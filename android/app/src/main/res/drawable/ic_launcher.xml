@@ -1,0 +1,104 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Clean, high-contrast Teal (#0E7896) background circle for branding -->
+    <path
+        android:fillColor="#0E7896"
+        android:pathData="M 50,0 C 77.6,0 100,22.4 100,50 C 100,77.6 77.6,100 50,100 C 22.4,100 0,77.6 0,50 C 0,22.4 22.4,0 50,0 Z" />
+        
+    <!-- Premium white circular outer ring indicating completion/academy -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.2"
+        android:pathData="M 50,6 A 44,44 0 1 1 49.9,6 Z" />
+
+    <!-- STUDENT GRADUATION CAP (Symbolizing academic success & learning) -->
+    <!-- Cap Diamond (Mortarboard top plate) in clean white -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 50,20 L 80,32 L 50,44 L 20,32 Z" />
+
+    <!-- Cap Base (Skullcap band underneath) in clean white -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 36,37.5 L 36,44 C 36,50 64,50 64,44 L 64,37.5 Z" />
+
+    <!-- Golden Tassel hanging on the left side in bright premium gold (#FFD54F) -->
+    <path
+        android:strokeColor="#FFD54F"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M 50,32 L 26,41.5 L 26,45.5" />
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M 26,47.5 C 27.1,47.5 28,46.6 28,45.5 C 28,44.4 27.1,43.5 26,43.5 C 24.9,43.5 24,44.4 24,45.5 C 24,46.6 24.9,47.5 26,47.5 Z" />
+
+    <!-- Stylized Book Pages representing deep knowledge and study materials -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.22"
+        android:pathData="M 50,56 L 72,50 L 72,58 L 50,64 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.22"
+        android:pathData="M 50,56 L 28,50 L 28,58 L 50,64 Z" />
+
+    <!-- "SMART X ET" Stylized Text Typography under the cap -->
+    <!-- Letter S -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 20,74 L 16,74 C 15,74 15,76 16,76 L 20,76 C 21,76 21,78 20,78 L 16,78" />
+    <!-- Letter M -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 25,78 L 25,74 L 28,77 L 31,74 L 31,78" />
+    <!-- Letter A -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 36,78 L 38.5,74 L 41,78 M 37,76.5 L 40,76.5" />
+    <!-- Letter R -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 46,78 L 46,74 L 49.5,74 C 50.5,74 50.5,76 49.5,76 L 46,76 M 48.5,76 L 51,78" />
+    <!-- Letter T -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 54,74 L 60,74 M 57,74 L 57,78" />
+    <!-- Letter X (Emphasized glowing central action letter) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M 65,74 L 71,78 M 65,78 L 71,74" />
+    <!-- Letter E (Accent color Gold #FFD54F) -->
+    <path
+        android:strokeColor="#FFD54F"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 80,74 L 76,74 L 76,78 L 80,78 M 76,76 L 79,76" />
+    <!-- Letter T (Accent color Gold #FFD54F) -->
+    <path
+        android:strokeColor="#FFD54F"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 83,74 L 89,74 M 86,74 L 86,78" />
+</vector>

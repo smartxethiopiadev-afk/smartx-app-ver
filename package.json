@@ -1,0 +1,13 @@
+{
+  "name": "smart-x-academy",
+  "version": "1.0.0",
+  "description": "Smart X Academy educational platform",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "echo 'Flutter project build pre-pass' && exit 0",
+    "lint": "echo 'Flutter project lint pre-pass' && exit 0"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

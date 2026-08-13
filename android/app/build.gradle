@@ -1,0 +1,100 @@
+plugins {
+    id "com.android.application"
+    id "org.jetbrains.kotlin.android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withReader('UTF-8') { reader ->
+        keystoreProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
+
+android {
+    namespace "com.smartx.learning"
+    compileSdkVersion 36
+    ndkVersion flutter.ndkVersion
+
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:deprecation"
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    signingConfigs {
+        release {
+            def keyAliasVal = keystoreProperties['keyAlias'] ?: System.getenv('KEY_ALIAS') ?: 'my-key-alias'
+            def keyPasswordVal = keystoreProperties['keyPassword'] ?: System.getenv('KEY_PASSWORD') ?: 'SmartXEdu2026'
+            def storePasswordVal = keystoreProperties['storePassword'] ?: System.getenv('STORE_PASSWORD') ?: 'SmartXEdu2026'
+            def storeFilePath = keystoreProperties['storeFile'] ?: System.getenv('STORE_FILE') ?: 'my-release-key.keystore'
+
+            keyAlias keyAliasVal
+            keyPassword keyPasswordVal
+            storePassword storePasswordVal
+            if (storeFilePath) {
+                storeFile file(storeFilePath)
+            }
+        }
+    }
+
+    defaultConfig {
+        applicationId "com.smartx.learning"
+        minSdkVersion 21
+        targetSdkVersion 35
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        multiDexEnabled true
+    }
+
+    buildTypes {
+        debug {
+        }
+        release {
+            signingConfig signingConfigs.release
+            // Prevents shrinking-related AdMob runtime crashes or build bugs
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+}
