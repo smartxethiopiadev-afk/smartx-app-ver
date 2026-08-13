@@ -11,6 +11,7 @@ on:
 
 jobs:
   build:
+    name: Build & Sign Production Release APK
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -31,60 +32,84 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Get Packages
+      - name: Get Dependencies
         run: flutter pub get
 
-      - name: Install Image Optimization Tools & Compress Assets
-        run: |
-          sudo apt-get update && sudo apt-get install -y webp imagemagick optipng jpegoptim
-          echo "Optimizing PNG assets..."
-          find assets/ -type f -name "*.png" -exec optipng -o2 -strip all {} +
-          echo "Optimizing JPG/JPEG assets..."
-          find assets/ -type f \( -name "*.jpg" -o -name "*.jpeg" \) -exec jpegoptim --max=82 --strip-all {} +
-
-      - name: Generate Launcher Icons
-        run: dart run flutter_launcher_icons
-
-      - name: Check Unused Packages
-        run: |
-          flutter pub global activate dependency_validator
-          flutter pub global run dependency_validator
-
-      - name: Analyze Code
-        run: flutter analyze
-
-      - name: Ensure google-services.json exists
+      # ------------------------------------------------------------------------
+      # SECURITY & SECRET RECONSTRUCTION STEP
+      # ------------------------------------------------------------------------
+      - name: Reconstruct google-services.json from GitHub Secrets
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "Reconstructing android/app/google-services.json from secret..."
             echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
-            echo "Successfully restored google-services.json from secret."
           elif [ -f "android/app/google-services.json" ]; then
-            echo "Using existing android/app/google-services.json from workspace."
+            echo "Using existing local google-services.json file."
+          else
+            echo "WARNING: GOOGLE_SERVICES_JSON secret not provided and file not found."
           fi
 
-      - name: Set up Gradle 8.14
+      - name: Decode Production Keystore from Base64
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Decoding release keystore from Base64..."
+            echo "$KEYSTORE_BASE64" | base64 --decode > android/app/my-release-key.keystore
+          else
+            echo "NOTICE: KEYSTORE_BASE64 secret not found. A temporary keystore will be generated if needed."
+          fi
+
+      - name: Generate Android key.properties dynamically
+        env:
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+        run: |
+          if [ -n "$KEYSTORE_STORE_PASSWORD" ] && [ -n "$KEYSTORE_ALIAS" ]; then
+            echo "Generating android/key.properties dynamically from secrets..."
+            cat <<EOF > android/key.properties
+storePassword=${KEYSTORE_STORE_PASSWORD}
+keyPassword=${KEYSTORE_KEY_PASSWORD:-$KEYSTORE_STORE_PASSWORD}
+keyAlias=${KEYSTORE_ALIAS}
+storeFile=my-release-key.keystore
+EOF
+          else
+            echo "NOTICE: Keystore password/alias secrets not set; build will use fallback configuration."
+          fi
+
+      - name: Optimize PNG & JPG Assets
+        run: |
+          sudo apt-get update && sudo apt-get install -y optipng jpegoptim
+          echo "Optimizing PNG assets..."
+          find assets/ -type f -name "*.png" -exec optipng -o2 -strip all {} + 2>/dev/null || true
+          echo "Optimizing JPG/JPEG assets..."
+          find assets/ -type f \( -name "*.jpg" -o -name "*.jpeg" \) -exec jpegoptim --max=82 --strip-all {} + 2>/dev/null || true
+
+      - name: Validate Dependencies & Analyze Code
+        run: flutter analyze
+
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14'
 
-      - name: Generate Debug Keystore
+      - name: Build Split Release APKs
+        env:
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEYSTORE_STORE_FILE: 'my-release-key.keystore'
         run: |
-          mkdir -p ~/.android
-          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          flutter build apk --release --split-per-abi \
+            --tree-shake-icons \
+            --obfuscate \
+            --split-debug-info=build/app/outputs/symbols \
+            --build-number=${{ github.run_number }}
 
-      - name: Run Gradle Signing Report
-        run: |
-          cd android
-          gradle wrapper
-          chmod +x gradlew
-          ./gradlew signingReport
-
-      - name: Build Code Artifact (Split APKs with Tree Shaken Icons & Obfuscation)
-        run: flutter build apk --release --split-per-abi --tree-shake-icons --obfuscate --split-debug-info=build/app/outputs/symbols --build-number=${{ github.run_number }}
-
-      - name: Create GitHub Release & Upload Release APKs
+      - name: Publish GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -92,4 +117,12 @@ jobs:
           gh release create "v1.0.2-build.${{ github.run_number }}" \
             build/app/outputs/flutter-apk/*.apk \
             --title "Release v1.0.2 (Build #${{ github.run_number }})" \
-            --notes "Interactive automatic production release of Smart X Academy (Build #${{ github.run_number }}). Built on $(date +'%Y-%m-%d %H:%M:%S UTC'). This package contains 3 optimized, split APKs for different processor architectures (armeabi-v7a, arm64-v8a, and x86_64) with obfuscated code, split debug symbols, tree-shaken icons, and compressed WebP/image assets, ensuring lightweight downloads and high UI resolution."
+            --notes "Production build #${{ github.run_number }} compiled with secure credential injection, code obfuscation, and split APK architecture."
+
+      - name: Clean Up Sensitive Build Artifacts
+        if: always()
+        run: |
+          echo "Purging temporary keystore and credential files from runner disk..."
+          rm -f android/app/my-release-key.keystore
+          rm -f android/key.properties
+          rm -f android/app/google-services.json

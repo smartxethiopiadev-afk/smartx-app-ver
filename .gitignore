@@ -1,49 +1,128 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.buildlog/
-.history
-.svn/
-migrate_working_dir/
+# ==============================================================================
+# Comprehensive Flutter & Android .gitignore Configuration
+# Protects all sensitive credentials, keystores, and local environment files
+# ==============================================================================
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
+# ------------------------------------------------------------------------------
+# 1. CRITICAL SECURITY & SENSITIVE CREDENTIALS (DO NOT COMMIT)
+# ------------------------------------------------------------------------------
+# Android Signing Keystores & Certificates
+*.keystore
+*.jks
+*.p12
+*.bks
+*.pfx
+**/my-release-key.keystore
+**/upload-keystore.jks
 
-# Flutter/Dart/Pub related
-**/doc/api/
+# Keystore properties and signing configs
+key.properties
+**/key.properties
+key.properties.local
+
+# Google Services / Firebase API Configuration files
+google-services.json
+**/google-services.json
+GoogleService-Info.plist
+**/GoogleService-Info.plist
+
+# Local environment & secret variables
+.env
+.env.*
+.env.local
+.env.production
+.env.staging
+!.env.example
+
+# Local Android SDK and properties
+local.properties
+**/local.properties
+**/android/local.properties
+
+# ------------------------------------------------------------------------------
+# 2. FLUTTER & DART BUILD ARTIFACTS
+# ------------------------------------------------------------------------------
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
 .pub-cache/
 .pub/
+build/
 /build/
-
-# Android related
-**/android/**/gradle-wrapper.jar
-**/android/.gradle
-**/android/captures/
-**/android/gradlew
-**/android/gradlew.bat
-**/android/local.properties
-**/android/**/GeneratedPluginRegistrant.java
-
-# Signing & Keystores (Security Protection)
-key.properties
-**/key.properties
-*.keystore
-*.jks
-
-# Symbol processing
+**/doc/api/
 .symbols/
 
-# Node.js
+# ------------------------------------------------------------------------------
+# 3. ANDROID GRADLE BUILD OUTPUTS & CACHES
+# ------------------------------------------------------------------------------
+.gradle/
+**/android/.gradle/
+**/android/captures/
+**/android/**/GeneratedPluginRegistrant.java
+**/android/**/generated/
+**/android/**/build/
+**/android/app/build/
+**/android/.cxx/
+
+# Gradle wrapper binaries (optional if using checked-in wrapper)
+**/android/**/gradle-wrapper.jar
+**/android/gradlew
+**/android/gradlew.bat
+
+# ------------------------------------------------------------------------------
+# 4. IOS / MACOS ARTIFACTS
+# ------------------------------------------------------------------------------
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/profile
+**/ios/Podfile.lock
+**/ios/**/default.mode1v3
+**/ios/**/default.mode2v3
+**/ios/**/default.pbxuser
+**/ios/**/default.perspectivev3
+
+# ------------------------------------------------------------------------------
+# 5. IDE & EDITOR FILES
+# ------------------------------------------------------------------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.code-workspace
+.history
+.atom/
+.svn/
+
+# ------------------------------------------------------------------------------
+# 6. OPERATING SYSTEM ARTIFACTS & LOGS
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.log
+*.class
+*.pyc
+*.swp
+*.bak
+*.tmp
+.buildlog/
+migrate_working_dir/
+
+# ------------------------------------------------------------------------------
+# 7. NODE.JS & TOOLING (If present in repository)
+# ------------------------------------------------------------------------------
 node_modules/
 dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

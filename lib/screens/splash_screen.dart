@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -66,71 +67,71 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 
   // Animation Controllers
-  late AnimationController _iconController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
+  late AnimationController _ambientController;
+  late AnimationController _entranceController;
+  late Animation<double> _titleFadeAnimation;
+  late Animation<Offset> _titleSlideAnimation;
+  late Animation<double> _spinnerFadeAnimation;
 
-  late AnimationController _subtextController;
-  late Animation<Offset> _subtextSlideAnimation;
-  late Animation<double> _subtextFadeAnimation;
-
-  // Flow State
-  bool _isReturningUser = false;
   Timer? _autoNavigateTimer;
 
   @override
   void initState() {
     super.initState();
 
-    _iconController = AnimationController(
+    // Continuous smooth ambient rotation for geometric abstract background
+    _ambientController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
+      duration: const Duration(seconds: 18),
+    )..repeat();
 
-    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _iconController, curve: Curves.easeOutBack),
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _iconController, curve: Curves.easeIn),
-    );
-
-    _subtextController = AnimationController(
+    // Entrance animation for typography and spinner
+    _entranceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 1200),
     );
 
-    _subtextSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.4),
+    _titleFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: const Interval(0.1, 0.7, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _titleSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.15),
       end: Offset.zero,
     ).animate(
-      CurvedAnimation(parent: _subtextController, curve: Curves.easeOutCubic),
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: const Interval(0.1, 0.8, curve: Curves.easeOutCubic),
+      ),
     );
 
-    _subtextFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _subtextController, curve: Curves.easeIn),
+    _spinnerFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
+      ),
     );
 
-    _iconController.forward();
+    _entranceController.forward();
 
-    // Start Non-Blocking App Boot Evaluation Pipeline
+    // Start App Initialization Pipeline
     _evaluateAppLaunchFlow();
   }
 
   @override
   void dispose() {
     _autoNavigateTimer?.cancel();
-    _iconController.dispose();
-    _subtextController.dispose();
+    _ambientController.dispose();
+    _entranceController.dispose();
     super.dispose();
   }
 
   /// Evaluates app launch flow in a non-blocking, offline-first manner.
-  /// Always resolves navigation after splash delay regardless of network state.
   Future<void> _evaluateAppLaunchFlow() async {
     debugPrint('[Splash] Evaluating non-blocking offline-first app launch flow...');
-
-    _subtextController.forward();
 
     SharedPreferences? prefs;
     bool hasSeenOnboarding = false;
@@ -139,11 +140,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     try {
       prefs = await SharedPreferences.getInstance();
       hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
-      if (mounted) {
-        setState(() {
-          _isReturningUser = hasSeenOnboarding;
-        });
-      }
     } catch (e) {
       debugPrint('[Splash] SharedPreferences read warning: $e');
     }
@@ -188,9 +184,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
     if (!mounted) return;
 
-    // 4. Always resolve flow & navigate to destination after splash duration
+    // 4. Navigate to destination after smooth splash timing
     _autoNavigateTimer?.cancel();
-    _autoNavigateTimer = Timer(const Duration(milliseconds: 1800), () {
+    _autoNavigateTimer = Timer(const Duration(milliseconds: 2000), () {
       if (!mounted) return;
       if (hasSeenOnboarding) {
         debugPrint('[Splash] Direct offline-first route -> HomeScreen');
@@ -218,7 +214,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
             child: child,
           );
         },
-        transitionDuration: const Duration(milliseconds: 400),
+        transitionDuration: const Duration(milliseconds: 500),
       ),
     );
   }
@@ -239,126 +235,396 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
             child: child,
           );
         },
-        transitionDuration: const Duration(milliseconds: 400),
+        transitionDuration: const Duration(milliseconds: 500),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isAmharic = widget.languageCode == 'am';
-
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: const Color(0xFF080E1E), // Dark rich navy blue base
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
-          systemNavigationBarColor: Color(0xFF0F172A),
+          systemNavigationBarColor: Color(0xFF080E1E),
           systemNavigationBarIconBrightness: Brightness.light,
         ),
-        child: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Spacer(),
-                // Central App Icon with scale & fade animation
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF00BFFF).withValues(alpha: 0.35),
-                            blurRadius: 36,
-                            spreadRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/app_icon.png',
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Center(
-                              child: Icon(
-                                Icons.school_rounded,
-                                size: 64,
-                                color: Color(0xFF00BFFF),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Layer 1: Animated Abstract Geometric & Light Effects Canvas
+            AnimatedBuilder(
+              animation: _ambientController,
+              builder: (context, child) {
+                return CustomPaint(
+                  painter: _GeometricAbstractPainter(
+                    animationProgress: _ambientController.value,
                   ),
-                ),
-                const SizedBox(height: 28),
-
-                // App Name
-                Text(
-                  'Smart X ET',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Subtext Animation
-                SlideTransition(
-                  position: _subtextSlideAnimation,
-                  child: FadeTransition(
-                    opacity: _subtextFadeAnimation,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00BFFF).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: const Color(0xFF00BFFF).withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Text(
-                        isAmharic
-                            ? (_isReturningUser ? 'እንኳን በደህና ተመለሱ!' : 'እንኳን ወደ Smart X ET በደህና መጡ!')
-                            : (_isReturningUser ? 'Welcome Back!' : 'Welcome to Smart X ET'),
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF00BFFF),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00BFFF)),
-                  ),
-                ),
-                const SizedBox(height: 36),
-              ],
+                  size: Size.infinite,
+                );
+              },
             ),
-          ),
+
+            // Layer 2: Subtle Ambient Center Glow Vignette
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment.center,
+                      radius: 0.85,
+                      colors: [
+                        const Color(0xFF0EA5E9).withValues(alpha: 0.08),
+                        Colors.transparent,
+                        const Color(0xFF080E1E).withValues(alpha: 0.65),
+                      ],
+                      stops: const [0.0, 0.55, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Layer 3: Central Brand Identity & Understated Loader
+            SafeArea(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Spacer(flex: 12),
+
+                    // Central App Name: "Smart X ET"
+                    SlideTransition(
+                      position: _titleSlideAnimation,
+                      child: FadeTransition(
+                        opacity: _titleFadeAnimation,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Main Title with sleek modern typography
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  'Smart ',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.5,
+                                    color: Colors.white,
+                                    shadows: [
+                                      Shadow(
+                                        color: const Color(0xFF00BFFF).withValues(alpha: 0.3),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  'X',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 35,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.5,
+                                    color: const Color(0xFF00D2FF), // Vibrant Teal/Cyan accent
+                                    shadows: [
+                                      Shadow(
+                                        color: const Color(0xFF00D2FF).withValues(alpha: 0.55),
+                                        blurRadius: 18,
+                                        offset: const Offset(0, 0),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  ' ET',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.5,
+                                    color: Colors.white,
+                                    shadows: [
+                                      Shadow(
+                                        color: const Color(0xFF00BFFF).withValues(alpha: 0.3),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            // Academic / Intelligent Learning Platform Tagline
+                            Text(
+                              'INTELLIGENT LEARNING PLATFORM',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 2.8,
+                                color: const Color(0xFF94A3B8).withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 36),
+
+                    // Understated Teal Blue Loading Spinner
+                    FadeTransition(
+                      opacity: _spinnerFadeAnimation,
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        padding: const EdgeInsets.all(2),
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2.0,
+                          strokeCap: StrokeCap.round,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00C9E8)), // Teal Blue
+                        ),
+                      ),
+                    ),
+
+                    const Spacer(flex: 14),
+
+                    // Minimal Footer Note
+                    FadeTransition(
+                      opacity: _spinnerFadeAnimation,
+                      child: Text(
+                        'ETHIOPIAN CURRICULUM EXCELLENCE',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 2.2,
+                          color: const Color(0xFF64748B).withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
+}
+
+/// Custom painter that renders clean, sophisticated geometric patterns,
+/// rotating orbital arcs, glowing constellation nodes, and soft light blooms.
+class _GeometricAbstractPainter extends CustomPainter {
+  final double animationProgress;
+
+  _GeometricAbstractPainter({required this.animationProgress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    final Offset center = Offset(w / 2, h / 2);
+
+    // 1. Rich Dark Navy Background Gradient
+    final Rect backgroundRect = Rect.fromLTWH(0, 0, w, h);
+    final Paint bgPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFF050B18), // Deep obsidian navy
+          Color(0xFF0A1428), // Rich sapphire navy
+          Color(0xFF070E1F), // Dark navy footer
+        ],
+        stops: [0.0, 0.55, 1.0],
+      ).createShader(backgroundRect);
+    canvas.drawRect(backgroundRect, bgPaint);
+
+    // 2. Soft Ambient Radial Light Blooms (Glow Effects)
+    final double angle = animationProgress * 2 * math.pi;
+
+    // Primary central teal glow
+    final Paint centerGlowPaint = Paint()
+      ..shader = RadialGradient(
+        center: Alignment.center,
+        radius: 0.55,
+        colors: [
+          const Color(0xFF00D2FF).withValues(alpha: 0.09),
+          const Color(0xFF0284C7).withValues(alpha: 0.04),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: math.min(w, h) * 0.7));
+    canvas.drawCircle(center, math.min(w, h) * 0.7, centerGlowPaint);
+
+    // Floating subtle orb in the upper-right quadrant
+    final Offset upperRightOrb = Offset(
+      center.dx + math.cos(angle) * 70 + w * 0.22,
+      center.dy + math.sin(angle) * 50 - h * 0.18,
+    );
+    final Paint orbPaint1 = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          const Color(0xFF0D9488).withValues(alpha: 0.08),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromCircle(center: upperRightOrb, radius: 140));
+    canvas.drawCircle(upperRightOrb, 140, orbPaint1);
+
+    // Floating subtle orb in the lower-left quadrant
+    final Offset lowerLeftOrb = Offset(
+      center.dx - math.cos(angle) * 60 - w * 0.2,
+      center.dy - math.sin(angle) * 45 + h * 0.18,
+    );
+    final Paint orbPaint2 = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          const Color(0xFF0284C7).withValues(alpha: 0.07),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromCircle(center: lowerLeftOrb, radius: 160));
+    canvas.drawCircle(lowerLeftOrb, 160, orbPaint2);
+
+    // 3. Smooth Concentric Geometric Rings & Dashed Orbital Arcs
+    _drawGeometricRing(
+      canvas: canvas,
+      center: center,
+      radius: 95,
+      rotation: angle * 0.8,
+      dashCount: 4,
+      dashRatio: 0.65,
+      color: const Color(0xFF00D2FF).withValues(alpha: 0.22),
+      strokeWidth: 1.2,
+    );
+
+    _drawGeometricRing(
+      canvas: canvas,
+      center: center,
+      radius: 155,
+      rotation: -angle * 0.5,
+      dashCount: 6,
+      dashRatio: 0.45,
+      color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
+      strokeWidth: 1.0,
+    );
+
+    _drawGeometricRing(
+      canvas: canvas,
+      center: center,
+      radius: 235,
+      rotation: angle * 0.3,
+      dashCount: 8,
+      dashRatio: 0.35,
+      color: const Color(0xFF0284C7).withValues(alpha: 0.10),
+      strokeWidth: 1.0,
+    );
+
+    _drawGeometricRing(
+      canvas: canvas,
+      center: center,
+      radius: 320,
+      rotation: -angle * 0.2,
+      dashCount: 12,
+      dashRatio: 0.25,
+      color: const Color(0xFF64748B).withValues(alpha: 0.08),
+      strokeWidth: 0.8,
+    );
+
+    // 4. Subtle Hexagonal / Orbital Nodes along rings
+    _drawOrbitalNodes(canvas, center, 155, -angle * 0.5, 3, const Color(0xFF00D2FF));
+    _drawOrbitalNodes(canvas, center, 235, angle * 0.3, 4, const Color(0xFF38BDF8));
+
+    // 5. Fine Diagonal Architectural Light Rays (Geometric grid lines)
+    final Paint gridLinePaint = Paint()
+      ..color = const Color(0xFF1E293B).withValues(alpha: 0.25)
+      ..strokeWidth = 0.6
+      ..style = PaintingStyle.stroke;
+
+    // Cross subtle guide lines at 45 degrees
+    final double rayLen = math.max(w, h) * 0.85;
+    for (int i = -2; i <= 2; i++) {
+      final double offsetVal = i * 90.0;
+      final Offset p1 = Offset(center.dx - rayLen + offsetVal, center.dy - rayLen);
+      final Offset p2 = Offset(center.dx + rayLen + offsetVal, center.dy + rayLen);
+      canvas.drawLine(p1, p2, gridLinePaint);
+    }
+  }
+
+  void _drawGeometricRing({
+    required Canvas canvas,
+    required Offset center,
+    required double radius,
+    required double rotation,
+    required int dashCount,
+    required double dashRatio,
+    required Color color,
+    required double strokeWidth,
+  }) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final double totalArcPerSegment = (2 * math.pi) / dashCount;
+    final double sweepAngle = totalArcPerSegment * dashRatio;
+
+    for (int i = 0; i < dashCount; i++) {
+      final double startAngle = rotation + (i * totalArcPerSegment);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweepAngle,
+        false,
+        paint,
+      );
+    }
+  }
+
+  void _drawOrbitalNodes(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    double rotation,
+    int count,
+    Color nodeColor,
+  ) {
+    final Paint nodePaint = Paint()
+      ..color = nodeColor.withValues(alpha: 0.45)
+      ..style = PaintingStyle.fill;
+
+    final Paint glowPaint = Paint()
+      ..color = nodeColor.withValues(alpha: 0.15)
+      ..style = PaintingStyle.fill;
+
+    final double step = (2 * math.pi) / count;
+    for (int i = 0; i < count; i++) {
+      final double a = rotation + (i * step);
+      final Offset pos = Offset(
+        center.dx + radius * math.cos(a),
+        center.dy + radius * math.sin(a),
+      );
+
+      // Glowing outer ring for node
+      canvas.drawCircle(pos, 4.5, glowPaint);
+      // Sharp core node
+      canvas.drawCircle(pos, 2.0, nodePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GeometricAbstractPainter oldDelegate) {
+    return oldDelegate.animationProgress != animationProgress;
   }
 }
