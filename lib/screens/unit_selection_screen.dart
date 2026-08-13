@@ -8,7 +8,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/ad_helper.dart';
 import '../services/offline_manager.dart';
-import '../services/pdf_cache_service.dart';
 import '../services/quiz_service.dart';
 import '../main.dart';
 import 'quiz_screen.dart';
@@ -3004,60 +3003,67 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
           }
 
           final String normalizedSubject = getNormalizedSubjectName(widget.subjectId);
-          final String expectedSubjectId = '${widget.grade}_$normalizedSubject';
 
-          final fetchedNotesResponse = await Supabase.instance.client
-              .from('units')
-              .select('''
-                id,
-                subject_id,
-                unit_number,
-                subjects!inner(
-                  id,
-                  name,
-                  grade
-                ),
-                unit_notes (
-                  id,
-                  unit_id,
-                  title,
-                  pdf_url,
-                  created_at
-                )
-              ''')
-              .eq('unit_number', activeUnitNum)
-              .eq('subjects.grade', widget.grade)
-              .or('subject_id.eq.$expectedSubjectId,subject_id.ilike.%$normalizedSubject%,subject_id.ilike.%${widget.subjectId}%')
-              .maybeSingle();
+          List<Map<String, dynamic>> fetchedNotes = [];
+          
+          try {
+            // First try fetching from modern short_notes table (HTML/CSS notes)
+            final shortNotesResponse = await Supabase.instance.client
+                .from('short_notes')
+                .select('id, grade, subject, unit_number, title, html_content, created_at')
+                .eq('grade', widget.grade)
+                .eq('unit_number', activeUnitNum)
+                .ilike('subject', '%$normalizedSubject%');
 
-          List<dynamic> fetchedNotesData = [];
-          if (fetchedNotesResponse != null && fetchedNotesResponse['unit_notes'] != null) {
-            fetchedNotesData = fetchedNotesResponse['unit_notes'];
+            if (shortNotesResponse.isNotEmpty) {
+              fetchedNotes = List<Map<String, dynamic>>.from(shortNotesResponse);
+            }
+          } catch (e) {
+            debugPrint('[Offline Download] Short notes query notice: $e');
           }
 
-          if (fetchedNotesData.isEmpty) {
+          // Fallback to unit_notes if short_notes is empty
+          if (fetchedNotes.isEmpty) {
+            final String expectedSubjectId = '${widget.grade}_$normalizedSubject';
+            final fetchedNotesResponse = await Supabase.instance.client
+                .from('units')
+                .select('''
+                  id,
+                  subject_id,
+                  unit_number,
+                  subjects!inner(
+                    id,
+                    name,
+                    grade
+                  ),
+                  unit_notes (
+                    id,
+                    unit_id,
+                    title,
+                    html_content,
+                    created_at
+                  )
+                ''')
+                .eq('unit_number', activeUnitNum)
+                .eq('subjects.grade', widget.grade)
+                .or('subject_id.eq.$expectedSubjectId,subject_id.ilike.%$normalizedSubject%,subject_id.ilike.%${widget.subjectId}%')
+                .maybeSingle();
+
+            if (fetchedNotesResponse != null && fetchedNotesResponse['unit_notes'] != null) {
+              fetchedNotes = List<Map<String, dynamic>>.from(fetchedNotesResponse['unit_notes']);
+            }
+          }
+
+          if (fetchedNotes.isEmpty) {
             throw Exception("No notes available on developer server.");
           }
-          final List<Map<String, dynamic>> fetchedNotes = List<Map<String, dynamic>>.from(fetchedNotesData);
+
           await OfflineManager.saveOfflineNotes(
             downloadKey,
             fetchedNotes,
             grade: widget.grade,
             unit: activeUnitNum,
           );
-
-          // Pre-download PDF files for offline reading
-          final String unitIdStr = 'g${widget.grade}_$unitId';
-          for (final note in fetchedNotes) {
-            final String? pdfUrl = note['pdf_url']?.toString().trim();
-            if (pdfUrl != null && pdfUrl.isNotEmpty) {
-              try {
-                await PdfCacheService.downloadAndSavePdf(unitId: unitIdStr, pdfUrl: pdfUrl);
-              } catch (e) {
-                debugPrint('[PDF Cache Error] Pre-downloading PDF note failed during unit download: $e');
-              }
-            }
-          }
         } else {
           final fetchedQuestions = await QuizService.fetchQuestions(
             grade: widget.grade,

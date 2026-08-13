@@ -340,16 +340,11 @@ class _QuizScreenState extends State<QuizScreen> {
 
     setState(() {
       _selectedAnswers[_currentIndex] = optionIndex;
-      if (widget.mode == QuizMode.practice) {
-        _submittedQuestions.add(_currentIndex);
-      }
     });
 
     _saveProgress();
 
-    if (widget.mode == QuizMode.practice) {
-      _scrollToExplanation();
-    } else if (widget.mode == QuizMode.exam) {
+    if (widget.mode == QuizMode.exam) {
       _scrollToShiftExamQuestionUp();
     }
   }
@@ -362,7 +357,18 @@ class _QuizScreenState extends State<QuizScreen> {
       _submittedQuestions.add(_currentIndex);
     });
 
+    _saveProgress();
     _scrollToExplanation();
+  }
+
+  void _jumpToQuestion(int targetIndex) {
+    if (targetIndex >= 0 && targetIndex < _questions.length) {
+      setState(() {
+        _currentIndex = targetIndex;
+      });
+      _saveProgress();
+      _scrollToActiveQuestion();
+    }
   }
 
   void _scrollToActiveQuestion() {
@@ -500,6 +506,7 @@ class _QuizScreenState extends State<QuizScreen> {
         'questions': _questions.map((q) => q.toJson()).toList(),
         'currentIndex': _currentIndex,
         'selectedAnswers': _selectedAnswers.map((k, v) => MapEntry(k.toString(), v)),
+        'submittedQuestions': _submittedQuestions.map((e) => e.toString()).toList(),
         'timeLeftSeconds': _timeLeftSeconds,
         'mode': widget.mode.toString(),
       };
@@ -624,7 +631,15 @@ class _QuizScreenState extends State<QuizScreen> {
         
         // Populate submitted questions for practice mode
         _submittedQuestions.clear();
-        if (widget.mode == QuizMode.practice) {
+        if (data.containsKey('submittedQuestions') && data['submittedQuestions'] is List) {
+          final List<dynamic> subList = data['submittedQuestions'] as List<dynamic>;
+          for (final item in subList) {
+            final parsedIdx = int.tryParse(item.toString());
+            if (parsedIdx != null) {
+              _submittedQuestions.add(parsedIdx);
+            }
+          }
+        } else if (widget.mode == QuizMode.practice) {
           _submittedQuestions.addAll(restoredAnswers.keys);
         }
       });
@@ -1785,9 +1800,9 @@ class _QuizScreenState extends State<QuizScreen> {
                     ),
                   ],
 
-                  // Next Question Button / Finish Quiz button
-                  if (!isExamReview && isActive && ((widget.mode == QuizMode.practice && isSubmitted) || (widget.mode == QuizMode.exam && hasSelected) || _showAnswersAndExplanations)) ...[
-                    const SizedBox(height: 28), // Ample spacing before button
+                  // Next Question Button / Finish Quiz button (Freely navigable in Practice & Exam modes)
+                  if (!isExamReview && isActive) ...[
+                    const SizedBox(height: 24), // Ample spacing before button
                     Row(
                       children: [
                         if (index > 0) ...[
@@ -1869,27 +1884,117 @@ class _QuizScreenState extends State<QuizScreen> {
     return Center(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 620),
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ...List.generate(_questions.length, (index) {
-                return _buildQuestionBlock(index, isLight, cardColor, descColor, titleTextColor);
-              }),
-              
-              // End block when finished
-              if (_currentIndex == _questions.length || isExamReview) ...[
-                _buildFinishedSection(),
-              ] else ...[
-                // Generous vertical spacing at the bottom so we can center scroll the last question perfectly!
-                const SizedBox(height: 500),
-              ],
-            ],
+        child: Column(
+          children: [
+            // Question Palette / Quick Jump Bar
+            if (_questions.length > 1 && !isExamReview)
+              _buildQuestionPaletteStrip(isLight),
+
+            Expanded(
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ...List.generate(_questions.length, (index) {
+                      return _buildQuestionBlock(index, isLight, cardColor, descColor, titleTextColor);
+                    }),
+                    
+                    // End block when finished
+                    if (_currentIndex == _questions.length || isExamReview) ...[
+                      _buildFinishedSection(),
+                    ] else ...[
+                      // Generous vertical spacing at the bottom so we can center scroll the last question perfectly!
+                      const SizedBox(height: 500),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuestionPaletteStrip(bool isLight) {
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: isLight ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
+        border: Border(
+          bottom: BorderSide(
+            color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
+            width: 1.0,
           ),
         ),
+      ),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _questions.length,
+        itemBuilder: (context, idx) {
+          final isCurrent = idx == _currentIndex;
+          final isAnswered = _selectedAnswers.containsKey(idx);
+          final isSubmitted = _submittedQuestions.contains(idx);
+          
+          Color bgColor;
+          Color textColor;
+          Border? border;
+
+          if (isCurrent) {
+            bgColor = _getSubjectThemeColor();
+            textColor = Colors.white;
+            border = Border.all(color: _getSubjectThemeColor(), width: 1.5);
+          } else if (widget.mode == QuizMode.practice && isSubmitted) {
+            final isCorrect = _selectedAnswers[idx] == _questions[idx].correctAnswerIndex;
+            if (isCorrect) {
+              bgColor = isLight ? const Color(0xFFDCFCE7) : const Color(0xFF064E3B);
+              textColor = isLight ? const Color(0xFF166534) : const Color(0xFF6EE7B7);
+              border = Border.all(color: const Color(0xFF22C55E), width: 1.2);
+            } else {
+              bgColor = isLight ? const Color(0xFFFEE2E2) : const Color(0xFF7F1D1D);
+              textColor = isLight ? const Color(0xFF991B1B) : const Color(0xFFFCA5A5);
+              border = Border.all(color: const Color(0xFFEF4444), width: 1.2);
+            }
+          } else if (isAnswered) {
+            bgColor = isLight ? _getSubjectThemeColor().withValues(alpha: 0.12) : _getSubjectThemeColor().withValues(alpha: 0.25);
+            textColor = _getSubjectThemeColor();
+            border = Border.all(color: _getSubjectThemeColor().withValues(alpha: 0.5), width: 1.0);
+          } else {
+            bgColor = isLight ? Colors.white : const Color(0xFF1E293B);
+            textColor = isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+            border = Border.all(color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155), width: 1.0);
+          }
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: InkWell(
+              onTap: () => _jumpToQuestion(idx),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                width: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(10),
+                  border: border,
+                ),
+                child: Text(
+                  "${idx + 1}",
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isCurrent ? FontWeight.w900 : FontWeight.w700,
+                    color: textColor,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

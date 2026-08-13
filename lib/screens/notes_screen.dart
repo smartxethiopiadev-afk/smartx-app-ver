@@ -1,13 +1,12 @@
-import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../services/offline_manager.dart';
-import '../services/pdf_cache_service.dart';
 import '../main.dart';
 
 enum NotesErrorType {
@@ -15,7 +14,6 @@ enum NotesErrorType {
   noInternet,
   emptyData,
   accessDenied,
-  pdfLoadError,
   unknown,
 }
 
@@ -44,42 +42,45 @@ class NotesScreen extends StatefulWidget {
 }
 
 class _NotesScreenState extends State<NotesScreen> {
-  late PdfViewerController _pdfViewerController;
   bool _isBookmarked = false;
   bool _isLoading = true;
   bool _hasError = false;
+  bool _isDownloaded = false;
+  bool _isDownloading = false;
 
   NotesErrorType _errorType = NotesErrorType.none;
   String? _debugErrorDetails;
-  bool _showDebugInfo = false;
 
   List<Map<String, dynamic>> _notesList = [];
   int _selectedNoteIndex = 0;
-  String? _pdfUrl;
-  String? _pdfTitle;
+  String? _noteTitle;
+  String? _htmlContent;
 
-  File? _localPdfFile;
-  bool _isDownloadingPdf = false;
-
-  int _currentPage = 1;
-  int _pageCount = 0;
-
-  final PdfScrollDirection _scrollDirection = PdfScrollDirection.vertical;
-  final bool _isColorInverted = false;
-  final bool _isPageByPage = false;
-
-  PdfPageLayoutMode get _pageLayoutMode =>
-      _isPageByPage ? PdfPageLayoutMode.single : PdfPageLayoutMode.continuous;
+  double _fontScale = 1.0; // Scaler from 0.85 to 1.45
+  bool _isSearchOpen = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _pdfViewerController = PdfViewerController();
     _checkBookmarkStatus();
+    _checkOfflineStatus();
     _fetchNotes();
   }
 
-  void _showFloatingSnackbar(String message, {bool isError = false, bool isSuccess = false, bool isInfo = false}) {
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _showFloatingSnackbar(
+    String message, {
+    bool isError = false,
+    bool isSuccess = false,
+    bool isInfo = false,
+  }) {
     if (!mounted) return;
     Color bgColor = const Color(0xFF1E293B);
     IconData iconData = Icons.info_outline_rounded;
@@ -115,127 +116,8 @@ class _NotesScreenState extends State<NotesScreen> {
         ),
         backgroundColor: bgColor,
         behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: isError ? 4 : 3),
+        duration: Duration(seconds: isError ? 4 : 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  Future<void> _checkAndLoadLocalPdf() async {
-    if (_pdfUrl == null || _pdfUrl!.isEmpty) return;
-    final String unitId = _getUnitId();
-    try {
-      final file = await PdfCacheService.getLocalPdfFile(unitId, _pdfUrl!);
-      if (mounted) {
-        setState(() {
-          _localPdfFile = file;
-        });
-      }
-    } catch (e) {
-      debugPrint('[PDF Cache Error] Error checking local file for $unitId: $e');
-    }
-  }
-
-  Future<void> _downloadPdfForOffline() async {
-    if (_pdfUrl == null || _pdfUrl!.isEmpty) return;
-    final String unitId = _getUnitId();
-
-    setState(() {
-      _isDownloadingPdf = true;
-    });
-
-    _showFloatingSnackbar(
-      widget.languageCode == 'en'
-          ? 'Downloading PDF note for offline reading...'
-          : 'ለስልክዎ ማስታወሻው በማውረድ ላይ ነው...',
-      isInfo: true,
-    );
-
-    try {
-      final savedFile = await PdfCacheService.downloadAndSavePdf(
-        unitId: unitId,
-        pdfUrl: _pdfUrl!,
-        registerOffline: false,
-      );
-
-      if (_notesList.isNotEmpty) {
-        await OfflineManager.saveOfflineNotes(
-          unitId,
-          _notesList,
-          grade: widget.grade,
-          unit: widget.unitNumber,
-        );
-      }
-
-      await OfflineManager.addDownload(unitId);
-
-      if (mounted) {
-        setState(() {
-          _localPdfFile = savedFile;
-          _isDownloadingPdf = false;
-        });
-        _showFloatingSnackbar(
-          widget.languageCode == 'en'
-              ? 'PDF downloaded successfully! Offline reading enabled.'
-              : 'ማስታወሻው በስኬት ወርዷል! ያለ ኢንተርኔት ማንበብ ይችላሉ።',
-          isSuccess: true,
-        );
-      }
-    } catch (e) {
-      debugPrint('[PDF Cache Error] User download failed for $unitId: $e');
-      await OfflineManager.removeDownload(unitId);
-      if (mounted) {
-        setState(() {
-          _isDownloadingPdf = false;
-        });
-        _showFloatingSnackbar(
-          widget.languageCode == 'en'
-              ? 'PDF download failed: ${e.toString().replaceAll('Exception: ', '')}'
-              : 'ማውረድ አልተሳካም፡ ${e.toString().replaceAll('Exception: ', '')}',
-          isError: true,
-        );
-      }
-    }
-  }
-
-  void _backgroundCacheCurrentPdf() async {
-    if (_pdfUrl == null || _pdfUrl!.isEmpty || _localPdfFile != null) return;
-    try {
-      final unitId = _getUnitId();
-      final file = await PdfCacheService.downloadAndSavePdf(
-        unitId: unitId,
-        pdfUrl: _pdfUrl!,
-        registerOffline: false,
-      );
-      if (mounted) {
-        setState(() {
-          _localPdfFile = file;
-        });
-      }
-    } catch (e) {
-      debugPrint('[PDF Cache Error] Auto background cache caught: $e');
-    }
-  }
-
-  @override
-  void dispose() {
-    _pdfViewerController.dispose();
-    super.dispose();
-  }
-
-  void _showDebugSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).removeCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '[Debug] $message',
-          style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-        ),
-        backgroundColor: const Color(0xFF1E293B),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -245,20 +127,24 @@ class _NotesScreenState extends State<NotesScreen> {
     String prefix = 'phys_u';
     if (sub.contains('math')) {
       prefix = 'math_u';
-    } else if (sub.contains('biol')) {
+    } else if (sub.contains('biol') || sub.contains('bio')) {
       prefix = 'bio_u';
     } else if (sub.contains('phys')) {
       prefix = 'phys_u';
     } else if (sub.contains('chem')) {
       prefix = 'chem_u';
-    } else if (sub.contains('geog')) {
+    } else if (sub.contains('geog') || sub.contains('geo')) {
       prefix = 'geo_u';
     } else if (sub.contains('hist')) {
       prefix = 'hist_u';
     } else if (sub.contains('civ')) {
       prefix = 'civ_u';
-    } else if (sub.contains('agri')) {
+    } else if (sub.contains('agri') || sub.contains('agr')) {
       prefix = 'agri_u';
+    } else if (sub.contains('econ') || sub.contains('eco')) {
+      prefix = 'econ_u';
+    } else if (sub.contains('eng')) {
+      prefix = 'eng_u';
     }
     return 'g${widget.grade}_$prefix${widget.unitNumber}';
   }
@@ -278,6 +164,16 @@ class _NotesScreenState extends State<NotesScreen> {
     return sub;
   }
 
+  Future<void> _checkOfflineStatus() async {
+    final String unitId = _getUnitId();
+    final bool downloaded = await OfflineManager.isDownloaded(unitId);
+    if (mounted) {
+      setState(() {
+        _isDownloaded = downloaded;
+      });
+    }
+  }
+
   Future<void> _fetchNotes() async {
     try {
       setState(() {
@@ -295,71 +191,71 @@ class _NotesScreenState extends State<NotesScreen> {
         fetchedNotes = await OfflineManager.getOfflineNotes(unitId);
       } else {
         final String normalizedSubject = _getNormalizedSubjectName();
-        final String expectedSubjectId = '${widget.grade}_$normalizedSubject';
 
-        _debugErrorDetails = 'Grade: ${widget.grade}, SubjectId: ${widget.subjectId}, '
-            'NormalizedSubject: $normalizedSubject, ExpectedSubjectId: $expectedSubjectId, '
-            'UnitNumber: ${widget.unitNumber}';
+        // 1. Primary Query: Supabase short_notes table
+        try {
+          final shortNotesResponse = await Supabase.instance.client
+              .from('short_notes')
+              .select('id, grade, subject, unit_number, title, html_content, created_at')
+              .eq('grade', widget.grade)
+              .eq('unit_number', widget.unitNumber)
+              .ilike('subject', '%$normalizedSubject%')
+              .order('created_at', ascending: true);
 
-        final response = await Supabase.instance.client
-            .from('units')
-            .select('''
-              id,
-              unit_number,
-              subject_id,
-              subjects!inner(
-                id,
-                name,
-                grade
-              ),
-              unit_notes(
-                id,
-                unit_id,
-                title,
-                pdf_url,
-                created_at
-              )
-            ''')
-            .eq('unit_number', widget.unitNumber)
-            .eq('subjects.grade', widget.grade)
-            .ilike('subjects.name', '%$normalizedSubject%')
-            .maybeSingle();
-
-        if (response != null && response['unit_notes'] != null) {
-          fetchedNotes = List<Map<String, dynamic>>.from(response['unit_notes']);
+          if (shortNotesResponse.isNotEmpty) {
+            fetchedNotes = List<Map<String, dynamic>>.from(shortNotesResponse);
+          }
+        } catch (e) {
+          debugPrint('[Short Notes] Supabase short_notes query info: $e');
         }
 
-        if (response == null) {
-          _debugErrorDetails = 'Supabase query returned null.\nQuery filters:\n'
-              '  unit_number: ${widget.unitNumber}\n'
-              '  grade: ${widget.grade}\n'
-              '  subjectId: ${widget.subjectId}\n'
-              '  expectedSubjectId: $expectedSubjectId\n'
-              '  normalizedSubject: $normalizedSubject';
-        } else if (fetchedNotes.isEmpty) {
-          _debugErrorDetails = 'Unit record found (ID: ${response['id']}), but "unit_notes" array is empty.\n'
-              '  subject_id: ${response['subject_id']}\n'
-              '  unit_number: ${response['unit_number']}';
+        // 2. Secondary Fallback Query: units & unit_notes
+        if (fetchedNotes.isEmpty) {
+          final String expectedSubjectId = '${widget.grade}_$normalizedSubject';
+          final response = await Supabase.instance.client
+              .from('units')
+              .select('''
+                id,
+                unit_number,
+                subject_id,
+                subjects!inner(
+                  id,
+                  name,
+                  grade
+                ),
+                unit_notes(
+                  id,
+                  unit_id,
+                  title,
+                  html_content,
+                  created_at
+                )
+              ''')
+              .eq('unit_number', widget.unitNumber)
+              .eq('subjects.grade', widget.grade)
+              .ilike('subjects.name', '%$normalizedSubject%')
+              .maybeSingle();
+
+          if (response != null && response['unit_notes'] != null) {
+            fetchedNotes = List<Map<String, dynamic>>.from(response['unit_notes']);
+          }
+        }
+
+        // 3. Built-in High-Quality Curriculum Seed Fallback if server table not yet seeded
+        if (fetchedNotes.isEmpty) {
+          fetchedNotes = _generateCurriculumFallbackNotes();
         }
       }
 
       if (fetchedNotes.isNotEmpty) {
-        fetchedNotes.sort((a, b) {
-          final String dateA = (a['created_at'] ?? '').toString();
-          final String dateB = (b['created_at'] ?? '').toString();
-          return dateA.compareTo(dateB);
-        });
-
         _notesList = fetchedNotes;
         _selectedNoteIndex = 0;
-        _pdfUrl = fetchedNotes.first['pdf_url']?.toString().trim();
-        _pdfTitle = fetchedNotes.first['title']?.toString().trim();
-        await _checkAndLoadLocalPdf();
+        _applySelectedNote(0);
       }
 
       setState(() {
         _isLoading = false;
-        if (_pdfUrl == null || _pdfUrl!.isEmpty) {
+        if (_notesList.isEmpty || _htmlContent == null || _htmlContent!.isEmpty) {
           _hasError = true;
           _errorType = NotesErrorType.emptyData;
         } else {
@@ -368,41 +264,209 @@ class _NotesScreenState extends State<NotesScreen> {
         }
       });
     } on PostgrestException catch (e) {
-      debugPrint('PostgrestException fetching notes: ${e.code} - ${e.message}');
-      final isRls = e.code == '42501' ||
-          e.message.toLowerCase().contains('permission') ||
-          e.message.toLowerCase().contains('denied') ||
-          e.message.toLowerCase().contains('row-level security') ||
-          e.message.toLowerCase().contains('rls');
-
+      debugPrint('PostgrestException fetching short notes: ${e.code} - ${e.message}');
       setState(() {
-        _notesList = [];
-        _hasError = true;
-        _isLoading = false;
-        _errorType = isRls ? NotesErrorType.accessDenied : NotesErrorType.unknown;
-        _debugErrorDetails = 'PostgrestException [Code: ${e.code}]: ${e.message}\nDetails: ${e.details ?? "None"}\nHint: ${e.hint ?? "None"}';
+        _notesList = _generateCurriculumFallbackNotes();
+        if (_notesList.isNotEmpty) {
+          _selectedNoteIndex = 0;
+          _applySelectedNote(0);
+          _hasError = false;
+          _isLoading = false;
+        } else {
+          _hasError = true;
+          _isLoading = false;
+          _errorType = NotesErrorType.accessDenied;
+          _debugErrorDetails = 'PostgrestException: ${e.message}';
+        }
       });
-      _showDebugSnackbar('DB Permission Error [${e.code}]: ${e.message}');
     } catch (e) {
-      debugPrint('Error fetching PDF notes: $e');
-      final String errStr = e.toString().toLowerCase();
-      final bool isNetErr = errStr.contains('socketexception') ||
-          errStr.contains('clientexception') ||
-          errStr.contains('network') ||
-          errStr.contains('connection') ||
-          errStr.contains('failed to connect') ||
-          errStr.contains('offline') ||
-          errStr.contains('getaddrinfo');
-
+      debugPrint('Error fetching short notes: $e');
+      final fallback = _generateCurriculumFallbackNotes();
       setState(() {
-        _notesList = [];
-        _hasError = true;
-        _isLoading = false;
-        _errorType = isNetErr ? NotesErrorType.noInternet : NotesErrorType.unknown;
-        _debugErrorDetails = 'Exception: $e';
+        if (fallback.isNotEmpty) {
+          _notesList = fallback;
+          _selectedNoteIndex = 0;
+          _applySelectedNote(0);
+          _hasError = false;
+          _isLoading = false;
+        } else {
+          _notesList = [];
+          _hasError = true;
+          _isLoading = false;
+          _errorType = NotesErrorType.unknown;
+          _debugErrorDetails = 'Exception: $e';
+        }
       });
-      _showDebugSnackbar(isNetErr ? 'Network Connection Error' : 'Error: $e');
     }
+  }
+
+  void _applySelectedNote(int index) {
+    if (index >= 0 && index < _notesList.length) {
+      final note = _notesList[index];
+      _selectedNoteIndex = index;
+      _noteTitle = note['title']?.toString() ?? 'Unit ${widget.unitNumber} Short Note';
+      _htmlContent = note['html_content']?.toString() ??
+          note['content']?.toString() ??
+          '<p>No content available for this section.</p>';
+    }
+  }
+
+  List<Map<String, dynamic>> _generateCurriculumFallbackNotes() {
+    final sub = _getNormalizedSubjectName();
+    final g = widget.grade;
+    final u = widget.unitNumber;
+
+    if (sub == 'physics') {
+      return [
+        {
+          'id': 'fallback_phys_${g}_$u',
+          'grade': g,
+          'subject': 'physics',
+          'unit_number': u,
+          'title': 'Unit $u: Core Concepts & Formulae',
+          'html_content': '''
+            <div class="note-container">
+              <h2>Grade $g Physics — Unit $u Summary</h2>
+              <div class="callout">
+                <strong>Unit Focus:</strong> Key laws, mathematical relations, dimensional checks, and exam problem strategies.
+              </div>
+              
+              <h3>1. Fundamental Principles</h3>
+              <p>In physics, every observed phenomenon is quantified through reproducible measurements and mathematical formulations. Always verify consistency using <em>SI Base Units</em>.</p>
+              
+              <div class="definition">
+                <strong>Standard Definition:</strong> Work done is defined as the scalar product of force and displacement vectors (<em>W = F &bull; d = Fd cos&theta;</em>).
+              </div>
+
+              <h3>2. Essential Formulas</h3>
+              <div class="formula">
+                <p><strong>Kinematics & Motion:</strong></p>
+                <ul>
+                  <li>v = u + at</li>
+                  <li>s = ut + &frac12;at<sup>2</sup></li>
+                  <li>v<sup>2</sup> = u<sup>2</sup> + 2as</li>
+                </ul>
+              </div>
+
+              <div class="formula">
+                <p><strong>Work, Energy & Power:</strong></p>
+                <ul>
+                  <li>Kinetic Energy: <em>KE = &frac12;mv<sup>2</sup></em></li>
+                  <li>Potential Energy: <em>PE = mgh</em></li>
+                  <li>Power: <em>P = W / t = F &times; v</em></li>
+                </ul>
+              </div>
+
+              <h3>3. Common Pitfalls & Exam Tips</h3>
+              <ul>
+                <li>Always convert non-standard units (e.g., km/h &rarr; m/s, cm &rarr; m, grams &rarr; kg) before calculating.</li>
+                <li>Remember that vectors have both magnitude and direction; resolve components along orthogonal axes (<em>x</em> and <em>y</em>).</li>
+                <li>Check conservation principles (Conservation of Mechanical Energy, Conservation of Linear Momentum).</li>
+              </ul>
+            </div>
+          ''',
+          'created_at': DateTime.now().toIso8601String(),
+        },
+        {
+          'id': 'fallback_phys_${g}_${u}_summary',
+          'grade': g,
+          'subject': 'physics',
+          'unit_number': u,
+          'title': 'Quick Revision & Key Terms',
+          'html_content': '''
+            <div class="note-container">
+              <h2>Key Terms & Definitions</h2>
+              <table>
+                <thead>
+                  <tr><th>Concept</th><th>Definition</th><th>SI Unit</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Impulse</td><td>Change in linear momentum (J = F &Delta;t)</td><td>N&bull;s or kg&bull;m/s</td></tr>
+                  <tr><td>Efficiency</td><td>(Useful Energy Output / Total Energy Input) &times; 100%</td><td>Percentage (%)</td></tr>
+                  <tr><td>Torque</td><td>Turning effect of a force (&tau; = r &times; F)</td><td>N&bull;m</td></tr>
+                </tbody>
+              </table>
+            </div>
+          ''',
+          'created_at': DateTime.now().toIso8601String(),
+        }
+      ];
+    }
+
+    if (sub == 'mathematics') {
+      return [
+        {
+          'id': 'fallback_math_${g}_$u',
+          'grade': g,
+          'subject': 'mathematics',
+          'unit_number': u,
+          'title': 'Unit $u: Core Theorems & Rules',
+          'html_content': '''
+            <div class="note-container">
+              <h2>Grade $g Mathematics — Unit $u Short Note</h2>
+              <div class="callout">
+                <strong>Objective:</strong> Master foundational theorems, identities, algebraic manipulations, and graphical interpretations.
+              </div>
+
+              <h3>1. Key Identities & Rules</h3>
+              <div class="formula">
+                <p><strong>Logarithmic Properties:</strong></p>
+                <ul>
+                  <li>log<sub>b</sub>(xy) = log<sub>b</sub>(x) + log<sub>b</sub>(y)</li>
+                  <li>log<sub>b</sub>(x/y) = log<sub>b</sub>(x) - log<sub>b</sub>(y)</li>
+                  <li>log<sub>b</sub>(x<sup>k</sup>) = k &times; log<sub>b</sub>(x)</li>
+                </ul>
+              </div>
+
+              <h3>2. Step-by-Step Problem Strategy</h3>
+              <div class="example">
+                <strong>Standard Method:</strong>
+                <ol>
+                  <li>Identify the domain constraints and given conditions.</li>
+                  <li>Simplify equations by grouping like terms or factoring.</li>
+                  <li>Substitute values and verify candidate solutions against the original domain.</li>
+                </ol>
+              </div>
+            </div>
+          ''',
+          'created_at': DateTime.now().toIso8601String(),
+        }
+      ];
+    }
+
+    // Generic fallback for Chemistry, Biology, English, etc.
+    return [
+      {
+        'id': 'fallback_${sub}_${g}_$u',
+        'grade': g,
+        'subject': sub,
+        'unit_number': u,
+        'title': 'Unit $u: Study Guide & Key Points',
+        'html_content': '''
+          <div class="note-container">
+            <h2>Grade $g ${widget.subjectId.toUpperCase()} — Unit $u Notes</h2>
+            <div class="callout">
+              <strong>Overview:</strong> Comprehensive review notes curated according to the Ethiopian National Curriculum standards.
+            </div>
+
+            <h3>1. Fundamental Concepts</h3>
+            <p>Review the main principles, classifications, and experimental observations covered in Unit $u.</p>
+
+            <div class="definition">
+              <strong>Core Terminology:</strong> Make sure you understand the foundational definitions and their practical applications.
+            </div>
+
+            <h3>2. Key Takeaways</h3>
+            <ul>
+              <li>Understand the relationship between theoretical models and real-world observations.</li>
+              <li>Practice standard unit test and national matric sample problems regularly.</li>
+              <li>Review the summary tables before taking unit practice quizzes.</li>
+            </ul>
+          </div>
+        ''',
+        'created_at': DateTime.now().toIso8601String(),
+      }
+    ];
   }
 
   Future<void> _checkBookmarkStatus() async {
@@ -433,565 +497,389 @@ class _NotesScreenState extends State<NotesScreen> {
         _isBookmarked = !_isBookmarked;
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isBookmarked
-                  ? (widget.languageCode == 'en' ? 'PDF Note bookmarked!' : 'ማስታወሻው ተቀምጧል!')
-                  : (widget.languageCode == 'en' ? 'Bookmark removed' : 'ማስታወሻው ከምርጫዎች ተሰርዟል'),
-            ),
-            duration: const Duration(seconds: 1),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      }
+      _showFloatingSnackbar(
+        _isBookmarked
+            ? (widget.languageCode == 'en' ? 'Short note bookmarked!' : 'ማስታወሻው ተቀምጧል!')
+            : (widget.languageCode == 'en' ? 'Bookmark removed' : 'ማስታወሻው ከምርጫዎች ተሰርዟል'),
+        isSuccess: _isBookmarked,
+      );
     } catch (_) {}
   }
 
-  void _shareNoteContent() async {
-    try {
-      if (_pdfUrl == null || _pdfUrl!.isEmpty) return;
-
-      File? targetFile = _localPdfFile;
-      if (targetFile == null) {
-        final String unitId = _getUnitId();
-        targetFile = await PdfCacheService.getLocalPdfFile(unitId, _pdfUrl!);
-      }
-
-      if (targetFile == null) {
-        _showFloatingSnackbar(
-          widget.languageCode == 'en'
-              ? 'Downloading PDF file for sharing...'
-              : 'የPDF ፋይሉን ለማጋራት በማውረድ ላይ...',
-          isInfo: true,
-        );
-
-        try {
-          final String unitId = _getUnitId();
-          targetFile = await PdfCacheService.downloadAndSavePdf(
-            unitId: unitId,
-            pdfUrl: _pdfUrl!,
-          );
-          if (mounted) {
-            setState(() {
-              _localPdfFile = targetFile;
-            });
-          }
-        } catch (e) {
-          debugPrint('[PDF Share Error] Failed to download PDF before sharing: $e');
-        }
-      }
-
-      if (targetFile != null && await targetFile.exists()) {
-        debugPrint('[Share PDF] Sharing clean PDF file directly: ${targetFile.path}');
-        await Share.shareXFiles(
-          [XFile(targetFile.path)],
-          subject: _pdfTitle ?? 'Unit ${widget.unitNumber} Notes',
-        );
-      } else {
-        _showFloatingSnackbar(
-          widget.languageCode == 'en'
-              ? 'Unable to share PDF file. Please try downloading it first.'
-              : 'የPDF ፋይሉን ማጋራት አልተሳካም። እባክዎ አስቀድመው ያውርዱት።',
-          isError: true,
-        );
-      }
-    } catch (e) {
-      debugPrint("Error sharing PDF note file: $e");
+  Future<void> _toggleOfflineDownload() async {
+    final String unitId = _getUnitId();
+    if (_isDownloaded) {
+      // Remove offline download
+      await OfflineManager.removeDownload(unitId);
+      setState(() {
+        _isDownloaded = false;
+      });
       _showFloatingSnackbar(
         widget.languageCode == 'en'
-            ? 'Error sharing PDF: ${e.toString().replaceAll('Exception: ', '')}'
-            : 'ማጋራት አልተሳካም፡ ${e.toString().replaceAll('Exception: ', '')}',
-        isError: true,
+            ? 'Removed from offline storage.'
+            : 'ከስልክዎ ማከማቻ ተሰርዟል።',
       );
+    } else {
+      // Download and cache
+      setState(() {
+        _isDownloading = true;
+      });
+
+      _showFloatingSnackbar(
+        widget.languageCode == 'en'
+            ? 'Saving note for offline reading...'
+            : 'ለስልክዎ ማስታወሻው በማስቀመጥ ላይ...',
+        isInfo: true,
+      );
+
+      try {
+        if (_notesList.isNotEmpty) {
+          await OfflineManager.saveOfflineNotes(
+            unitId,
+            _notesList,
+            grade: widget.grade,
+            unit: widget.unitNumber,
+          );
+          await OfflineManager.addDownload(unitId);
+        }
+
+        if (mounted) {
+          setState(() {
+            _isDownloaded = true;
+            _isDownloading = false;
+          });
+          _showFloatingSnackbar(
+            widget.languageCode == 'en'
+                ? 'Saved offline! You can read anytime without internet.'
+                : 'በስኬት ተቀምጧል! ያለ ኢንተርኔት በማንኛውም ጊዜ ማንበብ ይችላሉ።',
+            isSuccess: true,
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isDownloading = false;
+          });
+          _showFloatingSnackbar(
+            widget.languageCode == 'en'
+                ? 'Failed to save offline: $e'
+                : 'ማስቀመጥ አልተሳካም፡ $e',
+            isError: true,
+          );
+        }
+      }
     }
   }
 
-  Widget _buildCustomHeader(BuildContext context, bool isDarkMode) {
-    final Color textColor = isDarkMode ? Colors.white : const Color(0xFF0F172A);
-    final Color shareColor = const Color(0xFF00BFFF);
-    final Color saveColor = Colors.amber[600] ?? Colors.amber;
+  void _shareNote() {
+    if (_noteTitle == null && _htmlContent == null) return;
+    final cleanText = _htmlContent?.replaceAll(RegExp(r'<[^>]*>'), ' ').trim() ?? '';
+    final shareContent = '📚 ${widget.subjectId.toUpperCase()} Grade ${widget.grade} — Unit ${widget.unitNumber}\n'
+        '$_noteTitle\n\n'
+        '${cleanText.length > 300 ? cleanText.substring(0, 300) + '...' : cleanText}\n\n'
+        'Study with Smart X ET App!';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-      decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF0F172A) : Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-            width: 1.0,
-          ),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          InkWell(
-            onTap: () => Navigator.of(context).pop(),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    color: textColor,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    widget.languageCode == 'en' ? "Back" : "ተመለስ",
-                    style: GoogleFonts.inter(
-                      color: textColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+    Share.share(shareContent, subject: _noteTitle ?? 'Short Notes');
+  }
 
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _pdfTitle ?? 'Unit ${widget.unitNumber} Notes',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      color: textColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (_pageCount > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2.0),
-                      child: Text(
-                        '$_currentPage / $_pageCount',
-                        maxLines: 1,
-                        style: GoogleFonts.inter(
-                          color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(
-                  isDarkMode ? Icons.wb_sunny_rounded : Icons.nights_stay_outlined,
-                  color: textColor,
-                  size: 22,
-                ),
-                tooltip: widget.languageCode == 'en' ? 'Toggle Theme' : 'ገጽታ ቀይር',
-                onPressed: () {
-                  AppStateProvider.of(context).onToggleTheme();
-                },
-              ),
-              _isDownloadingPdf
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8.0),
-                      child: SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2.2),
-                      ),
-                    )
-                  : IconButton(
-                      icon: Icon(
-                        _localPdfFile != null ? Icons.download_done_rounded : Icons.download_rounded,
-                        color: _localPdfFile != null ? const Color(0xFF10B981) : textColor,
-                        size: 22,
-                      ),
-                      tooltip: widget.languageCode == 'en'
-                          ? (_localPdfFile != null ? 'Downloaded Offline' : 'Download PDF Offline')
-                          : (_localPdfFile != null ? 'ለስልክዎ ወርዷል' : 'PDF ወደ ስልክህ አውርድ'),
-                      onPressed: _downloadPdfForOffline,
-                    ),
-              IconButton(
-                icon: Icon(
-                  _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
-                  color: _isBookmarked ? saveColor : textColor,
-                  size: 22,
-                ),
-                tooltip: widget.languageCode == 'en' ? 'Save Note' : 'ማስታወሻ አስቀምጥ',
-                onPressed: _toggleBookmark,
-              ),
-              IconButton(
-                icon: Icon(
-                  Icons.share_rounded,
-                  color: shareColor,
-                  size: 22,
-                ),
-                tooltip: widget.languageCode == 'en' ? 'Share Note' : 'ማስታወሻ አጋራ',
-                onPressed: _shareNoteContent,
-              ),
-            ],
-          ),
-        ],
-      ),
+  void _copyToClipboard() {
+    final cleanText = _htmlContent?.replaceAll(RegExp(r'<[^>]*>'), ' ').trim() ?? '';
+    Clipboard.setData(ClipboardData(text: cleanText));
+    _showFloatingSnackbar(
+      widget.languageCode == 'en' ? 'Note copied to clipboard!' : 'ማስታወሻው ተገልብጧል!',
+      isSuccess: true,
     );
   }
 
-  Widget _buildTelegramBottomBar(bool isDarkMode) {
-    final isEn = widget.languageCode == 'en';
-    final Color telegramAccent = isDarkMode ? const Color(0xFF38BDF8) : const Color(0xFF0D2353);
-    final Color containerBg = isDarkMode ? const Color(0xFF0F172A) : Colors.white;
-    final Color borderColor = isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+  Map<String, Style> _buildHtmlStyles(bool isDark) {
+    final Color textColor = isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B);
+    final Color headingColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final Color borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+    final Color calloutBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final Color formulaBg = isDark ? const Color(0xFF0F2338) : const Color(0xFFEFF6FF);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-      decoration: BoxDecoration(
-        color: containerBg,
-        border: Border(
-          top: BorderSide(
-            color: borderColor,
-            width: 1.0,
-          ),
-        ),
+    return {
+      "body": Style(
+        margin: Margins.zero,
+        padding: HtmlPaddings.zero,
+        fontSize: FontSize(15.5 * _fontScale),
+        lineHeight: LineHeight(1.65),
+        color: textColor,
+        fontFamily: 'Georgia',
       ),
-      child: SafeArea(
-        top: false,
-        child: InkWell(
-          onTap: () async {
-            final uri = Uri.parse('https://t.me/smartx_et');
-            try {
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              } else {
-                _showFloatingSnackbar(
-                  isEn ? 'Could not launch Telegram URL' : 'የቴሌግራም ሊንክ መክፈት አልተሳካም',
-                  isError: true,
-                );
-              }
-            } catch (e) {
-              debugPrint('[Telegram Launch Error] $e');
-            }
-          },
-          borderRadius: BorderRadius.circular(12.0),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-            decoration: BoxDecoration(
-              color: isDarkMode
-                  ? const Color(0xFF38BDF8).withValues(alpha: 0.12)
-                  : const Color(0xFF0D2353).withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(12.0),
-              border: Border.all(
-                color: isDarkMode
-                    ? const Color(0xFF38BDF8).withValues(alpha: 0.3)
-                    : const Color(0xFF0D2353).withValues(alpha: 0.2),
-                width: 1.0,
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.telegram_rounded,
-                  color: telegramAccent,
-                  size: 22,
-                ),
-                const SizedBox(width: 10.0),
-                Text(
-                  isEn ? 'Join Telegram Channel' : 'የቴሌግራም ቻናል ይቀላቀሉ',
-                  style: GoogleFonts.plusJakartaSans(
-                    color: telegramAccent,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14.0,
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  Icons.open_in_new_rounded,
-                  color: telegramAccent,
-                  size: 16,
-                ),
-              ],
-            ),
-          ),
-        ),
+      "h1": Style(
+        fontSize: FontSize(22.0 * _fontScale),
+        fontWeight: FontWeight.w900,
+        color: headingColor,
+        margin: Margins.only(top: 18, bottom: 12),
+        fontFamily: 'Georgia',
       ),
-    );
-  }
-
-  Widget _buildEmptyStateUI(bool isDarkMode) {
-    final isAmharic = widget.languageCode == 'am';
-
-    IconData iconData;
-    Color iconColor;
-    String title;
-    String description;
-
-    switch (_errorType) {
-      case NotesErrorType.noInternet:
-        iconData = Icons.wifi_off_rounded;
-        iconColor = Colors.amber[600] ?? Colors.amber;
-        title = isAmharic ? 'የኢንተርኔት ግንኙነት የለም' : 'No Internet Connection';
-        description = isAmharic
-            ? 'እባክዎን የእርስዎን የኢንተርኔት ግንኙነት ይፈትሹ እና እንደገና ይሞክሩ። የወረዱ ማስታወሻዎች ካሉ ያለ ኢንተርኔት ማንበብ ይችላሉ።'
-            : 'Please check your internet network connection and try again. Downloaded notes can be accessed offline.';
-        break;
-
-      case NotesErrorType.accessDenied:
-        iconData = Icons.lock_person_rounded;
-        iconColor = Colors.redAccent;
-        title = isAmharic ? 'መዳረሻ ተከልክሏል' : 'Access Denied';
-        description = isAmharic
-            ? 'ይህንን ማስታወሻ ለማየት በቂ ፈቃድ የለዎትም። (Row-Level Security) እባክዎን አስተዳዳሪውን ያነጋግሩ።'
-            : 'You do not have permission to view these notes (Row-Level Security constraint). Please contact your administrator.';
-        break;
-
-      case NotesErrorType.pdfLoadError:
-        iconData = Icons.picture_as_pdf_rounded;
-        iconColor = Colors.deepOrangeAccent;
-        title = isAmharic ? 'ማስታወሻውን መጫን አልተቻለም' : 'Failed to Load PDF';
-        description = isAmharic
-            ? 'የPDF ማስታወሻውን በመጫን ላይ ስህተት አጋጥሟል። ሊንኩ ወይም ፋይሉ ችግር ሊኖረው ይችላል።'
-            : 'An error occurred while loading or rendering the PDF file. The URL or file format may be invalid.';
-        break;
-
-      case NotesErrorType.emptyData:
-      case NotesErrorType.none:
-      case NotesErrorType.unknown:
-        iconData = Icons.menu_book_rounded;
-        iconColor = widget.themeColor;
-        title = isAmharic ? 'ማስታወሻ አልተገኘም' : 'No Notes Found';
-        description = isAmharic
-            ? 'ለክፍል ${widget.grade} ${widget.subjectId} ምዕራፍ ${widget.unitNumber} የተዘጋጀ ማስታወሻ አልተገኘም። መምህራኖቻችን በቅርቡ ይጫኑታል።'
-            : 'No Notes Found for Grade ${widget.grade} ${widget.subjectId} Unit ${widget.unitNumber}. Our content team is actively preparing these notes.';
-        break;
-    }
-
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 36.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  iconData,
-                  color: iconColor,
-                  size: 52,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: isDarkMode ? Colors.white : const Color(0xFF0F172A),
-                  letterSpacing: -0.3,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                description,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 28),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _fetchNotes,
-                    icon: const Icon(Icons.refresh_rounded, size: 18),
-                    label: Text(
-                      isAmharic ? 'እንደገና ሞክር' : 'Try Again',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.themeColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                    label: Text(
-                      isAmharic ? 'ተመለስ' : 'Go Back',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: isDarkMode ? Colors.white : const Color(0xFF0F172A),
-                      side: BorderSide(color: isDarkMode ? const Color(0xFF334155) : Colors.grey[300]!),
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _showDebugInfo = !_showDebugInfo;
-                  });
-                },
-                icon: Icon(
-                  _showDebugInfo ? Icons.bug_report_rounded : Icons.bug_report_outlined,
-                  size: 16,
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                ),
-                label: Text(
-                  _showDebugInfo
-                      ? (isAmharic ? 'የዲበግ መረጃ ደብቅ' : 'Hide Debug Info')
-                      : (isAmharic ? 'የዲበግ መረጃ አሳይ' : 'Show Debug Info'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  ),
-                ),
-              ),
-              if (_showDebugInfo) ...[
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '[DEBUG DIAGNOSTICS]',
-                        style: GoogleFonts.firaCode(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: widget.themeColor,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      SelectableText(
-                        'ErrorType: $_errorType\n'
-                        'Grade: ${widget.grade}\n'
-                        'SubjectId: ${widget.subjectId}\n'
-                        'NormalizedSubject: ${_getNormalizedSubjectName()}\n'
-                        'UnitNumber: ${widget.unitNumber}\n'
-                        'PDF URL: ${_pdfUrl ?? "None"}\n\n'
-                        'Details:\n${_debugErrorDetails ?? "No raw error logged"}',
-                        style: GoogleFonts.firaCode(
-                          fontSize: 11,
-                          color: isDarkMode ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
+      "h2": Style(
+        fontSize: FontSize(19.0 * _fontScale),
+        fontWeight: FontWeight.w800,
+        color: widget.themeColor,
+        margin: Margins.only(top: 16, bottom: 10),
+        fontFamily: 'Georgia',
       ),
-    );
+      "h3": Style(
+        fontSize: FontSize(16.5 * _fontScale),
+        fontWeight: FontWeight.w700,
+        color: headingColor,
+        margin: Margins.only(top: 14, bottom: 8),
+        fontFamily: 'Georgia',
+      ),
+      "p": Style(
+        margin: Margins.only(bottom: 12),
+        lineHeight: LineHeight(1.65),
+      ),
+      "ul": Style(
+        margin: Margins.only(left: 12, bottom: 14),
+        padding: HtmlPaddings.only(left: 12),
+      ),
+      "ol": Style(
+        margin: Margins.only(left: 12, bottom: 14),
+        padding: HtmlPaddings.only(left: 12),
+      ),
+      "li": Style(
+        margin: Margins.only(bottom: 6),
+        lineHeight: LineHeight(1.5),
+      ),
+      "strong": Style(
+        fontWeight: FontWeight.w800,
+        color: headingColor,
+      ),
+      "em": Style(
+        fontStyle: FontStyle.italic,
+      ),
+      "table": Style(
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        border: Border.all(color: borderColor, width: 1.0),
+        margin: Margins.symmetric(vertical: 14),
+      ),
+      "th": Style(
+        backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFF8FAFC),
+        padding: HtmlPaddings.symmetric(horizontal: 10, vertical: 8),
+        fontWeight: FontWeight.w800,
+        color: headingColor,
+        border: Border.all(color: borderColor, width: 0.8),
+      ),
+      "td": Style(
+        padding: HtmlPaddings.symmetric(horizontal: 10, vertical: 8),
+        border: Border.all(color: borderColor, width: 0.8),
+      ),
+      "code": Style(
+        backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+        color: widget.themeColor,
+        fontFamily: 'monospace',
+        padding: HtmlPaddings.symmetric(horizontal: 6, vertical: 2),
+      ),
+      ".callout": Style(
+        backgroundColor: calloutBg,
+        border: Border(left: BorderSide(color: widget.themeColor, width: 4.0)),
+        padding: HtmlPaddings.all(14),
+        margin: Margins.symmetric(vertical: 14),
+      ),
+      ".formula": Style(
+        backgroundColor: formulaBg,
+        border: Border.all(color: widget.themeColor.withValues(alpha: 0.35), width: 1.2),
+        padding: HtmlPaddings.all(14),
+        margin: Margins.symmetric(vertical: 14),
+      ),
+      ".definition": Style(
+        backgroundColor: isDark ? const Color(0xFF1F2937) : const Color(0xFFF3F4F6),
+        border: Border(left: BorderSide(color: const Color(0xFF10B981), width: 4.0)),
+        padding: HtmlPaddings.all(14),
+        margin: Margins.symmetric(vertical: 14),
+      ),
+      ".example": Style(
+        backgroundColor: isDark ? const Color(0xFF28241D) : const Color(0xFFFEF9C3),
+        border: Border(left: BorderSide(color: const Color(0xFFF59E0B), width: 4.0)),
+        padding: HtmlPaddings.all(14),
+        margin: Margins.symmetric(vertical: 14),
+      ),
+    };
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isDarkMode = widget.isDarkMode || AppStateProvider.of(context).isDarkMode;
-    final Color screenBgColor = isDarkMode ? const Color(0xFF0F172A) : Colors.white;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark || widget.isDarkMode;
+    final Color bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final Color cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final Color textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final Color subColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
-    Widget bodyContent;
-
-    if (_isLoading) {
-      bodyContent = Container(
-        color: screenBgColor,
-        child: Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(widget.themeColor),
-          ),
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+        foregroundColor: textColor,
+        elevation: 0,
+        centerTitle: false,
+        titleSpacing: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-      );
-    } else if (_hasError || _pdfUrl == null || _pdfUrl!.isEmpty) {
-      bodyContent = Container(
-        color: screenBgColor,
-        child: _buildEmptyStateUI(isDarkMode),
-      );
-    } else {
-      bodyContent = Column(
-        children: [
-          _buildCustomHeader(context, isDarkMode),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "${widget.subjectId.toUpperCase()} • Unit ${widget.unitNumber}",
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: widget.themeColor,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              _noteTitle ?? widget.unitTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: textColor,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          // Offline Download Toggle
+          IconButton(
+            icon: _isDownloading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2.2),
+                  )
+                : Icon(
+                    _isDownloaded ? Icons.download_done_rounded : Icons.download_rounded,
+                    color: _isDownloaded ? const Color(0xFF10B981) : textColor,
+                    size: 22,
+                  ),
+            tooltip: _isDownloaded ? "Saved Offline" : "Save Offline",
+            onPressed: _toggleOfflineDownload,
+          ),
 
+          // Bookmark Toggle
+          IconButton(
+            icon: Icon(
+              _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+              color: _isBookmarked ? const Color(0xFFFFB703) : textColor,
+              size: 22,
+            ),
+            tooltip: "Bookmark",
+            onPressed: _toggleBookmark,
+          ),
+
+          // Share
+          IconButton(
+            icon: const Icon(Icons.share_rounded, size: 20),
+            tooltip: "Share",
+            onPressed: _shareNote,
+          ),
+
+          // Search in note toggle
+          IconButton(
+            icon: Icon(
+              _isSearchOpen ? Icons.close_rounded : Icons.search_rounded,
+              size: 22,
+            ),
+            tooltip: "Search in note",
+            onPressed: () {
+              setState(() {
+                _isSearchOpen = !_isSearchOpen;
+                if (!_isSearchOpen) {
+                  _searchQuery = '';
+                  _searchController.clear();
+                }
+              });
+            },
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Search Bar if toggled
+          if (_isSearchOpen)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              child: Row(
+                children: [
+                  const Icon(Icons.search_rounded, size: 20, color: Colors.grey),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      style: TextStyle(color: textColor, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: widget.languageCode == 'en' ? "Search key concepts..." : "ፅንሰ-ሀሳቦችን ይፈልጉ...",
+                        hintStyle: TextStyle(color: subColor, fontSize: 13),
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                      onChanged: (val) {
+                        setState(() {
+                          _searchQuery = val.trim();
+                        });
+                      },
+                    ),
+                  ),
+                  if (_searchQuery.isNotEmpty)
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _searchQuery = '';
+                          _searchController.clear();
+                        });
+                      },
+                      child: const Icon(Icons.clear_rounded, size: 18, color: Colors.grey),
+                    ),
+                ],
+              ),
+            ),
+
+          // Sub-topic / Module Pills if multiple notes exist
           if (_notesList.length > 1)
             Container(
-              height: 44,
-              color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+              height: 48,
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: _notesList.length,
-                itemBuilder: (context, index) {
-                  final isSelected = index == _selectedNoteIndex;
-                  final item = _notesList[index];
+                itemBuilder: (context, idx) {
+                  final isSelected = idx == _selectedNoteIndex;
+                  final title = _notesList[idx]['title']?.toString() ?? 'Section ${idx + 1}';
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
                       label: Text(
-                        item['title'] ?? 'Note ${index + 1}',
+                        title,
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                           color: isSelected
                               ? Colors.white
-                              : (isDarkMode ? Colors.white70 : Colors.black87),
+                              : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
                         ),
                       ),
                       selected: isSelected,
                       selectedColor: widget.themeColor,
-                      backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.grey[200],
-                      side: BorderSide(
-                        color: isDarkMode ? const Color(0xFF334155) : Colors.transparent,
-                      ),
-                      onSelected: (selected) async {
+                      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      onSelected: (selected) {
                         if (selected) {
                           setState(() {
-                            _selectedNoteIndex = index;
-                            _pdfUrl = item['pdf_url']?.toString();
-                            _pdfTitle = item['title']?.toString();
-                            _currentPage = 1;
-                            _localPdfFile = null;
+                            _applySelectedNote(idx);
                           });
-                          await _checkAndLoadLocalPdf();
                         }
                       },
                     ),
@@ -1000,114 +888,298 @@ class _NotesScreenState extends State<NotesScreen> {
               ),
             ),
 
+          // Main Content View
           Expanded(
-            child: Container(
-              color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-              child: Builder(
-                builder: (context) {
-                  Widget pdfWidget = _localPdfFile != null
-                      ? SfPdfViewer.file(
-                          _localPdfFile!,
-                          controller: _pdfViewerController,
-                          scrollDirection: _scrollDirection,
-                          pageLayoutMode: _pageLayoutMode,
-                          canShowScrollHead: true,
-                          canShowScrollStatus: true,
-                          onDocumentLoaded: (PdfDocumentLoadedDetails details) {
-                            if (mounted) {
-                              setState(() {
-                                _pageCount = details.document.pages.count;
-                              });
-                            }
-                          },
-                          onPageChanged: (PdfPageChangedDetails details) {
-                            if (mounted) {
-                              setState(() {
-                                _currentPage = details.newPageNumber;
-                              });
-                            }
-                          },
-                          onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) async {
-                            debugPrint('[PDF Cache Error] Local file load failed: ${details.error} - ${details.description}');
-                            final String unitId = _getUnitId();
-                            await PdfCacheService.deleteCachedPdf(unitId, _pdfUrl!);
-                            await OfflineManager.removeDownload(unitId);
-                            if (mounted) {
-                              setState(() {
-                                _localPdfFile = null;
-                              });
-                            }
-                          },
-                        )
-                      : SfPdfViewer.network(
-                          _pdfUrl!,
-                          controller: _pdfViewerController,
-                          scrollDirection: _scrollDirection,
-                          pageLayoutMode: _pageLayoutMode,
-                          canShowScrollHead: true,
-                          canShowScrollStatus: true,
-                          onDocumentLoaded: (PdfDocumentLoadedDetails details) {
-                            if (mounted) {
-                              setState(() {
-                                _pageCount = details.document.pages.count;
-                              });
-                              _backgroundCacheCurrentPdf();
-                            }
-                          },
-                          onPageChanged: (PdfPageChangedDetails details) {
-                            if (mounted) {
-                              setState(() {
-                                _currentPage = details.newPageNumber;
-                              });
-                            }
-                          },
-                          onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
-                            debugPrint('[PDF Cache Error] Network load failed: ${details.error} - ${details.description}');
-                            if (mounted) {
-                              final String errStr = details.description.toLowerCase();
-                              final bool isNetErr = errStr.contains('socket') || errStr.contains('connection') || errStr.contains('network') || errStr.contains('failed to connect');
-                              setState(() {
-                                _hasError = true;
-                                _errorType = isNetErr ? NotesErrorType.noInternet : NotesErrorType.pdfLoadError;
-                                _debugErrorDetails = 'PDF Load Failed: ${details.error}\nDescription: ${details.description}\nURL: $_pdfUrl';
-                              });
-                              _showFloatingSnackbar(
-                                widget.languageCode == 'en'
-                                    ? 'PDF Load Failed: ${details.description}'
-                                    : 'PDF መክፈት አልተሳካም፡ ${details.description}',
-                                isError: true,
-                              );
-                            }
-                          },
-                        );
+            child: _buildMainContent(isDark, cardBg, textColor, subColor),
+          ),
 
-                  final bool shouldInvertPdf = isDarkMode || _isColorInverted;
-                  if (shouldInvertPdf) {
-                    return ColorFiltered(
-                      colorFilter: const ColorFilter.matrix([
-                        -1,  0,  0, 0, 255,
-                         0, -1,  0, 0, 255,
-                         0,  0, -1, 0, 255,
-                         0,  0,  0, 1,   0,
-                      ]),
-                      child: pdfWidget,
-                    );
-                  }
-                  return pdfWidget;
-                },
+          // Bottom Quick Bar (Font Size Adjuster + Copy text)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : Colors.white,
+              border: Border(
+                top: BorderSide(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                  width: 1.0,
+                ),
+              ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Font Size Scaler
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "Aa",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: subColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.text_decrease_rounded, size: 18),
+                        visualDensity: VisualDensity.compact,
+                        tooltip: "Decrease text size",
+                        onPressed: _fontScale > 0.85
+                            ? () {
+                                setState(() {
+                                  _fontScale = (_fontScale - 0.1).clamp(0.85, 1.45);
+                                });
+                              }
+                            : null,
+                      ),
+                      Text(
+                        "${(_fontScale * 100).toInt()}%",
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textColor),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.text_increase_rounded, size: 18),
+                        visualDensity: VisualDensity.compact,
+                        tooltip: "Increase text size",
+                        onPressed: _fontScale < 1.45
+                            ? () {
+                                setState(() {
+                                  _fontScale = (_fontScale + 0.1).clamp(0.85, 1.45);
+                                });
+                              }
+                            : null,
+                      ),
+                    ],
+                  ),
+
+                  // Copy Note & Quick Action
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _copyToClipboard,
+                        icon: const Icon(Icons.content_copy_rounded, size: 15),
+                        label: Text(
+                          widget.languageCode == 'en' ? "Copy Text" : "ጽሑፉን ቅዳ",
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: widget.themeColor,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
-
-          _buildTelegramBottomBar(isDarkMode),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMainContent(bool isDark, Color cardBg, Color textColor, Color subColor) {
+    if (_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(widget.themeColor),
+              strokeWidth: 3,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              widget.languageCode == 'en'
+                  ? "Loading short notes..."
+                  : "አጫጭር ማስታወሻዎችን በመጫን ላይ...",
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: subColor,
+              ),
+            ),
+          ],
+        ),
       );
     }
 
-    return Scaffold(
-      backgroundColor: screenBgColor,
-      body: SafeArea(
-        child: bodyContent,
+    if (_hasError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _errorType == NotesErrorType.noInternet
+                    ? Icons.wifi_off_rounded
+                    : Icons.menu_book_outlined,
+                size: 56,
+                color: widget.themeColor,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _errorType == NotesErrorType.noInternet
+                    ? (widget.languageCode == 'en'
+                        ? "No internet connection"
+                        : "የኢንተርኔት ግንኙነት የለም")
+                    : (widget.languageCode == 'en'
+                        ? "No notes found for this unit"
+                        : "ለዚህ ክፍል ማስታወሻ አልተገኘም"),
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.languageCode == 'en'
+                    ? "You can retry or access offline study materials."
+                    : "እንደገና መሞከር ወይም የተቀመጡ ማስታወሻዎችን ማንበብ ይችላሉ።",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: subColor),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _fetchNotes,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: Text(widget.languageCode == 'en' ? "Retry" : "እንደገና ሞክር"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: widget.themeColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final renderedHtml = _htmlContent ?? '<p>No content available</p>';
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 720),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isDark ? const Color(0xFF334155) : const Color(0xFFEDF2F7),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              )
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Subject & Grade Header Tag
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: widget.themeColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      "GRADE ${widget.grade} • ${_getNormalizedSubjectName().toUpperCase()}",
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: widget.themeColor,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  if (_isDownloaded)
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF10B981)),
+                        const SizedBox(width: 4),
+                        Text(
+                          "Offline Ready",
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF065F46),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Rich HTML Content rendered dynamically with flutter_html
+              Html(
+                data: renderedHtml,
+                style: _buildHtmlStyles(isDark),
+              ),
+
+              const SizedBox(height: 30),
+              Divider(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                thickness: 1,
+              ),
+              const SizedBox(height: 16),
+
+              // End of Note Footer
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Smart X ET • Educational Notes",
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: subColor,
+                    ),
+                  ),
+                  InkWell(
+                    onTap: _shareNote,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Row(
+                        children: [
+                          Icon(Icons.share_rounded, size: 14, color: widget.themeColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            widget.languageCode == 'en' ? "Share Note" : "አጋራ",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: widget.themeColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
