@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../services/ad_helper.dart';
 import '../services/offline_manager.dart';
 import '../services/quiz_service.dart';

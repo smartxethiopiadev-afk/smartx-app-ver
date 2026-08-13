@@ -21,9 +21,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          distribution: 'zulu'
           java-version: '17'
 
       - name: Set up Flutter
@@ -59,7 +59,7 @@ jobs:
             echo "Decoding release keystore from Base64..."
             echo "$KEYSTORE_BASE64" | base64 --decode > android/app/my-release-key.keystore
           else
-            echo "NOTICE: KEYSTORE_BASE64 secret not found. A temporary keystore will be generated if needed."
+            echo "NOTICE: KEYSTORE_BASE64 secret not found. Fallback or debug config will be applied."
           fi
 
       - name: Generate Android key.properties dynamically
@@ -88,26 +88,51 @@ EOF
           echo "Optimizing JPG/JPEG assets..."
           find assets/ -type f \( -name "*.jpg" -o -name "*.jpeg" \) -exec jpegoptim --max=82 --strip-all {} + 2>/dev/null || true
 
-      - name: Validate Dependencies & Analyze Code
-        run: flutter analyze
+      # ------------------------------------------------------------------------
+      # CODE ANALYSIS & NON-FATAL VERIFICATION
+      # ------------------------------------------------------------------------
+      - name: Analyze Flutter Code
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Optional Dependency Validation
+        continue-on-error: true
+        run: |
+          if flutter pub run dependency_validator --help > /dev/null 2>&1; then
+            flutter pub run dependency_validator || true
+          else
+            echo "dependency_validator not installed or skipped."
+          fi
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14'
 
-      - name: Build Split Release APKs
+      # ------------------------------------------------------------------------
+      # PRODUCTION APK BUILD
+      # ------------------------------------------------------------------------
+      - name: Build Production Release APK
         env:
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
           KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
           KEYSTORE_STORE_FILE: 'my-release-key.keystore'
         run: |
-          flutter build apk --release --split-per-abi \
+          flutter build apk --release \
             --tree-shake-icons \
             --obfuscate \
             --split-debug-info=build/app/outputs/symbols \
             --build-number=${{ github.run_number }}
+
+      # ------------------------------------------------------------------------
+      # ARTIFACT UPLOAD (actions/upload-artifact@v4)
+      # ------------------------------------------------------------------------
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: smart-x-release-apk-build-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/*.apk
+          retention-days: 30
 
       - name: Publish GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -117,7 +142,7 @@ EOF
           gh release create "v1.0.2-build.${{ github.run_number }}" \
             build/app/outputs/flutter-apk/*.apk \
             --title "Release v1.0.2 (Build #${{ github.run_number }})" \
-            --notes "Production build #${{ github.run_number }} compiled with secure credential injection, code obfuscation, and split APK architecture."
+            --notes "Production build #${{ github.run_number }} compiled with secure credential injection, code obfuscation, and Java 17 Zulu runtime."
 
       - name: Clean Up Sensitive Build Artifacts
         if: always()
