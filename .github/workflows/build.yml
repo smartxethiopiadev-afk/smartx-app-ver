@@ -61,7 +61,7 @@ jobs:
           else
             echo "NOTICE: KEYSTORE_BASE64 secret not found. Fallback or debug config will be applied."
           fi
-
+ 
       - name: Generate Android key.properties dynamically
         env:
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
@@ -69,17 +69,15 @@ jobs:
           KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
         run: |
           if [ -n "$KEYSTORE_STORE_PASSWORD" ] && [ -n "$KEYSTORE_ALIAS" ]; then
-            echo "Generating android/key.properties dynamically from secrets..."
-            cat <<EOF > android/key.properties
-storePassword=${KEYSTORE_STORE_PASSWORD}
-keyPassword=${KEYSTORE_KEY_PASSWORD:-$KEYSTORE_STORE_PASSWORD}
-keyAlias=${KEYSTORE_ALIAS}
-storeFile=my-release-key.keystore
-EOF
+            echo "Generating android/key.properties..."
+            echo "storePassword=$KEYSTORE_STORE_PASSWORD" > android/key.properties
+            echo "keyPassword=$KEYSTORE_KEY_PASSWORD" >> android/key.properties
+            echo "keyAlias=$KEYSTORE_ALIAS" >> android/key.properties
+            echo "storeFile=my-release-key.keystore" >> android/key.properties
           else
-            echo "NOTICE: Keystore password/alias secrets not set; build will use fallback configuration."
+            echo "NOTICE: Secrets not set."
           fi
-
+          
       - name: Optimize PNG & JPG Assets
         run: |
           sudo apt-get update && sudo apt-get install -y optipng jpegoptim
