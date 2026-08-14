@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
 
     steps:
       - name: Checkout Code
@@ -34,6 +35,40 @@ jobs:
 
       - name: Get Dependencies
         run: flutter pub get
+
+      # ------------------------------------------------------------------------
+      # CODE ANALYSIS, LINT & UNUSED CODE CHECKS
+      # ------------------------------------------------------------------------
+      - name: Strict Unused Code & Lint Check (dart analyze)
+        run: dart analyze --fatal-infos
+
+      - name: Detect Unreferenced & Unused Assets in assets/
+        run: |
+          echo "Scanning assets/ directory for unreferenced files..."
+          UNREFERENCED_FOUND=0
+          if [ -d "assets" ]; then
+            for asset in $(find assets -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.svg" -o -name "*.webp" -o -name "*.json" \)); do
+              filename=$(basename "$asset")
+              # Check if the filename or path is referenced across the lib/ source code
+              if ! grep -rq "$filename" lib/ 2>/dev/null; then
+                echo "::warning file=$asset::Asset file '$asset' appears unreferenced in lib/ codebase."
+                UNREFERENCED_FOUND=$((UNREFERENCED_FOUND + 1))
+              fi
+            done
+            echo "Asset scan complete. Unreferenced assets detected: $UNREFERENCED_FOUND"
+          else
+            echo "No assets directory found to scan."
+          fi
+
+      - name: Check Broken URLs and Dead Links (lychee)
+        uses: lycheeverse/lychee-action@v2
+        continue-on-error: true
+        with:
+          args: --exclude-all-private --exclude-mail --timeout 15 --max-concurrency 8 'lib/**/*.dart' 'README.md'
+          fail: false
+
+      - name: Run Flutter Tests
+        run: flutter test
 
       # ------------------------------------------------------------------------
       # SECURITY & SECRET RECONSTRUCTION STEP
@@ -78,6 +113,9 @@ jobs:
             echo "NOTICE: Keystore password/alias secrets not set; build will use fallback configuration."
           fi
 
+      # ------------------------------------------------------------------------
+      # ASSET OPTIMIZATION
+      # ------------------------------------------------------------------------
       - name: Optimize PNG & JPG Assets
         run: |
           sudo apt-get update && sudo apt-get install -y optipng jpegoptim
@@ -86,30 +124,15 @@ jobs:
           echo "Optimizing JPG/JPEG assets..."
           find assets/ -type f \( -name "*.jpg" -o -name "*.jpeg" \) -exec jpegoptim --max=82 --strip-all {} + 2>/dev/null || true
 
-      # ------------------------------------------------------------------------
-      # CODE ANALYSIS & NON-FATAL VERIFICATION
-      # ------------------------------------------------------------------------
-      - name: Analyze Flutter Code
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
-
-      - name: Optional Dependency Validation
-        continue-on-error: true
-        run: |
-          if flutter pub run dependency_validator --help > /dev/null 2>&1; then
-            flutter pub run dependency_validator || true
-          else
-            echo "dependency_validator not installed or skipped."
-          fi
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14'
 
       # ------------------------------------------------------------------------
-      # PRODUCTION APK BUILD
+      # PRODUCTION APK BUILD (Split per ABI: arm64-v8a, armeabi-v7a, x86_64)
       # ------------------------------------------------------------------------
-      - name: Build Production Release APK
+      - name: Build Production Split Release APKs
         env:
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
@@ -117,21 +140,25 @@ jobs:
           KEYSTORE_STORE_FILE: 'my-release-key.keystore'
         run: |
           flutter build apk --release \
+            --split-per-abi \
             --tree-shake-icons \
             --obfuscate \
             --split-debug-info=build/app/outputs/symbols \
             --build-number=${{ github.run_number }}
 
       # ------------------------------------------------------------------------
-      # ARTIFACT UPLOAD (actions/upload-artifact@v4)
+      # ARTIFACT UPLOAD (actions/upload-artifact@v4 - Captures all 3 APKs)
       # ------------------------------------------------------------------------
-      - name: Upload Release APK Artifact
+      - name: Upload Release APK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: smart-x-release-apk-build-${{ github.run_number }}
+          name: smart-x-release-split-apks-build-${{ github.run_number }}
           path: build/app/outputs/flutter-apk/*.apk
           retention-days: 30
 
+      # ------------------------------------------------------------------------
+      # GITHUB RELEASE CREATION
+      # ------------------------------------------------------------------------
       - name: Publish GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
@@ -140,8 +167,11 @@ jobs:
           gh release create "v1.0.2-build.${{ github.run_number }}" \
             build/app/outputs/flutter-apk/*.apk \
             --title "Release v1.0.2 (Build #${{ github.run_number }})" \
-            --notes "Production build #${{ github.run_number }} compiled with secure credential injection, code obfuscation, and Java 17 Zulu runtime."
+            --notes "Production build #${{ github.run_number }} compiled with ABI split architecture (arm64-v8a, armeabi-v7a, x86_64), secure credential injection, asset optimization, and quality verification."
 
+      # ------------------------------------------------------------------------
+      # CLEANUP
+      # ------------------------------------------------------------------------
       - name: Clean Up Sensitive Build Artifacts
         if: always()
         run: |
