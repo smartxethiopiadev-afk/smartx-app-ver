@@ -4,7 +4,6 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../models/question_model.dart';
 import '../services/quiz_service.dart';
 import '../services/offline_manager.dart';
@@ -757,70 +756,6 @@ class _QuizScreenState extends State<QuizScreen> {
     );
   }
 
-  Future<void> _checkNotificationPermissionOnFinish(VoidCallback onDone) async {
-    final status = await Permission.notification.status;
-    if (!status.isGranted) {
-      if (!mounted) {
-        onDone();
-        return;
-      }
-      final isLight = Theme.of(context).brightness == Brightness.light;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext dialogContext) {
-          return AlertDialog(
-            backgroundColor: isLight ? Colors.white : const Color(0xFF1E293B),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Text(
-              " Enable Notifications / ማሳወቂያዎችን ያግብሩ",
-              style: TextStyle(
-                color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 17,
-              ),
-            ),
-            content: Text(
-              "Get exam tips, unit updates, and study reminders / የፈተና ምክሮችን፣ የክፍል አፕዴት እና የማጠናከሪያ ማሳሰቢያዎችን ለማግኘት ማሳወቂያዎችን ይፍቀዱ።",
-              style: TextStyle(
-                color: isLight ? const Color(0xFF334155) : const Color(0xFF94A3B8),
-                fontSize: 13.5,
-                height: 1.4,
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-                  onDone();
-                },
-                child: const Text("Cancel / ሰርዝ", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00BFFF),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () async {
-                  Navigator.of(dialogContext).pop();
-                  final reqStatus = await Permission.notification.request();
-                  if (reqStatus.isPermanentlyDenied) {
-                    await openAppSettings();
-                  }
-                  onDone();
-                },
-                child: const Text("Allow / አግብር", style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
-          );
-        },
-      );
-    } else {
-      onDone();
-    }
-  }
-
   Future<void> _showResults() async {
     _quizTimer?.cancel();
     if (_questions.isEmpty) return;
@@ -963,17 +898,15 @@ class _QuizScreenState extends State<QuizScreen> {
                   icon: Icon(Icons.close_rounded, color: isLight ? Colors.black54 : Colors.white70),
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    _checkNotificationPermissionOnFinish(() {
-                      if (widget.mode == QuizMode.exam) {
-                        setState(() {
-                          _showAnswersAndExplanations = true;
-                          _currentIndex = 0; // Return to first question for review
-                        });
-                        _scrollToActiveQuestion();
-                      } else {
-                        Navigator.of(context).pop();
-                      }
-                    });
+                    if (widget.mode == QuizMode.exam) {
+                      setState(() {
+                        _showAnswersAndExplanations = true;
+                        _currentIndex = 0; // Return to first question for review
+                      });
+                      _scrollToActiveQuestion();
+                    } else {
+                      Navigator.of(context).pop();
+                    }
                   },
                 ),
               ),
