@@ -343,7 +343,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                   ),
                                 ),
                                 Text(
-                                  ' ET',
+                                  ' Ethiopian',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 34,
                                     fontWeight: FontWeight.w700,

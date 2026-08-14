@@ -114,7 +114,7 @@ jobs:
           fi
 
       # ------------------------------------------------------------------------
-      # ASSET OPTIMIZATION
+      # ASSET OPTIMIZATION & LAUNCHER ICONS GENERATION
       # ------------------------------------------------------------------------
       - name: Optimize PNG & JPG Assets
         run: |
@@ -123,6 +123,9 @@ jobs:
           find assets/ -type f -name "*.png" -exec optipng -o2 -strip all {} + 2>/dev/null || true
           echo "Optimizing JPG/JPEG assets..."
           find assets/ -type f \( -name "*.jpg" -o -name "*.jpeg" \) -exec jpegoptim --max=82 --strip-all {} + 2>/dev/null || true
+
+      - name: Generate App Launcher Icons
+        run: dart run flutter_launcher_icons
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4

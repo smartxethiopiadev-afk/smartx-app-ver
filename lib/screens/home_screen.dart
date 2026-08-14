@@ -94,8 +94,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Dictionary for dynamic translation matching 'EN/አማርኛ'
   final Map<String, Map<String, String>> _localizedValues = {
     'en': {
-      'title': 'Smart X ET',
-      'tutorial_desc': 'Watch tutorial: Getting started with the Smart X',
+      'title': 'Smart X Ethiopian',
+      'tutorial_desc': 'Watch tutorial: Getting started with the Smart X Ethiopian',
       'explore_title': 'Explore Your Learning Path',
       'explore_sub': 'Select your grade to access courses and resources.',
       'g9_title': 'Grade 9',
@@ -126,8 +126,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'pdf_page_label': 'Page',
     },
     'am': {
-      'title': 'ስማርት ኤክስ ኢቲ',
-      'tutorial_desc': 'የማጠናከሪያ ቪዲዮ: በስማርት ኤክስ ኢቲ መተግበሪያ እንዴት እንደሚጀመር።',
+      'title': 'ስማርት ኤክስ ኢትዮጵያ',
+      'tutorial_desc': 'የማጠናከሪያ ቪዲዮ: በስማርት ኤክስ ኢትዮጵያ መተግበሪያ እንዴት እንደሚጀመር።',
       'explore_title': 'የመማር መንገድዎን ያስሱ',
       'explore_sub': 'ኮርሶችን እና ሀብቶችን ለማግኘት ክፍልዎን ይምረጡ።',
       'g9_title': 'ክፍል 9',

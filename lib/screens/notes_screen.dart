@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/offline_manager.dart';
+import '../main.dart';
 
 enum NotesErrorType {
   none,
@@ -23,6 +24,7 @@ class NotesScreen extends StatefulWidget {
   final Color themeColor;
   final bool isDarkMode;
   final String languageCode;
+  final VoidCallback? onToggleTheme;
 
   const NotesScreen({
     super.key,
@@ -33,6 +35,7 @@ class NotesScreen extends StatefulWidget {
     required this.themeColor,
     required this.isDarkMode,
     required this.languageCode,
+    this.onToggleTheme,
   });
 
   @override
@@ -45,22 +48,25 @@ class _NotesScreenState extends State<NotesScreen> {
   bool _hasError = false;
   bool _isDownloaded = false;
   bool _isDownloading = false;
+  late bool _isDarkMode;
 
   NotesErrorType _errorType = NotesErrorType.none;
 
   List<Map<String, dynamic>> _notesList = [];
-  int _selectedNoteIndex = 0;
-  String? _noteTitle;
-  String? _htmlContent;
+  int _currentPageIndex = 0;
+  late PageController _pageController;
 
-  double _fontScale = 1.0; // Scaler from 0.85 to 1.45
   bool _isSearchOpen = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  static const String _telegramChannelUrl = 'https://t.me/smart_x_academy';
+
   @override
   void initState() {
     super.initState();
+    _isDarkMode = widget.isDarkMode;
+    _pageController = PageController(initialPage: 0);
     _checkBookmarkStatus();
     _checkOfflineStatus();
     _fetchNotes();
@@ -68,6 +74,7 @@ class _NotesScreenState extends State<NotesScreen> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -120,7 +127,7 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 
   String _getUnitId() {
-    String sub = (widget.subjectId).toLowerCase();
+    String sub = widget.subjectId.toLowerCase();
     String prefix = 'phys_u';
     if (sub.contains('math')) {
       prefix = 'math_u';
@@ -202,7 +209,7 @@ class _NotesScreenState extends State<NotesScreen> {
             fetchedNotes = List<Map<String, dynamic>>.from(shortNotesResponse);
           }
         } catch (e) {
-          debugPrint('[Short Notes] Supabase short_notes query info: $e');
+          debugPrint('[Short Notes] Supabase short_notes query notice: $e');
         }
 
         // 2. Built-in High-Quality Curriculum Seed Fallback if server table not yet seeded
@@ -213,13 +220,12 @@ class _NotesScreenState extends State<NotesScreen> {
 
       if (fetchedNotes.isNotEmpty) {
         _notesList = fetchedNotes;
-        _selectedNoteIndex = 0;
-        _applySelectedNote(0);
+        _currentPageIndex = 0;
       }
 
       setState(() {
         _isLoading = false;
-        if (_notesList.isEmpty || _htmlContent == null || _htmlContent!.isEmpty) {
+        if (_notesList.isEmpty) {
           _hasError = true;
           _errorType = NotesErrorType.emptyData;
         } else {
@@ -232,8 +238,7 @@ class _NotesScreenState extends State<NotesScreen> {
       setState(() {
         _notesList = _generateCurriculumFallbackNotes();
         if (_notesList.isNotEmpty) {
-          _selectedNoteIndex = 0;
-          _applySelectedNote(0);
+          _currentPageIndex = 0;
           _hasError = false;
           _isLoading = false;
         } else {
@@ -248,8 +253,7 @@ class _NotesScreenState extends State<NotesScreen> {
       setState(() {
         if (fallback.isNotEmpty) {
           _notesList = fallback;
-          _selectedNoteIndex = 0;
-          _applySelectedNote(0);
+          _currentPageIndex = 0;
           _hasError = false;
           _isLoading = false;
         } else {
@@ -259,17 +263,6 @@ class _NotesScreenState extends State<NotesScreen> {
           _errorType = NotesErrorType.unknown;
         }
       });
-    }
-  }
-
-  void _applySelectedNote(int index) {
-    if (index >= 0 && index < _notesList.length) {
-      final note = _notesList[index];
-      _selectedNoteIndex = index;
-      _noteTitle = note['title']?.toString() ?? 'Unit ${widget.unitNumber} Short Note';
-      _htmlContent = note['html_content']?.toString() ??
-          note['content']?.toString() ??
-          '<p>No content available for this section.</p>';
     }
   }
 
@@ -290,7 +283,7 @@ class _NotesScreenState extends State<NotesScreen> {
             <div class="note-container">
               <h2>Grade $g Physics — Unit $u Summary</h2>
               <div class="callout">
-                <strong>Unit Focus:</strong> Key laws, mathematical relations, dimensional checks, and exam problem strategies.
+                <strong>Unit Focus:</strong> Key physical laws, SI units, vector operations, and exam preparation strategies.
               </div>
               
               <h3>1. Fundamental Principles</h3>
@@ -338,6 +331,9 @@ class _NotesScreenState extends State<NotesScreen> {
           'html_content': '''
             <div class="note-container">
               <h2>Key Terms & Definitions</h2>
+              <div class="callout">
+                <strong>Summary Table:</strong> High-frequency matric examination definitions and SI units.
+              </div>
               <table>
                 <thead>
                   <tr><th>Concept</th><th>Definition</th><th>SI Unit</th></tr>
@@ -384,7 +380,7 @@ class _NotesScreenState extends State<NotesScreen> {
               <div class="example">
                 <strong>Standard Method:</strong>
                 <ol>
-                  <li>Identify the domain constraints and given conditions.</li>
+                  <li>Identify domain constraints and given conditions.</li>
                   <li>Simplify equations by grouping like terms or factoring.</li>
                   <li>Substitute values and verify candidate solutions against the original domain.</li>
                 </ol>
@@ -408,11 +404,11 @@ class _NotesScreenState extends State<NotesScreen> {
           <div class="note-container">
             <h2>Grade $g ${widget.subjectId.toUpperCase()} — Unit $u Notes</h2>
             <div class="callout">
-              <strong>Overview:</strong> Comprehensive review notes curated according to the Ethiopian National Curriculum standards.
+              <strong>Overview:</strong> Comprehensive review notes curated according to Ethiopian National Curriculum standards.
             </div>
 
             <h3>1. Fundamental Concepts</h3>
-            <p>Review the main principles, classifications, and experimental observations covered in Unit $u.</p>
+            <p>Review the main principles, classifications, and core observations covered in Unit $u.</p>
 
             <div class="definition">
               <strong>Core Terminology:</strong> Make sure you understand the foundational definitions and their practical applications.
@@ -420,8 +416,8 @@ class _NotesScreenState extends State<NotesScreen> {
 
             <h3>2. Key Takeaways</h3>
             <ul>
-              <li>Understand the relationship between theoretical models and real-world observations.</li>
-              <li>Practice standard unit test and national matric sample problems regularly.</li>
+              <li>Understand the relationship between theoretical models and real-world applications.</li>
+              <li>Practice standard unit test and national examination sample problems regularly.</li>
               <li>Review the summary tables before taking unit practice quizzes.</li>
             </ul>
           </div>
@@ -534,23 +530,53 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 
   void _shareNote() {
-    if (_noteTitle == null && _htmlContent == null) return;
-    final cleanText = _htmlContent?.replaceAll(RegExp(r'<[^>]*>'), ' ').trim() ?? '';
+    if (_notesList.isEmpty) return;
+    final currentNote = _notesList[_currentPageIndex];
+    final title = currentNote['title']?.toString() ?? widget.unitTitle;
+    final content = currentNote['html_content']?.toString() ?? '';
+    final cleanText = content.replaceAll(RegExp(r'<[^>]*>'), ' ').trim();
     final shareContent = '📚 ${widget.subjectId.toUpperCase()} Grade ${widget.grade} — Unit ${widget.unitNumber}\n'
-        '$_noteTitle\n\n'
+        '$title\n\n'
         '${cleanText.length > 300 ? cleanText.substring(0, 300) + '...' : cleanText}\n\n'
-        'Study with Smart X ET App!';
+        'Study with Smart X Ethiopian App!\n'
+        'Telegram: $_telegramChannelUrl';
 
-    Share.share(shareContent, subject: _noteTitle ?? 'Short Notes');
+    Share.share(shareContent, subject: title);
   }
 
-  void _copyToClipboard() {
-    final cleanText = _htmlContent?.replaceAll(RegExp(r'<[^>]*>'), ' ').trim() ?? '';
-    Clipboard.setData(ClipboardData(text: cleanText));
-    _showFloatingSnackbar(
-      widget.languageCode == 'en' ? 'Note copied to clipboard!' : 'ማስታወሻው ተገልብጧል!',
-      isSuccess: true,
-    );
+  void _toggleThemeMode() {
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+    });
+
+    if (widget.onToggleTheme != null) {
+      widget.onToggleTheme!();
+    } else {
+      try {
+        AppStateProvider.of(context).onToggleTheme();
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _openTelegramChannel() async {
+    final Uri telegramUri = Uri.parse(_telegramChannelUrl);
+    try {
+      final bool launched = await launchUrl(
+        telegramUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        await launchUrl(telegramUri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      debugPrint('Telegram launch note: $e');
+      _showFloatingSnackbar(
+        widget.languageCode == 'en'
+            ? 'Opening Telegram: @smart_x_academy'
+            : 'ቴሌግራም በመክፈት ላይ: @smart_x_academy',
+        isInfo: true,
+      );
+    }
   }
 
   Map<String, Style> _buildHtmlStyles(bool isDark) {
@@ -564,27 +590,27 @@ class _NotesScreenState extends State<NotesScreen> {
       "body": Style(
         margin: Margins.zero,
         padding: HtmlPaddings.zero,
-        fontSize: FontSize(15.5 * _fontScale),
+        fontSize: FontSize(15.5),
         lineHeight: LineHeight(1.65),
         color: textColor,
         fontFamily: 'Georgia',
       ),
       "h1": Style(
-        fontSize: FontSize(22.0 * _fontScale),
+        fontSize: FontSize(22.0),
         fontWeight: FontWeight.w900,
         color: headingColor,
         margin: Margins.only(top: 18, bottom: 12),
         fontFamily: 'Georgia',
       ),
       "h2": Style(
-        fontSize: FontSize(19.0 * _fontScale),
+        fontSize: FontSize(19.0),
         fontWeight: FontWeight.w800,
         color: widget.themeColor,
         margin: Margins.only(top: 16, bottom: 10),
         fontFamily: 'Georgia',
       ),
       "h3": Style(
-        fontSize: FontSize(16.5 * _fontScale),
+        fontSize: FontSize(16.5),
         fontWeight: FontWeight.w700,
         color: headingColor,
         margin: Margins.only(top: 14, bottom: 8),
@@ -664,11 +690,15 @@ class _NotesScreenState extends State<NotesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark || widget.isDarkMode;
+    final bool isDark = _isDarkMode;
     final Color bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final Color cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final Color textColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final Color subColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
+    final String activeTitle = _notesList.isNotEmpty
+        ? (_notesList[_currentPageIndex]['title']?.toString() ?? widget.unitTitle)
+        : widget.unitTitle;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -697,7 +727,7 @@ class _NotesScreenState extends State<NotesScreen> {
             ),
             const SizedBox(height: 2),
             Text(
-              _noteTitle ?? widget.unitTitle,
+              activeTitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.plusJakartaSans(
@@ -709,7 +739,7 @@ class _NotesScreenState extends State<NotesScreen> {
           ],
         ),
         actions: [
-          // Offline Download Toggle
+          // 1. Offline Download Toggle
           IconButton(
             icon: _isDownloading
                 ? const SizedBox(
@@ -726,7 +756,7 @@ class _NotesScreenState extends State<NotesScreen> {
             onPressed: _toggleOfflineDownload,
           ),
 
-          // Bookmark Toggle
+          // 2. Bookmark Toggle
           IconButton(
             icon: Icon(
               _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
@@ -737,14 +767,33 @@ class _NotesScreenState extends State<NotesScreen> {
             onPressed: _toggleBookmark,
           ),
 
-          // Share
+          // 3. Dark/Light Mode Toggle (Requested in Top Bar)
+          IconButton(
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (child, anim) => RotationTransition(
+                turns: anim,
+                child: FadeTransition(opacity: anim, child: child),
+              ),
+              child: Icon(
+                isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                key: ValueKey<bool>(isDark),
+                color: isDark ? const Color(0xFFFBBF24) : const Color(0xFF334155),
+                size: 22,
+              ),
+            ),
+            tooltip: isDark ? "Switch to Light Mode" : "Switch to Dark Mode",
+            onPressed: _toggleThemeMode,
+          ),
+
+          // 4. Share
           IconButton(
             icon: const Icon(Icons.share_rounded, size: 20),
             tooltip: "Share",
             onPressed: _shareNote,
           ),
 
-          // Search in note toggle
+          // 5. Search in note toggle
           IconButton(
             icon: Icon(
               _isSearchOpen ? Icons.close_rounded : Icons.search_rounded,
@@ -807,7 +856,7 @@ class _NotesScreenState extends State<NotesScreen> {
               ),
             ),
 
-          // Sub-topic / Module Pills if multiple notes exist
+          // Sub-topic / Module Pills bar (Allows jump-to-page)
           if (_notesList.length > 1)
             Container(
               height: 48,
@@ -818,7 +867,7 @@ class _NotesScreenState extends State<NotesScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: _notesList.length,
                 itemBuilder: (context, idx) {
-                  final isSelected = idx == _selectedNoteIndex;
+                  final isSelected = idx == _currentPageIndex;
                   final title = _notesList[idx]['title']?.toString() ?? 'Section ${idx + 1}';
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
@@ -839,9 +888,11 @@ class _NotesScreenState extends State<NotesScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       onSelected: (selected) {
                         if (selected) {
-                          setState(() {
-                            _applySelectedNote(idx);
-                          });
+                          _pageController.animateToPage(
+                            idx,
+                            duration: const Duration(milliseconds: 350),
+                            curve: Curves.easeInOutCubic,
+                          );
                         }
                       },
                     ),
@@ -850,16 +901,94 @@ class _NotesScreenState extends State<NotesScreen> {
               ),
             ),
 
-          // Main Content View
+          // Page Indicator Header Strip (e.g. Page X of Y + Quick Flippers)
+          if (_notesList.length > 1)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                    width: 0.8,
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.auto_stories_rounded, size: 16, color: widget.themeColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        widget.languageCode == 'en'
+                            ? "Page ${_currentPageIndex + 1} of ${_notesList.length}"
+                            : "ገጽ ${_currentPageIndex + 1} ከ ${_notesList.length}",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: widget.themeColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_rounded, size: 14),
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: "Previous page",
+                        onPressed: _currentPageIndex > 0
+                            ? () {
+                                _pageController.previousPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              }
+                            : null,
+                      ),
+                      const SizedBox(width: 14),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: "Next page",
+                        onPressed: _currentPageIndex < _notesList.length - 1
+                            ? () {
+                                _pageController.nextPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              }
+                            : null,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+          // Main Paginated Reading View (PageView)
           Expanded(
-            child: _buildMainContent(isDark, cardBg, textColor, subColor),
+            child: _buildPaginatedContent(isDark, cardBg, textColor, subColor),
           ),
 
-          // Bottom Quick Bar (Font Size Adjuster + Copy text)
+          // Bottom Action Bar: Full-Width "Join Telegram Channel" Button
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF0F172A) : Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
+                ),
+              ],
               border: Border(
                 top: BorderSide(
                   color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
@@ -869,72 +998,43 @@ class _NotesScreenState extends State<NotesScreen> {
             ),
             child: SafeArea(
               top: false,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Font Size Scaler
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        "Aa",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: subColor,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.text_decrease_rounded, size: 18),
-                        visualDensity: VisualDensity.compact,
-                        tooltip: "Decrease text size",
-                        onPressed: _fontScale > 0.85
-                            ? () {
-                                setState(() {
-                                  _fontScale = (_fontScale - 0.1).clamp(0.85, 1.45);
-                                });
-                              }
-                            : null,
-                      ),
-                      Text(
-                        "${(_fontScale * 100).toInt()}%",
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: textColor),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.text_increase_rounded, size: 18),
-                        visualDensity: VisualDensity.compact,
-                        tooltip: "Increase text size",
-                        onPressed: _fontScale < 1.45
-                            ? () {
-                                setState(() {
-                                  _fontScale = (_fontScale + 0.1).clamp(0.85, 1.45);
-                                });
-                              }
-                            : null,
-                      ),
-                    ],
+              child: SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: _openTelegramChannel,
+                  icon: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.white24,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.send_rounded,
+                      color: Colors.white,
+                      size: 17,
+                    ),
                   ),
-
-                  // Copy Note & Quick Action
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextButton.icon(
-                        onPressed: _copyToClipboard,
-                        icon: const Icon(Icons.content_copy_rounded, size: 15),
-                        label: Text(
-                          widget.languageCode == 'en' ? "Copy Text" : "ጽሑፉን ቅዳ",
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                        style: TextButton.styleFrom(
-                          foregroundColor: widget.themeColor,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                    ],
+                  label: Text(
+                    widget.languageCode == 'en'
+                        ? "Join Telegram Channel"
+                        : "የቴሌግራም ቻናላችንን ይቀላቀሉ",
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
+                    ),
                   ),
-                ],
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF229ED9), // Telegram Vibrant Brand Blue
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    shadowColor: const Color(0xFF229ED9).withValues(alpha: 0.4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -943,7 +1043,7 @@ class _NotesScreenState extends State<NotesScreen> {
     );
   }
 
-  Widget _buildMainContent(bool isDark, Color cardBg, Color textColor, Color subColor) {
+  Widget _buildPaginatedContent(bool isDark, Color cardBg, Color textColor, Color subColor) {
     if (_isLoading) {
       return Center(
         child: Column(
@@ -969,7 +1069,7 @@ class _NotesScreenState extends State<NotesScreen> {
       );
     }
 
-    if (_hasError) {
+    if (_hasError || _notesList.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(28.0),
@@ -1025,124 +1125,151 @@ class _NotesScreenState extends State<NotesScreen> {
       );
     }
 
-    final renderedHtml = _htmlContent ?? '<p>No content available</p>';
-
-    return SingleChildScrollView(
+    return PageView.builder(
+      controller: _pageController,
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 720),
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isDark ? const Color(0xFF334155) : const Color(0xFFEDF2F7),
-              width: 1.2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              )
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Subject & Grade Header Tag
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      itemCount: _notesList.length,
+      onPageChanged: (pageIndex) {
+        setState(() {
+          _currentPageIndex = pageIndex;
+        });
+      },
+      itemBuilder: (context, index) {
+        final note = _notesList[index];
+        final String noteTitle = note['title']?.toString() ?? 'Section ${index + 1}';
+        final String htmlRaw = note['html_content']?.toString() ??
+            note['content']?.toString() ??
+            '<p>No content available for this section.</p>';
+
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          child: Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 720),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFEDF2F7),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  )
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: widget.themeColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      "GRADE ${widget.grade} • ${_getNormalizedSubjectName().toUpperCase()}",
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: widget.themeColor,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  if (_isDownloaded)
-                    Row(
-                      children: [
-                        const Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF10B981)),
-                        const SizedBox(width: 4),
-                        Text(
-                          "Offline Ready",
+                  // Subject & Grade Header Tag
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: widget.themeColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          "GRADE ${widget.grade} • ${_getNormalizedSubjectName().toUpperCase()}",
                           style: TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF065F46),
+                            fontWeight: FontWeight.w900,
+                            color: widget.themeColor,
+                            letterSpacing: 0.5,
                           ),
                         ),
-                      ],
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Rich HTML Content rendered dynamically with flutter_html
-              Html(
-                data: renderedHtml,
-                style: _buildHtmlStyles(isDark),
-              ),
-
-              const SizedBox(height: 30),
-              Divider(
-                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                thickness: 1,
-              ),
-              const SizedBox(height: 16),
-
-              // End of Note Footer
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Smart X ET • Educational Notes",
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: subColor,
-                    ),
-                  ),
-                  InkWell(
-                    onTap: _shareNote,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      child: Row(
-                        children: [
-                          Icon(Icons.share_rounded, size: 14, color: widget.themeColor),
-                          const SizedBox(width: 4),
-                          Text(
-                            widget.languageCode == 'en' ? "Share Note" : "አጋራ",
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: widget.themeColor,
-                            ),
-                          ),
-                        ],
                       ),
+                      if (_isDownloaded)
+                        Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF10B981)),
+                            const SizedBox(width: 4),
+                            Text(
+                              "Offline Ready",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF065F46),
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Section Title
+                  Text(
+                    noteTitle,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: textColor,
                     ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Rich HTML Content rendered dynamically with flutter_html
+                  Html(
+                    data: htmlRaw,
+                    style: _buildHtmlStyles(isDark),
+                  ),
+
+                  const SizedBox(height: 30),
+                  Divider(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    thickness: 1,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // End of Note Footer
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Smart X Ethiopian • Educational Notes",
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: subColor,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: _shareNote,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.share_rounded, size: 14, color: widget.themeColor),
+                              const SizedBox(width: 4),
+                              Text(
+                                widget.languageCode == 'en' ? "Share" : "አጋራ",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: widget.themeColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

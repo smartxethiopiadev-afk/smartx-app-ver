@@ -1,5 +1,5 @@
 name: smart_x_academy
-description: "A gorgeous, responsive mobile application for Smart X ET. Replicates the Grade-level courses hub, multilingual support, light/dark modes, and video tutorials."
+description: "A gorgeous, responsive mobile application for Smart X Ethiopian. Replicates the Grade-level courses hub, multilingual support, light/dark modes, and video tutorials."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -46,8 +46,7 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/images/app_icon.png"
-  adaptive_icon_background: "#00BFFF"
-  adaptive_icon_foreground: "assets/images/app_icon.png"
+  min_sdk_android: 21
 
 flutter_native_splash:
   color: "#0F172A"
