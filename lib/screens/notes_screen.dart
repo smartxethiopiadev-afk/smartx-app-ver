@@ -177,7 +177,6 @@ class _NotesScreenState extends State<NotesScreen> {
         _isLoading = true;
         _hasError = false;
         _errorType = NotesErrorType.none;
-        _debugErrorDetails = null;
       });
 
       final String unitId = _getUnitId();
@@ -189,7 +188,7 @@ class _NotesScreenState extends State<NotesScreen> {
       } else {
         final String normalizedSubject = _getNormalizedSubjectName();
 
-        // 1. Primary Query: Supabase short_notes table
+        // 1. Primary Query: Supabase short_notes table strictly
         try {
           final shortNotesResponse = await Supabase.instance.client
               .from('short_notes')
@@ -206,38 +205,7 @@ class _NotesScreenState extends State<NotesScreen> {
           debugPrint('[Short Notes] Supabase short_notes query info: $e');
         }
 
-        // 2. Secondary Fallback Query: units & unit_notes
-        if (fetchedNotes.isEmpty) {
-          final response = await Supabase.instance.client
-              .from('units')
-              .select('''
-                id,
-                unit_number,
-                subject_id,
-                subjects!inner(
-                  id,
-                  name,
-                  grade
-                ),
-                unit_notes(
-                  id,
-                  unit_id,
-                  title,
-                  html_content,
-                  created_at
-                )
-              ''')
-              .eq('unit_number', widget.unitNumber)
-              .eq('subjects.grade', widget.grade)
-              .ilike('subjects.name', '%$normalizedSubject%')
-              .maybeSingle();
-
-          if (response != null && response['unit_notes'] != null) {
-            fetchedNotes = List<Map<String, dynamic>>.from(response['unit_notes']);
-          }
-        }
-
-        // 3. Built-in High-Quality Curriculum Seed Fallback if server table not yet seeded
+        // 2. Built-in High-Quality Curriculum Seed Fallback if server table not yet seeded
         if (fetchedNotes.isEmpty) {
           fetchedNotes = _generateCurriculumFallbackNotes();
         }
