@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,7 +6,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/offline_manager.dart';
-import '../main.dart';
 
 enum NotesErrorType {
   none,
@@ -49,7 +47,6 @@ class _NotesScreenState extends State<NotesScreen> {
   bool _isDownloading = false;
 
   NotesErrorType _errorType = NotesErrorType.none;
-  String? _debugErrorDetails;
 
   List<Map<String, dynamic>> _notesList = [];
   int _selectedNoteIndex = 0;
@@ -211,7 +208,6 @@ class _NotesScreenState extends State<NotesScreen> {
 
         // 2. Secondary Fallback Query: units & unit_notes
         if (fetchedNotes.isEmpty) {
-          final String expectedSubjectId = '${widget.grade}_$normalizedSubject';
           final response = await Supabase.instance.client
               .from('units')
               .select('''
@@ -276,7 +272,6 @@ class _NotesScreenState extends State<NotesScreen> {
           _hasError = true;
           _isLoading = false;
           _errorType = NotesErrorType.accessDenied;
-          _debugErrorDetails = 'PostgrestException: ${e.message}';
         }
       });
     } catch (e) {
@@ -294,7 +289,6 @@ class _NotesScreenState extends State<NotesScreen> {
           _hasError = true;
           _isLoading = false;
           _errorType = NotesErrorType.unknown;
-          _debugErrorDetails = 'Exception: $e';
         }
       });
     }

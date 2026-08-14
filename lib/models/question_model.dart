@@ -88,4 +88,7 @@ class QuestionModel {
       'order_index': orderIndex,
     };
   }
+
+  /// Returns the zero-based index of the correct option in [options], or -1 if none is marked correct.
+  int get correctAnswerIndex => options.indexWhere((opt) => opt.isCorrect);
 }
