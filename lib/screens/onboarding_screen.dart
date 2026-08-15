@@ -34,7 +34,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<Map<String, dynamic>> _slides = [
     {
       'image': 'assets/images/student_laptop.png',
-      'color': const Color(0xFF00BFFF), // DeepSkyBlue
+      'color': const Color(0xFF00BFFF), // Deep Sky Blue
       'titleEn': 'Interactive Quizzes',
       'titleAm': 'አሳታፊ ጥያቄዎች',
       'descEn': 'Sharpen your skills with real-time feedback, detailed explanations, and performance analytics after every quiz.',
