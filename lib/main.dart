@@ -28,10 +28,8 @@ void main() {
     };
 
     // Initialize Firebase Core safely with a strict timeout for offline-first resilience
-    bool isFirebaseInitialized = false;
     try {
       await Firebase.initializeApp().timeout(const Duration(seconds: 3));
-      isFirebaseInitialized = true;
       debugPrint("[Firebase] Initialized successfully.");
     } on TimeoutException {
       debugPrint("[Firebase] Initialization timed out (device offline or slow network). Proceeding in offline mode.");
