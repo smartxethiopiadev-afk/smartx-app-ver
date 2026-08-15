@@ -98,6 +98,8 @@ class QuizService {
           .eq('unit_number', unit)
           .eq('subjects.grade', grade)
           .or('subject_id.eq.$expectedSubjectId,subject_id.ilike.%$normalizedSubject%,subject_id.ilike.%$subject%')
+          .order('order_index', ascending: true, referencedTable: 'questions')
+          .order('created_at', ascending: true, referencedTable: 'questions')
           .maybeSingle();
 
       if (response == null || response['questions'] == null) {
@@ -106,7 +108,33 @@ class QuizService {
       }
 
       final List<dynamic> questionsData = response['questions'] as List<dynamic>;
-      return questionsData.map((json) => QuestionModel.fromJson(json)).toList();
+      final List<QuestionModel> questions = questionsData.map((json) => QuestionModel.fromJson(json)).toList();
+
+      // Enforce strict deterministic sorting: order_index ASC first, created_at ASC second, id fallback
+      questions.sort((a, b) {
+        if (a.orderIndex != null && b.orderIndex != null) {
+          final cmp = a.orderIndex!.compareTo(b.orderIndex!);
+          if (cmp != 0) return cmp;
+        } else if (a.orderIndex != null) {
+          return -1;
+        } else if (b.orderIndex != null) {
+          return 1;
+        }
+
+        if (a.questionNumber != null && b.questionNumber != null) {
+          final cmp = a.questionNumber!.compareTo(b.questionNumber!);
+          if (cmp != 0) return cmp;
+        }
+
+        if (a.createdAt != null && b.createdAt != null) {
+          final cmp = a.createdAt!.compareTo(b.createdAt!);
+          if (cmp != 0) return cmp;
+        }
+
+        return a.id.compareTo(b.id);
+      });
+
+      return questions;
     } catch (e) {
       debugPrint('Supabase query failed: $e');
       rethrow;

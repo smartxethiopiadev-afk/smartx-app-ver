@@ -21,8 +21,10 @@ dependencies:
   path_provider: ^2.1.2
   http: ^1.2.1
 
-  # Backend Integration
+  # Backend & Analytics Integration
   supabase_flutter: ^2.6.0
+  firebase_core: ^3.0.0
+  firebase_analytics: ^11.0.0
 
   # Ads, Sharing & Utilities
   google_mobile_ads: ^7.0.0
@@ -52,9 +54,12 @@ flutter_launcher_icons:
 
 flutter_native_splash:
   color: "#0F172A"
+  image: "assets/images/app_icon.png"
   fullscreen: true
   android_12:
     color: "#0F172A"
+    image: "assets/images/app_icon.png"
+    icon_background_color: "#0F172A"
 
 flutter:
   uses-material-design: true

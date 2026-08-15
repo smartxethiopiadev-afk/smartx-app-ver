@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'home_screen.dart';
 import 'registration_screen.dart';
+import '../services/analytics_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -60,6 +61,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
+    logScreen('OnboardingScreen');
     _startAutoPlay();
   }
 

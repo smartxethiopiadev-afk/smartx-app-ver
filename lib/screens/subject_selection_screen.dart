@@ -5,6 +5,7 @@ import '../main.dart';
 import 'unit_selection_screen.dart';
 import '../widgets/subject_vector_widgets.dart';
 import '../widgets/interactive_subject_card.dart';
+import '../services/analytics_service.dart';
 
 class SubjectSelectionScreen extends StatefulWidget {
   final int grade;
@@ -39,6 +40,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
   void initState() {
     super.initState();
     _selectedGrade = widget.grade;
+    logScreen('SubjectListScreen');
     _loadBannerAd();
   }
 

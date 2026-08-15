@@ -3,13 +3,24 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'config/app_config.dart';
 import 'screens/splash_screen.dart';
 import 'services/offline_manager.dart';
+import 'services/analytics_service.dart';
 
 void main() async {
   // Ensure widget bindings are safely initialized before calling native platforms/plugins
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase Core safely
+  try {
+    await Firebase.initializeApp();
+    debugPrint("[Firebase] Initialized successfully.");
+  } catch (e) {
+    debugPrint("[Firebase] Firebase.initializeApp notice: $e");
+  }
 
   SharedPreferences? prefs;
   try {
@@ -164,6 +175,11 @@ class _SmartXAcademyAppState extends State<SmartXAcademyApp> {
           ),
         ),
         themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
+        
+        // Automated Navigation Observer for Firebase Analytics
+        navigatorObservers: [
+          AnalyticsService.observer,
+        ],
         
         // Launch the beautiful animated open-application process (Splash Screen)
         home: SplashScreen(

@@ -12,6 +12,8 @@ import '../main.dart';
 import 'quiz_screen.dart';
 import 'registration_overlay.dart';
 import 'notes_screen.dart';
+import '../widgets/ad_loading_dialog.dart';
+import '../services/analytics_service.dart';
 
 class UnitSelectionScreen extends StatefulWidget {
   final int grade;
@@ -68,6 +70,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
   @override
   void initState() {
     super.initState();
+    logScreen(widget.isShortNotesMode ? 'ShortNotesUnitScreen' : 'UnitSelectionScreen');
     _loadBannerAd();
     _loadRewardedAd();
     _loadInterstitialAd();
@@ -511,43 +514,11 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
   }
 
   void _showAdLoadingDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false, // Prevent user from dismissing it manually
-      builder: (BuildContext context) {
-        final isDark = AppStateProvider.of(context).isDarkMode;
-        return PopScope(
-          canPop: false, // Prevent back button from dismissing
-          child: AlertDialog(
-            backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            content: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    widget.languageCode == 'en' ? 'Loading ad...' : 'ማስታወቂያ በመጫን ላይ...',
-                    style: TextStyle(
-                      fontSize: 14.0,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    final isDark = AppStateProvider.of(context).isDarkMode;
+    AdLoadingDialog.show(
+      context,
+      languageCode: widget.languageCode,
+      isDark: isDark,
     );
   }
 
@@ -3083,6 +3054,13 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
           );
         }
         await OfflineManager.addDownload(downloadKey);
+
+        // Log Firebase Analytics Event for offline unit download
+        AnalyticsService.logOfflineDownload(
+          unitTitle: 'Unit $activeUnitNum',
+          subject: widget.subjectId,
+          grade: widget.grade,
+        );
 
         progressTimer.cancel();
 

@@ -5,15 +5,16 @@ import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../services/offline_manager.dart';
+import '../services/analytics_service.dart';
 import '../main.dart';
 
 enum NotesErrorType {
   none,
   noInternet,
   emptyData,
-  accessDenied,
-  unknown,
+  serverError,
 }
 
 class NotesScreen extends StatefulWidget {
@@ -67,6 +68,19 @@ class _NotesScreenState extends State<NotesScreen> {
     super.initState();
     _isDarkMode = widget.isDarkMode;
     _pageController = PageController(initialPage: 0);
+
+    // Firebase Analytics tracking for screen view and custom event
+    logScreen('ShortNotesScreen');
+    logEvent(
+      name: 'short_note_opened',
+      parameters: {
+        'unit': widget.unitTitle,
+        'subject': widget.subjectId,
+        'grade': widget.grade,
+        'unit_number': widget.unitNumber,
+      },
+    );
+
     _checkBookmarkStatus();
     _checkOfflineStatus();
     _fetchNotes();
@@ -186,6 +200,15 @@ class _NotesScreenState extends State<NotesScreen> {
         _errorType = NotesErrorType.none;
       });
 
+      // Check internet connection proactively
+      bool hasConnection = true;
+      try {
+        final connectivityResult = await Connectivity().checkConnectivity();
+        if (connectivityResult == ConnectivityResult.none) {
+          hasConnection = false;
+        }
+      } catch (_) {}
+
       final String unitId = _getUnitId();
       final bool isNotesDownloaded = await OfflineManager.isDownloaded(unitId);
       List<Map<String, dynamic>> fetchedNotes = [];
@@ -193,28 +216,43 @@ class _NotesScreenState extends State<NotesScreen> {
       if (isNotesDownloaded) {
         fetchedNotes = await OfflineManager.getOfflineNotes(unitId);
       } else {
-        final String normalizedSubject = _getNormalizedSubjectName();
-
-        // 1. Primary Query: Supabase short_notes table strictly
-        try {
-          final shortNotesResponse = await Supabase.instance.client
-              .from('short_notes')
-              .select('id, grade, subject, unit_number, title, html_content, created_at')
-              .eq('grade', widget.grade)
-              .eq('unit_number', widget.unitNumber)
-              .ilike('subject', '%$normalizedSubject%')
-              .order('created_at', ascending: true);
-
-          if (shortNotesResponse.isNotEmpty) {
-            fetchedNotes = List<Map<String, dynamic>>.from(shortNotesResponse);
+        if (!hasConnection) {
+          // If no connection and not downloaded, check fallback
+          final fallback = _generateCurriculumFallbackNotes();
+          if (fallback.isNotEmpty) {
+            fetchedNotes = fallback;
+          } else {
+            setState(() {
+              _isLoading = false;
+              _hasError = true;
+              _errorType = NotesErrorType.noInternet;
+            });
+            return;
           }
-        } catch (e) {
-          debugPrint('[Short Notes] Supabase short_notes query notice: $e');
-        }
+        } else {
+          final String normalizedSubject = _getNormalizedSubjectName();
 
-        // 2. Built-in High-Quality Curriculum Seed Fallback if server table not yet seeded
-        if (fetchedNotes.isEmpty) {
-          fetchedNotes = _generateCurriculumFallbackNotes();
+          // 1. Primary Query: Supabase short_notes table strictly
+          try {
+            final shortNotesResponse = await Supabase.instance.client
+                .from('short_notes')
+                .select('id, grade, subject, unit_number, title, html_content, created_at')
+                .eq('grade', widget.grade)
+                .eq('unit_number', widget.unitNumber)
+                .ilike('subject', '%$normalizedSubject%')
+                .order('created_at', ascending: true);
+
+            if (shortNotesResponse.isNotEmpty) {
+              fetchedNotes = List<Map<String, dynamic>>.from(shortNotesResponse);
+            }
+          } catch (e) {
+            debugPrint('[Short Notes] Supabase query notice: $e');
+          }
+
+          // 2. Built-in High-Quality Curriculum Seed Fallback if server table not yet seeded
+          if (fetchedNotes.isEmpty) {
+            fetchedNotes = _generateCurriculumFallbackNotes();
+          }
         }
       }
 
@@ -227,7 +265,7 @@ class _NotesScreenState extends State<NotesScreen> {
         _isLoading = false;
         if (_notesList.isEmpty) {
           _hasError = true;
-          _errorType = NotesErrorType.emptyData;
+          _errorType = !hasConnection ? NotesErrorType.noInternet : NotesErrorType.emptyData;
         } else {
           _hasError = false;
           _errorType = NotesErrorType.none;
@@ -235,16 +273,18 @@ class _NotesScreenState extends State<NotesScreen> {
       });
     } on PostgrestException catch (e) {
       debugPrint('PostgrestException fetching short notes: ${e.code} - ${e.message}');
+      final fallback = _generateCurriculumFallbackNotes();
       setState(() {
-        _notesList = _generateCurriculumFallbackNotes();
-        if (_notesList.isNotEmpty) {
+        if (fallback.isNotEmpty) {
+          _notesList = fallback;
           _currentPageIndex = 0;
           _hasError = false;
           _isLoading = false;
         } else {
+          _notesList = [];
           _hasError = true;
           _isLoading = false;
-          _errorType = NotesErrorType.accessDenied;
+          _errorType = NotesErrorType.serverError;
         }
       });
     } catch (e) {
@@ -260,7 +300,7 @@ class _NotesScreenState extends State<NotesScreen> {
           _notesList = [];
           _hasError = true;
           _isLoading = false;
-          _errorType = NotesErrorType.unknown;
+          _errorType = NotesErrorType.serverError;
         }
       });
     }
@@ -688,6 +728,192 @@ class _NotesScreenState extends State<NotesScreen> {
     };
   }
 
+  void _showCompletionDialog() {
+    final bool isDark = _isDarkMode;
+    final bool isEn = widget.languageCode == 'en';
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Celebration Badge
+                Container(
+                  width: 76,
+                  height: 76,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        widget.themeColor,
+                        widget.themeColor.withValues(alpha: 0.7),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: widget.themeColor.withValues(alpha: 0.35),
+                        blurRadius: 18,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.verified_rounded,
+                    color: Colors.white,
+                    size: 42,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Congratulatory Title
+                Text(
+                  isEn ? "Thanks for reading!" : "እንኳን ደስ አለዎት!",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                Text(
+                  isEn
+                      ? "You have completed all summary notes for this unit."
+                      : "የትምህርቱን ማጠቃለያ በስኬት ጨርሰዋል።",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: widget.themeColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Unit details pill card
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.menu_book_rounded, size: 20, color: widget.themeColor),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Grade ${widget.grade} • ${widget.subjectId.toUpperCase()}",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              ),
+                            ),
+                            Text(
+                              "Unit ${widget.unitNumber}: ${widget.unitTitle}",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Primary Action: Return to Units List
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                    label: Text(
+                      isEn ? "Return to Units List" : "ወደ ክፍሎች ዝርዝር ተመለስ",
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: widget.themeColor,
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Secondary Action: Review from Beginning
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      _pageController.animateToPage(
+                        0,
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                    label: Text(
+                      isEn ? "Review from Beginning" : "ከመጀመሪያው ድጋሚ አንብብ",
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                      side: BorderSide(
+                        color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDark = _isDarkMode;
@@ -695,6 +921,7 @@ class _NotesScreenState extends State<NotesScreen> {
     final Color cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
     final Color textColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final Color subColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final bool isEn = widget.languageCode == 'en';
 
     final String activeTitle = _notesList.isNotEmpty
         ? (_notesList[_currentPageIndex]['title']?.toString() ?? widget.unitTitle)
@@ -856,189 +1083,333 @@ class _NotesScreenState extends State<NotesScreen> {
               ),
             ),
 
-          // Sub-topic / Module Pills bar (Allows jump-to-page)
-          if (_notesList.length > 1)
-            Container(
-              height: 48,
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _notesList.length,
-                itemBuilder: (context, idx) {
-                  final isSelected = idx == _currentPageIndex;
-                  final title = _notesList[idx]['title']?.toString() ?? 'Section ${idx + 1}';
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          color: isSelected
-                              ? Colors.white
-                              : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
-                        ),
-                      ),
-                      selected: isSelected,
-                      selectedColor: widget.themeColor,
-                      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      onSelected: (selected) {
-                        if (selected) {
-                          _pageController.animateToPage(
-                            idx,
-                            duration: const Duration(milliseconds: 350),
-                            curve: Curves.easeInOutCubic,
-                          );
-                        }
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-
-          // Page Indicator Header Strip (e.g. Page X of Y + Quick Flippers)
-          if (_notesList.length > 1)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                border: Border(
-                  bottom: BorderSide(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-                    width: 0.8,
-                  ),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.auto_stories_rounded, size: 16, color: widget.themeColor),
-                      const SizedBox(width: 6),
-                      Text(
-                        widget.languageCode == 'en'
-                            ? "Page ${_currentPageIndex + 1} of ${_notesList.length}"
-                            : "ገጽ ${_currentPageIndex + 1} ከ ${_notesList.length}",
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: widget.themeColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_rounded, size: 14),
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        tooltip: "Previous page",
-                        onPressed: _currentPageIndex > 0
-                            ? () {
-                                _pageController.previousPage(
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                );
-                              }
-                            : null,
-                      ),
-                      const SizedBox(width: 14),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        tooltip: "Next page",
-                        onPressed: _currentPageIndex < _notesList.length - 1
-                            ? () {
-                                _pageController.nextPage(
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                );
-                              }
-                            : null,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
           // Main Paginated Reading View (PageView)
           Expanded(
             child: _buildPaginatedContent(isDark, cardBg, textColor, subColor),
           ),
 
-          // Bottom Action Bar: Full-Width "Join Telegram Channel" Button
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0F172A) : Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-              border: Border(
-                top: BorderSide(
-                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-                  width: 1.0,
-                ),
-              ),
-            ),
-            child: SafeArea(
-              top: false,
-              child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: _openTelegramChannel,
-                  icon: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.white24,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.send_rounded,
-                      color: Colors.white,
-                      size: 17,
-                    ),
+          // Bottom Action & Navigation Bar (Strictly bottom-aligned, no top tabs)
+          if (!_isLoading && !_hasError && _notesList.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, -2),
                   ),
-                  label: Text(
-                    widget.languageCode == 'en'
-                        ? "Join Telegram Channel"
-                        : "የቴሌግራም ቻናላችንን ይቀላቀሉ",
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF229ED9), // Telegram Vibrant Brand Blue
-                    foregroundColor: Colors.white,
-                    elevation: 2,
-                    shadowColor: const Color(0xFF229ED9).withValues(alpha: 0.4),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                ],
+                border: Border(
+                  top: BorderSide(
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                    width: 1.0,
                   ),
                 ),
               ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Subtle Telegram Channel Banner
+                    InkWell(
+                      onTap: _openTelegramChannel,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF229ED9).withValues(alpha: isDark ? 0.15 : 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFF229ED9).withValues(alpha: 0.3),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.send_rounded, color: Color(0xFF229ED9), size: 13),
+                            const SizedBox(width: 6),
+                            Text(
+                              isEn ? "Join Telegram for Daily Study Tips & Quizzes" : "ለተጨማሪ የትምህርት መርጃዎች ቴሌግራማችንን ይቀላቀሉ",
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF229ED9),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Bottom Navigation Controls Row (Back Button, Progress Badge, Next/Finish Button)
+                    Row(
+                      children: [
+                        // Back Button
+                        Expanded(
+                          flex: 3,
+                          child: SizedBox(
+                            height: 46,
+                            child: OutlinedButton.icon(
+                              onPressed: _currentPageIndex > 0
+                                  ? () {
+                                      _pageController.previousPage(
+                                        duration: const Duration(milliseconds: 300),
+                                        curve: Curves.easeInOutCubic,
+                                      );
+                                    }
+                                  : null,
+                              icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                              label: Text(
+                                isEn ? "Back" : "ወደ ኋላ",
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+                                disabledForegroundColor: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+                                side: BorderSide(
+                                  color: _currentPageIndex > 0
+                                      ? (isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1))
+                                      : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
+                                  width: 1.2,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Center Page Progress Indicator Badge
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Text(
+                              "${_currentPageIndex + 1} / ${_notesList.length}",
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: widget.themeColor,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Next / Finish Button
+                        Expanded(
+                          flex: 4,
+                          child: SizedBox(
+                            height: 46,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                if (_currentPageIndex < _notesList.length - 1) {
+                                  _pageController.nextPage(
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOutCubic,
+                                  );
+                                } else {
+                                  _showCompletionDialog();
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _currentPageIndex == _notesList.length - 1
+                                    ? const Color(0xFF10B981)
+                                    : widget.themeColor,
+                                foregroundColor: Colors.white,
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _currentPageIndex == _notesList.length - 1
+                                        ? (isEn ? "Finish" : "ጨርስ")
+                                        : (isEn ? "Next" : "ቀጣይ"),
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Icon(
+                                    _currentPageIndex == _notesList.length - 1
+                                        ? Icons.check_circle_rounded
+                                        : Icons.arrow_forward_rounded,
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStudentFriendlyError(bool isDark, Color cardBg, Color textColor, Color subColor) {
+    final bool isEn = widget.languageCode == 'en';
+
+    IconData iconData = Icons.cloud_off_rounded;
+    Color iconColor = const Color(0xFFEF4444);
+    String title = '';
+    String subtitle = '';
+
+    switch (_errorType) {
+      case NotesErrorType.noInternet:
+        iconData = Icons.wifi_off_rounded;
+        iconColor = const Color(0xFFF59E0B);
+        title = isEn ? "No Internet Connection" : "የኢንተርኔት ግንኙነት የለም";
+        subtitle = isEn
+            ? "No internet connection or network timed out. Please check your connection and try again."
+            : "ኢንተርኔት የለም ወይም ተቋርጧል። እባክዎ ኮኔክሽንዎን ፈትሸው ድጋሚ ይሞክሩ።";
+        break;
+
+      case NotesErrorType.emptyData:
+        iconData = Icons.menu_book_outlined;
+        iconColor = const Color(0xFF0EA5E9);
+        title = isEn ? "Notes Not Available" : "ማጠቃለያ አልተገኘም";
+        subtitle = isEn
+            ? "Summary notes for this unit have not been published yet. They will be uploaded soon!"
+            : "ለዚህ ክፍል የተዘጋጀ ማጠቃለያ አልተገኘም። በቅርቡ ይጫናል።";
+        break;
+
+      case NotesErrorType.serverError:
+      default:
+        iconData = Icons.cloud_sync_rounded;
+        iconColor = const Color(0xFFEF4444);
+        title = isEn ? "Server Connection Error" : "የሰርቨር ግንኙነት ችግር";
+        subtitle = isEn
+            ? "Could not load educational notes from the server right now. Please try again in a few minutes."
+            : "መረጃዎችን ከሰርቨር ላይ መጫን አልተቻለም። እባክዎ በጥቂት ደቂቃዎች ውስጥ ድጋሚ ይሞክሩ።";
+        break;
+    }
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(28.0),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 480),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: iconColor.withValues(alpha: 0.12),
+                  border: Border.all(
+                    color: iconColor.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                ),
+                child: Icon(iconData, size: 36, color: iconColor),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13.5,
+                  height: 1.5,
+                  fontWeight: FontWeight.w500,
+                  color: subColor,
+                ),
+              ),
+              const SizedBox(height: 26),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        isEn ? "Go Back" : "ተመለስ",
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _fetchNotes,
+                      icon: const Icon(Icons.refresh_rounded, size: 17),
+                      label: Text(
+                        isEn ? "Retry" : "ድጋሚ ይሞክሩ",
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 13),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: widget.themeColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1070,59 +1441,7 @@ class _NotesScreenState extends State<NotesScreen> {
     }
 
     if (_hasError || _notesList.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                _errorType == NotesErrorType.noInternet
-                    ? Icons.wifi_off_rounded
-                    : Icons.menu_book_outlined,
-                size: 56,
-                color: widget.themeColor,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _errorType == NotesErrorType.noInternet
-                    ? (widget.languageCode == 'en'
-                        ? "No internet connection"
-                        : "የኢንተርኔት ግንኙነት የለም")
-                    : (widget.languageCode == 'en'
-                        ? "No notes found for this unit"
-                        : "ለዚህ ክፍል ማስታወሻ አልተገኘም"),
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                widget.languageCode == 'en'
-                    ? "You can retry or access offline study materials."
-                    : "እንደገና መሞከር ወይም የተቀመጡ ማስታወሻዎችን ማንበብ ይችላሉ።",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: subColor),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: _fetchNotes,
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: Text(widget.languageCode == 'en' ? "Retry" : "እንደገና ሞክር"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: widget.themeColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      return _buildStudentFriendlyError(isDark, cardBg, textColor, subColor);
     }
 
     return PageView.builder(

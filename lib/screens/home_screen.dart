@@ -16,6 +16,7 @@ import '../widgets/image_slider_carousel.dart';
 import '../widgets/subject_vector_widgets.dart';
 import '../widgets/interactive_subject_card.dart';
 import '../main.dart';
+import '../services/analytics_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -168,6 +169,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.initState();
     _fullNameController = TextEditingController();
     _phoneController = TextEditingController();
+
+    // Log Screen View for Firebase Analytics
+    logScreen('HomeScreen');
 
     _loadProfileData();
     _fadeController = AnimationController(
@@ -1705,6 +1709,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final bool isLight = !widget.isDarkMode;
     final bool isAmharic = widget.languageCode == 'am';
 
+    // Log Grade Selection Screen for Firebase Analytics
+    logScreen('GradeSelectionScreen');
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -2517,6 +2524,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           setState(() {
             _currentIndex = index;
           });
+          switch (index) {
+            case 0:
+              logScreen('HomeScreen');
+              break;
+            case 1:
+              logScreen('OfflineScreen');
+              break;
+            case 2:
+              logScreen('QuizScreen');
+              break;
+            case 3:
+              logScreen('ShortNotesScreen');
+              break;
+          }
         },
         child: Container(
           color: Colors.transparent,

@@ -10,6 +10,7 @@ import '../config/app_config.dart';
 import '../services/offline_manager.dart';
 import 'home_screen.dart';
 import 'onboarding_screen.dart';
+import '../services/analytics_service.dart';
 import '../main.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -78,6 +79,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   @override
   void initState() {
     super.initState();
+    logScreen('SplashScreen');
 
     // Continuous smooth ambient rotation for geometric abstract background
     _ambientController = AnimationController(
@@ -296,7 +298,53 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   children: [
                     const Spacer(flex: 12),
 
-                    // Central App Name: "Smart X ET"
+                    // Central Circular App Icon
+                    SlideTransition(
+                      position: _titleSlideAnimation,
+                      child: FadeTransition(
+                        opacity: _titleFadeAnimation,
+                        child: Container(
+                          width: 90,
+                          height: 90,
+                          margin: const EdgeInsets.only(bottom: 22),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF00D2FF),
+                                Color(0xFF0072FF),
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF00D2FF).withValues(alpha: 0.35),
+                                blurRadius: 24,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(2.5),
+                          child: ClipOval(
+                            child: Container(
+                              color: const Color(0xFF0F172A),
+                              child: Image.asset(
+                                'assets/images/app_icon.png',
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => const Icon(
+                                  Icons.school_rounded,
+                                  size: 44,
+                                  color: Color(0xFF00D2FF),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Central App Name: "Smart X Ethiopian"
                     SlideTransition(
                       position: _titleSlideAnimation,
                       child: FadeTransition(

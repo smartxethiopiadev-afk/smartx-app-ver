@@ -9,6 +9,9 @@ import '../services/quiz_service.dart';
 import '../services/offline_manager.dart';
 import '../services/ad_helper.dart';
 import '../main.dart';
+import '../widgets/ad_loading_dialog.dart';
+import '../widgets/quiz_result_dialog.dart';
+import '../services/analytics_service.dart';
 
 enum QuizMode {
   practice,
@@ -93,6 +96,7 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   void initState() {
     super.initState();
+    logScreen('QuizScreen');
     _loadRewardedAd();
     _loadInterstitialAd();
     _loadBannerAd();
@@ -793,6 +797,20 @@ class _QuizScreenState extends State<QuizScreen> {
     final percent = (score / _questions.length * 100).round();
     final bool isLight = Theme.of(context).brightness == Brightness.light;
 
+    // Log Quiz Completed Event for Firebase Analytics
+    logEvent(
+      name: 'quiz_completed',
+      parameters: {
+        'subject': widget.subject ?? 'General',
+        'score': score,
+        'total_questions': _questions.length,
+        'percent': percent,
+        'grade': widget.grade,
+        'unit': widget.unit ?? 1,
+        'mode': widget.mode == QuizMode.exam ? 'exam' : 'practice',
+      },
+    );
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final String scoreKey = 'best_score_${widget.grade}_${widget.subject ?? ""}_u${widget.unit ?? 1}';
@@ -802,279 +820,82 @@ class _QuizScreenState extends State<QuizScreen> {
       }
     } catch (_) {}
 
-    // Show completed results dialog instantly
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        int selectRandomUnit() {
-          final currentUnit = widget.unit ?? 1;
-          final List<int> unitsPool = [1, 2, 3, 4, 5, 6, 7, 8].where((u) => u != currentUnit).toList();
-          unitsPool.shuffle();
-          return unitsPool.isNotEmpty ? unitsPool.first : currentUnit;
-        }
+    // Show celebratory results dialog
+    int selectRandomUnit() {
+      final currentUnit = widget.unit ?? 1;
+      final List<int> unitsPool = [1, 2, 3, 4, 5, 6, 7, 8].where((u) => u != currentUnit).toList();
+      unitsPool.shuffle();
+      return unitsPool.isNotEmpty ? unitsPool.first : currentUnit;
+    }
 
-        void startRandomQuiz() {
-          final int randomUnit = selectRandomUnit();
-          final targetGrade = widget.grade;
-          final targetSubject = widget.subject;
-          final targetMode = widget.mode;
-          final targetIsOffline = widget.isOffline;
-          final targetOfflineUnitId = widget.offlineUnitId;
+    void startRandomQuiz() {
+      final int randomUnit = selectRandomUnit();
+      final targetGrade = widget.grade;
+      final targetSubject = widget.subject;
+      final targetMode = widget.mode;
+      final targetIsOffline = widget.isOffline;
+      final targetOfflineUnitId = widget.offlineUnitId;
 
-          void performNavigation() {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => QuizScreen(
-                  grade: targetGrade,
-                  subject: targetSubject,
-                  unit: randomUnit,
-                  mode: targetMode,
-                  isOffline: targetIsOffline,
-                  offlineUnitId: targetOfflineUnitId,
-                ),
-              ),
-            );
-          }
-
-          // Trigger AdMob interstitial or rewarded ad transition before pushing
-          if (_isInterstitialAdLoaded && _interstitialAd != null) {
-            _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-              onAdDismissedFullScreenContent: (ad) {
-                ad.dispose();
-                _loadInterstitialAd();
-                performNavigation();
-              },
-              onAdFailedToShowFullScreenContent: (ad, err) {
-                ad.dispose();
-                _loadInterstitialAd();
-                performNavigation();
-              },
-            );
-            _interstitialAd!.show();
-            _interstitialAd = null;
-            _isInterstitialAdLoaded = false;
-          } else {
-            performNavigation();
-          }
-        }
-
-        return AlertDialog(
-          elevation: 12,
-          backgroundColor: isLight ? Colors.white : const Color(0xFF0F172A),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-          titlePadding: const EdgeInsets.only(top: 16, left: 16, right: 16),
-          title: Stack(
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFBBF24).withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.emoji_events_rounded, color: Color(0xFFFBBF24), size: 48),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      widget.mode == QuizMode.exam ? "Exam Finished!" : "Quiz Finished!",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 22,
-                        color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                right: 0,
-                top: 0,
-                child: IconButton(
-                  icon: Icon(Icons.close_rounded, color: isLight ? Colors.black54 : Colors.white70),
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    if (widget.mode == QuizMode.exam) {
-                      setState(() {
-                        _showAnswersAndExplanations = true;
-                        _currentIndex = 0; // Return to first question for review
-                      });
-                      _scrollToActiveQuestion();
-                    } else {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "Here is your performance summary",
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                  decoration: BoxDecoration(
-                    color: isLight ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Column(
-                        children: [
-                          const Text("SCORE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey)),
-                          const SizedBox(height: 6),
-                          Text(
-                            "$score / ${_questions.length}",
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(width: 1.5, height: 36, color: Colors.grey.withValues(alpha: 0.2)),
-                      Column(
-                        children: [
-                          const Text("ACCURACY", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey)),
-                          const SizedBox(height: 6),
-                          Text(
-                            "$percent%",
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: percent >= 70 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  "You can now review all questions and explanations.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    height: 1.4,
-                    fontWeight: FontWeight.w500,
-                    color: isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // Encouraging Card: Ready to practice more?
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0D2353), Color(0xFF1E3A8A)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFF6D00).withValues(alpha: 0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        "Ready to practice more?",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 15,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        "Keep up the momentum! Challenge yourself with a random unit from ${widget.subject ?? 'this subject'}.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontWeight: FontWeight.w500,
-                          fontSize: 11,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.of(ctx).pop();
-                          startRandomQuiz();
-                        },
-                        icon: const Icon(Icons.shuffle_rounded, size: 16),
-                        label: const Text(
-                          "Start Random Quiz",
-                          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF6D00),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+      void performNavigation() {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => QuizScreen(
+              grade: targetGrade,
+              subject: targetSubject,
+              unit: randomUnit,
+              mode: targetMode,
+              isOffline: targetIsOffline,
+              offlineUnitId: targetOfflineUnitId,
             ),
           ),
-          actions: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  if (widget.mode == QuizMode.exam) {
-                    setState(() {
-                      _showAnswersAndExplanations = true;
-                      _currentIndex = 0; // Return to first question for review
-                    });
-                    _scrollToActiveQuestion();
-                  } else {
-                    Navigator.of(context).pop();
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _getSubjectThemeColor(),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 2,
-                ),
-                child: Text(
-                  widget.mode == QuizMode.exam ? "Review Answers" : "Done",
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                ),
-              ),
-            )
-          ],
         );
+      }
+
+      // Trigger AdMob interstitial or rewarded ad transition before pushing
+      if (_isInterstitialAdLoaded && _interstitialAd != null) {
+        _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+          onAdDismissedFullScreenContent: (ad) {
+            ad.dispose();
+            _loadInterstitialAd();
+            performNavigation();
+          },
+          onAdFailedToShowFullScreenContent: (ad, err) {
+            ad.dispose();
+            _loadInterstitialAd();
+            performNavigation();
+          },
+        );
+        _interstitialAd!.show();
+        _interstitialAd = null;
+        _isInterstitialAdLoaded = false;
+      } else {
+        performNavigation();
+      }
+    }
+
+    QuizResultDialog.show(
+      context,
+      score: score,
+      totalQuestions: _questions.length,
+      subject: widget.subject,
+      grade: widget.grade,
+      unit: widget.unit,
+      isExam: widget.mode == QuizMode.exam,
+      isLight: isLight,
+      subjectColor: _getSubjectThemeColor(),
+      languageCode: AppStateProvider.of(context).languageCode,
+      onReviewAnswers: () {
+        if (widget.mode == QuizMode.exam) {
+          setState(() {
+            _showAnswersAndExplanations = true;
+            _currentIndex = 0; // Return to first question for review
+          });
+          _scrollToActiveQuestion();
+        } else {
+          Navigator.of(context).pop();
+        }
       },
+      onStartRandomQuiz: startRandomQuiz,
     );
   }
 
@@ -1233,79 +1054,67 @@ class _QuizScreenState extends State<QuizScreen> {
           children: [
             _buildBody(),
             if (_isAdLoading)
-              Container(
-                color: Colors.black.withValues(alpha: 0.6),
-                child: Center(
-                  child: Card(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF1E293B)
-                        : Colors.white,
-                    elevation: 12,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(24)),
-                    ),
-                    child: Padding(
+              Positioned.fill(
+                child: AdLoadingDialog(
+                  languageCode: AppStateProvider.of(context).languageCode,
+                  isDark: !isLight,
+                ),
+              ),
+            if (_isSubmittingScore)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.65),
+                  child: Center(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 36),
                       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+                      decoration: BoxDecoration(
+                        color: isLight ? Colors.white : const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isLight ? 0.08 : 0.4),
+                            blurRadius: 24,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const CircularProgressIndicator(
-                            strokeWidth: 4,
-                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+                          const SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
+                            ),
                           ),
                           const SizedBox(height: 20),
                           Text(
                             AppStateProvider.of(context).languageCode == 'en'
-                                ? "Loading ad..."
-                                : "ማስታወቂያ በመጫን ላይ...",
+                                ? "Syncing Leaderboard..."
+                                : "ውጤት በማመሳሰል ላይ...",
                             style: TextStyle(
                               fontWeight: FontWeight.w900,
-                              fontSize: 15,
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.white
-                                  : const Color(0xFF0F172A),
+                              fontSize: 16,
+                              color: isLight ? const Color(0xFF0F172A) : Colors.white,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 6),
                           Text(
                             AppStateProvider.of(context).languageCode == 'en'
-                                ? "Please wait a moment"
-                                : "እባክዎ ትንሽ ይጠብቁ",
-                            style: const TextStyle(
+                                ? "Please do not close this screen"
+                                : "እባክዎ ይህንን ገጽ አይዝጉት",
+                            style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              fontSize: 11.5,
-                              color: Colors.grey,
+                              fontSize: 12,
+                              color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            if (_isSubmittingScore)
-              Container(
-                color: Colors.black.withValues(alpha: 0.6),
-                child: const Center(
-                  child: Card(
-                    color: Colors.white,
-                    elevation: 12,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(24))),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 28),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(strokeWidth: 4),
-                          SizedBox(height: 20),
-                          Text(
-                            "Syncing Leaderboard...",
-                            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Colors.black),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            "Please do not close this screen",
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11.5, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -1407,8 +1216,9 @@ class _QuizScreenState extends State<QuizScreen> {
         bgCol = Colors.transparent;
       }
     } else {
-      borderCol = isSelected ? subjectColor : (isLight ? const Color(0xFFCBD5E1) : const Color(0xFF475569));
-      bgCol = isSelected ? subjectColor : Colors.transparent;
+      const selectedHighlightColor = Color(0xFFF59E0B);
+      borderCol = isSelected ? selectedHighlightColor : (isLight ? const Color(0xFFCBD5E1) : const Color(0xFF475569));
+      bgCol = isSelected ? selectedHighlightColor : Colors.transparent;
       if (isSelected) {
         icon = const Icon(Icons.check, color: Colors.white, size: 12);
       }
@@ -1427,8 +1237,8 @@ class _QuizScreenState extends State<QuizScreen> {
         boxShadow: isSelected && !showFeedback
             ? [
                 BoxShadow(
-                  color: subjectColor.withValues(alpha: 0.3),
-                  blurRadius: 4,
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
+                  blurRadius: 6,
                   offset: const Offset(0, 2),
                 )
               ]
@@ -1587,17 +1397,20 @@ class _QuizScreenState extends State<QuizScreen> {
                                 txtCol = isLight ? const Color(0xFF991B1B) : const Color(0xFFFECACA);
                               } else {
                                 borderCol = isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155);
-                                bgCol = Colors.transparent;
-                                txtCol = descColor.withValues(alpha: 0.6);
+                                bgCol = isLight ? const Color(0xFFF8FAFC).withValues(alpha: 0.5) : const Color(0xFF0F172A).withValues(alpha: 0.5);
+                                txtCol = isLight ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
                               }
                             } else {
+                              const selectedAmber = Color(0xFFF59E0B);
                               borderCol = isOptSelected
-                                  ? _getSubjectThemeColor()
+                                  ? selectedAmber
                                   : (isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155));
                               bgCol = isOptSelected
-                                  ? _getSubjectThemeColor().withValues(alpha: isLight ? 0.08 : 0.15)
-                                  : (isLight ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B));
-                              txtCol = isOptSelected ? _getSubjectThemeColor() : (isLight ? const Color(0xFF0F172A) : Colors.white);
+                                  ? selectedAmber.withValues(alpha: isLight ? 0.10 : 0.18)
+                                  : (isLight ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A));
+                              txtCol = isOptSelected 
+                                  ? (isLight ? const Color(0xFFB45309) : const Color(0xFFFDE68A))
+                                  : (isLight ? const Color(0xFF334155) : const Color(0xFFE2E8F0));
                             }
 
                             return GestureDetector(
@@ -1620,7 +1433,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                   boxShadow: isOptSelected && !showFeedback
                                       ? [
                                           BoxShadow(
-                                            color: _getSubjectThemeColor().withValues(alpha: 0.12),
+                                            color: const Color(0xFFF59E0B).withValues(alpha: isLight ? 0.15 : 0.25),
                                             blurRadius: 10.0,
                                             offset: const Offset(0, 4),
                                           )
