@@ -134,7 +134,7 @@ class _GlobalCustomErrorWidgetState extends State<GlobalCustomErrorWidget> {
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
-              crossAxisAlignment: CrossAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Warning Card
                 Container(
@@ -143,14 +143,14 @@ class _GlobalCustomErrorWidgetState extends State<GlobalCustomErrorWidget> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E293B),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.4), width: 1.5),
+                    border: Border.all(color: const Color(0x66EF4444), width: 1.5),
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444).withOpacity(0.15),
+                        decoration: const BoxDecoration(
+                          color: Color(0x26EF4444),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 28),
@@ -158,7 +158,7 @@ class _GlobalCustomErrorWidgetState extends State<GlobalCustomErrorWidget> {
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               "UI Rendering Exception Caught",
