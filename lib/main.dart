@@ -29,10 +29,41 @@ void main() async {
   }
 
   try {
-    GoogleFonts.config.allowRuntimeFetching = false;
+    GoogleFonts.config.allowRuntimeFetching = true;
   } catch (e) {
     debugPrint("GoogleFonts config notice: $e");
   }
+
+  // Prevent blank gray screens on uncaught widget build errors
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      child: Container(
+        color: const Color(0xFF0F172A),
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                "Something went wrong",
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                details.exception.toString(),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  };
 
   // Launch app immediately to ensure smooth, unblocked UI presentation
   runApp(SmartXAcademyApp(prefs: prefs));
