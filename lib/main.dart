@@ -27,12 +27,16 @@ void main() {
       debugPrint('[FlutterError] Uncaught Flutter Framework Error: ${details.exception}');
     };
 
-    // Initialize Firebase Core safely
+    // Initialize Firebase Core safely with a strict timeout for offline-first resilience
+    bool isFirebaseInitialized = false;
     try {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp().timeout(const Duration(seconds: 3));
+      isFirebaseInitialized = true;
       debugPrint("[Firebase] Initialized successfully.");
+    } on TimeoutException {
+      debugPrint("[Firebase] Initialization timed out (device offline or slow network). Proceeding in offline mode.");
     } catch (e) {
-      debugPrint("[Firebase] Firebase.initializeApp notice: $e");
+      debugPrint("[Firebase] Firebase.initializeApp notice (offline/config fallback): $e");
     }
 
     SharedPreferences? prefs;

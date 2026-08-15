@@ -1,4 +1,6 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 
 /// Top-level helper function to log screen views manually across the application.
@@ -16,25 +18,43 @@ Future<void> logEvent({
 
 class AnalyticsService {
   static FirebaseAnalytics? _instance;
-  static FirebaseAnalyticsObserver? _observerInstance;
+  static NavigatorObserver? _observerInstance;
 
-  /// Singleton access to [FirebaseAnalytics].
-  static FirebaseAnalytics get analytics {
-    _instance ??= FirebaseAnalytics.instance;
-    return _instance!;
+  /// Safe access to [FirebaseAnalytics]. Returns `null` if Firebase is not initialized.
+  static FirebaseAnalytics? get analytics {
+    try {
+      if (Firebase.apps.isNotEmpty) {
+        _instance ??= FirebaseAnalytics.instance;
+        return _instance;
+      }
+    } catch (e) {
+      debugPrint('[AnalyticsService] Firebase Analytics unavailable: $e');
+    }
+    return null;
   }
 
-  /// Navigation observer for automatic named route tracking in [MaterialApp].
-  static FirebaseAnalyticsObserver get observer {
-    _observerInstance ??= FirebaseAnalyticsObserver(analytics: analytics);
-    return _observerInstance!;
+  /// Safe Navigation observer for automatic named route tracking in [MaterialApp].
+  /// Returns a dummy [NavigatorObserver] if Firebase Analytics is unavailable.
+  static NavigatorObserver get observer {
+    try {
+      final fa = analytics;
+      if (fa != null) {
+        _observerInstance ??= FirebaseAnalyticsObserver(analytics: fa);
+        return _observerInstance!;
+      }
+    } catch (e) {
+      debugPrint('[AnalyticsService] Error creating observer: $e');
+    }
+    return NavigatorObserver(); // Safe fallback observer
   }
 
   /// Manually logs a screen view transition.
   static Future<void> logScreen(String screenName) async {
     try {
+      final fa = analytics;
+      if (fa == null) return;
       debugPrint('[FirebaseAnalytics] Tracking Screen View: $screenName');
-      await analytics.logScreenView(screenName: screenName);
+      await fa.logScreenView(screenName: screenName);
     } catch (e) {
       debugPrint('[FirebaseAnalytics] Error logging screen "$screenName": $e');
     }
@@ -46,8 +66,10 @@ class AnalyticsService {
     Map<String, Object>? parameters,
   }) async {
     try {
+      final fa = analytics;
+      if (fa == null) return;
       debugPrint('[FirebaseAnalytics] Tracking Event: "$name" -> $parameters');
-      await analytics.logEvent(
+      await fa.logEvent(
         name: name,
         parameters: parameters,
       );
