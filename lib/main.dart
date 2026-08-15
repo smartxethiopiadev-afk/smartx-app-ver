@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,67 +11,250 @@ import 'screens/splash_screen.dart';
 import 'services/offline_manager.dart';
 import 'services/analytics_service.dart';
 
-void main() async {
-  // Ensure widget bindings are safely initialized before calling native platforms/plugins
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  runZonedGuarded<Future<void>>(() async {
+    // 1. Ensure widget bindings are safely initialized at the very beginning inside the zone
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase Core safely
-  try {
-    await Firebase.initializeApp();
-    debugPrint("[Firebase] Initialized successfully.");
-  } catch (e) {
-    debugPrint("[Firebase] Firebase.initializeApp notice: $e");
+    // 2. Override ErrorWidget.builder to show a dark theme Scaffold error UI with exact exception & stack trace
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      return GlobalCustomErrorWidget(details: details);
+    };
+
+    // 3. Catch Flutter framework errors globally
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      debugPrint('[FlutterError] Uncaught Flutter Framework Error: ${details.exception}');
+    };
+
+    // Initialize Firebase Core safely
+    try {
+      await Firebase.initializeApp();
+      debugPrint("[Firebase] Initialized successfully.");
+    } catch (e) {
+      debugPrint("[Firebase] Firebase.initializeApp notice: $e");
+    }
+
+    SharedPreferences? prefs;
+    try {
+      prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
+    } catch (e, stack) {
+      debugPrint("Local SharedPreferences init notice: $e\n$stack");
+    }
+
+    try {
+      GoogleFonts.config.allowRuntimeFetching = true;
+    } catch (e) {
+      debugPrint("GoogleFonts config notice: $e");
+    }
+
+    // Launch app immediately to ensure smooth, unblocked UI presentation
+    runApp(SmartXAcademyApp(prefs: prefs));
+
+    // Non-blocking background initialization of remote and local cache services
+    _initServicesBackground();
+  }, (Object error, StackTrace stack) {
+    // Catch uncaught asynchronous errors globally
+    debugPrint('[runZonedGuarded] Uncaught Async Exception: $error');
+    debugPrint(stack.toString());
+  });
+}
+
+/// A developer-friendly fallback UI displayed whenever a rendering crash or unhandled UI error occurs.
+class GlobalCustomErrorWidget extends StatefulWidget {
+  final FlutterErrorDetails details;
+  const GlobalCustomErrorWidget({super.key, required this.details});
+
+  @override
+  State<GlobalCustomErrorWidget> createState() => _GlobalCustomErrorWidgetState();
+}
+
+class _GlobalCustomErrorWidgetState extends State<GlobalCustomErrorWidget> {
+  bool _copied = false;
+
+  void _copyToClipboard(BuildContext context) {
+    final String errorLog = "EXCEPTION:\n${widget.details.exceptionAsString()}\n\nSTACK TRACE:\n${widget.details.stack.toString()}";
+    Clipboard.setData(ClipboardData(text: errorLog));
+    setState(() {
+      _copied = true;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+            SizedBox(width: 8),
+            Text("Error details copied to clipboard"),
+          ],
+        ),
+        duration: Duration(seconds: 3),
+        backgroundColor: Color(0xFF10B981),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
-  SharedPreferences? prefs;
-  try {
-    prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
-  } catch (e) {
-    debugPrint("Local SharedPreferences init notice: $e");
-  }
+  @override
+  Widget build(BuildContext context) {
+    final String exceptionString = widget.details.exceptionAsString();
+    final String stackTraceString = widget.details.stack?.toString() ?? 'No stack trace available.';
 
-  try {
-    GoogleFonts.config.allowRuntimeFetching = true;
-  } catch (e) {
-    debugPrint("GoogleFonts config notice: $e");
-  }
-
-  // Prevent blank gray screens on uncaught widget build errors
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    return Material(
-      child: Container(
-        color: const Color(0xFF0F172A),
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 48),
-              const SizedBox(height: 16),
-              const Text(
-                "Something went wrong",
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF0F172A),
+      ),
+      home: Scaffold(
+        backgroundColor: const Color(0xFF0F172A),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF1E293B),
+          elevation: 0,
+          leading: const Padding(
+            padding: EdgeInsets.all(12.0),
+            child: Icon(Icons.bug_report_rounded, color: Color(0xFFEF4444)),
+          ),
+          title: const Text(
+            "Application Error Encountered",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+          ),
+          actions: [
+            Builder(
+              builder: (ctx) => IconButton(
+                icon: Icon(
+                  _copied ? Icons.check_circle_rounded : Icons.copy_rounded,
+                  color: _copied ? const Color(0xFF10B981) : Colors.white70,
+                ),
+                tooltip: "Copy Error",
+                onPressed: () => _copyToClipboard(ctx),
               ),
-              const SizedBox(height: 8),
-              Text(
-                details.exception.toString(),
-                textAlign: TextAlign.center,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-            ],
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAlignment.start,
+              children: [
+                // Warning Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.4), width: 1.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 28),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAlignment.start,
+                          children: [
+                            Text(
+                              "UI Rendering Exception Caught",
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              "The exact details below describe what went wrong during runtime.",
+                              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  "EXCEPTION MESSAGE",
+                  style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(maxHeight: 120),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF020617),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF334155)),
+                  ),
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      exceptionString,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        color: Color(0xFFF87171),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  "STACK TRACE",
+                  style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1),
+                ),
+                const SizedBox(height: 6),
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF020617),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF334155)),
+                    ),
+                    child: SingleChildScrollView(
+                      child: SelectableText(
+                        stackTraceString,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                          color: Color(0xFFCBD5E1),
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Builder(
+                  builder: (ctx) => SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _copyToClipboard(ctx),
+                      icon: Icon(_copied ? Icons.check_circle_rounded : Icons.copy_rounded, size: 18),
+                      label: Text(_copied ? "Copied to Clipboard" : "Copy Error Details"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00BFFF),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
-  };
-
-  // Launch app immediately to ensure smooth, unblocked UI presentation
-  runApp(SmartXAcademyApp(prefs: prefs));
-
-  // Non-blocking background initialization of remote and local cache services
-  _initServicesBackground();
+  }
 }
 
 Future<void> _initServicesBackground() async {
