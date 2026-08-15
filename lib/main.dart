@@ -1,3 +1,5 @@
+import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -10,62 +12,148 @@ import 'services/offline_manager.dart';
 import 'services/analytics_service.dart';
 
 void main() async {
-  // Ensure widget bindings are safely initialized before calling native platforms/plugins
+  // 1. Ensure widget bindings are safely initialized before any async/native plugin calls
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase Core safely
+  // 2. Global Error Handling to eliminate Grey Screen and capture uncaught errors
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('[FlutterError] Caught framework error: ${details.exceptionAsString()}');
+  };
+
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    debugPrint('[PlatformDispatcher] Caught root error: $error\n$stack');
+    return true; // Prevents app process termination
+  };
+
+  // 3. Fallback Error Widget: replace the default plain Grey Screen with a polished, readable error card
+  ErrorWidget.builder = (FlutterErrorDetails errorDetails) {
+    return Material(
+      color: const Color(0xFF0F172A),
+      child: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            child: Container(
+              padding: const EdgeInsets.all(24.0),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(20.0),
+                border: Border.all(color: const Color(0xFF334155), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14.0),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.error_outline_rounded,
+                      color: Color(0xFFEF4444),
+                      size: 40.0,
+                    ),
+                  ),
+                  const SizedBox(height: 16.0),
+                  const Text(
+                    'Application Notice',
+                    style: TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8.0),
+                  Text(
+                    kReleaseMode
+                        ? 'A temporary display issue occurred. Please restart or go back.'
+                        : errorDetails.exceptionAsString(),
+                    textAlign: TextAlign.center,
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13.0,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF94A3B8),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  };
+
+  // 4. Safe Firebase Core initialization with offline/network fault tolerance
   try {
-    await Firebase.initializeApp();
-    debugPrint("[Firebase] Initialized successfully.");
+    await Firebase.initializeApp().timeout(const Duration(seconds: 3));
+    debugPrint('[Firebase] Initialized successfully.');
   } catch (e) {
-    debugPrint("[Firebase] Firebase.initializeApp notice: $e");
+    debugPrint('[Firebase] Safe initialization notice (offline/skipped): $e');
   }
 
+  // 5. Safe local SharedPreferences loading
   SharedPreferences? prefs;
   try {
     prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
   } catch (e) {
-    debugPrint("Local SharedPreferences init notice: $e");
+    debugPrint('[Preferences] SharedPreferences init notice: $e');
   }
 
+  // 6. Safe Google Fonts configuration
   try {
     GoogleFonts.config.allowRuntimeFetching = false;
   } catch (e) {
-    debugPrint("GoogleFonts config notice: $e");
+    debugPrint('[GoogleFonts] Config notice: $e');
   }
 
-  // Launch app immediately to ensure smooth, unblocked UI presentation
+  // 7. Safe local offline database setup
+  try {
+    await OfflineManager.init().timeout(const Duration(seconds: 2));
+    debugPrint('[OfflineManager] Local SQLite/cache storage ready.');
+  } catch (e) {
+    debugPrint('[OfflineManager] Safe local storage init notice: $e');
+  }
+
+  // 8. Launch UI immediately for instant rendering even when offline
   runApp(SmartXAcademyApp(prefs: prefs));
 
-  // Non-blocking background initialization of remote and local cache services
+  // 9. Non-blocking asynchronous cloud services background initialization
   _initServicesBackground();
 }
 
 Future<void> _initServicesBackground() async {
-  // Initialize offline manager locally
-  try {
-    await OfflineManager.init();
-  } catch (e) {
-    debugPrint("OfflineManager local init notice: $e");
-  }
-  
-  // Initialize Mobile Ads SDK silently in background
+  // Initialize Mobile Ads SDK silently in background with timeout
   try {
     await MobileAds.instance.initialize().timeout(const Duration(seconds: 4));
+    debugPrint('[MobileAds] Initialized successfully in background.');
   } catch (e) {
-    debugPrint("MobileAds background init notice: $e");
+    debugPrint('[MobileAds] Safe background init notice: $e');
   }
 
-  // Initialize Supabase client silently in background
+  // Initialize Supabase client silently in background with timeout & network safety
   try {
     if (!Supabase.instance.isInitialized) {
       await Supabase.initialize(
         url: AppConfig.supabaseUrl,
         publishableKey: AppConfig.supabaseAnonKey,
       ).timeout(const Duration(seconds: 4));
+      debugPrint('[Supabase] Initialized successfully in background.');
     }
   } catch (e) {
-    debugPrint("Supabase background init notice: $e");
+    debugPrint('[Supabase] Safe background init notice: $e');
   }
 }
 
@@ -149,7 +237,7 @@ class _SmartXAcademyAppState extends State<SmartXAcademyApp> {
           useMaterial3: true,
           brightness: Brightness.light,
           colorScheme: const ColorScheme.light(
-            primary: Color(0xFF00BFFF), // Elegant DeepSkyBlue (#00BFFF)
+            primary: Color(0xFF00BFFF), // DeepSkyBlue (#00BFFF)
             surface: Color(0xFFF1F5F9), // Soft slate background
             onPrimary: Colors.white,
             onSurface: Color(0xFF1E2843),
@@ -163,7 +251,7 @@ class _SmartXAcademyAppState extends State<SmartXAcademyApp> {
           useMaterial3: true,
           brightness: Brightness.dark,
           colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF00BFFF), // Elegant DeepSkyBlue (#00BFFF)
+            primary: Color(0xFF00BFFF), // DeepSkyBlue (#00BFFF)
             surface: Color(0xFF0F172A), // Deep dark-slate background
             onPrimary: Color(0xFF0F172A),
             onSurface: Color(0xFFFAFAFA),
@@ -180,7 +268,7 @@ class _SmartXAcademyAppState extends State<SmartXAcademyApp> {
           AnalyticsService.observer,
         ],
         
-        // Launch the beautiful animated open-application process (Splash Screen)
+        // Launch the animated open-application process (Splash Screen)
         home: SplashScreen(
           isDarkMode: _isDarkMode,
           languageCode: _languageCode,
@@ -191,3 +279,4 @@ class _SmartXAcademyAppState extends State<SmartXAcademyApp> {
     );
   }
 }
+
