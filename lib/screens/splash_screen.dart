@@ -204,6 +204,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
+        settings: const RouteSettings(name: '/home'),
         pageBuilder: (context, animation, secondaryAnimation) => HomeScreen(
           isDarkMode: widget.isDarkMode,
           languageCode: widget.languageCode,
@@ -225,6 +226,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
+        settings: const RouteSettings(name: '/onboarding'),
         pageBuilder: (context, animation, secondaryAnimation) => OnboardingScreen(
           isDarkMode: widget.isDarkMode,
           languageCode: widget.languageCode,

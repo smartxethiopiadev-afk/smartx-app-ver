@@ -16,50 +16,64 @@ void main() {
     // 1. Ensure widget bindings are safely initialized at the very beginning inside the zone
     WidgetsFlutterBinding.ensureInitialized();
 
-    // 2. Override ErrorWidget.builder to show a dark theme Scaffold error UI with exact exception & stack trace
+    // 2. Custom ErrorWidget builder to present a structured, copyable error UI instead of gray/white screens
     ErrorWidget.builder = (FlutterErrorDetails details) {
       return GlobalCustomErrorWidget(details: details);
     };
 
-    // 3. Catch Flutter framework errors globally
+    // 3. Catch and report unhandled Flutter framework errors
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
       debugPrint('[FlutterError] Uncaught Flutter Framework Error: ${details.exception}');
     };
 
-    // Initialize Firebase Core safely with a strict timeout for offline-first resilience
-    try {
-      await Firebase.initializeApp().timeout(const Duration(seconds: 3));
-      debugPrint("[Firebase] Initialized successfully.");
-    } on TimeoutException {
-      debugPrint("[Firebase] Initialization timed out (device offline or slow network). Proceeding in offline mode.");
-    } catch (e) {
-      debugPrint("[Firebase] Firebase.initializeApp notice (offline/config fallback): $e");
-    }
+    // 4. Safe Firebase Core & Google Services Initialization
+    // Supports native android/app/google-services.json and ios/Runner/GoogleService-Info.plist seamlessly.
+    // Wrapped in a strict timeout to ensure offline startup is instant and non-blocking.
+    await _initFirebaseSafely();
 
+    // 5. Load fast local preferences
     SharedPreferences? prefs;
     try {
       prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
     } catch (e, stack) {
-      debugPrint("Local SharedPreferences init notice: $e\n$stack");
+      debugPrint('[SharedPreferences] Local cache init notice: $e\n$stack');
     }
 
     try {
       GoogleFonts.config.allowRuntimeFetching = true;
     } catch (e) {
-      debugPrint("GoogleFonts config notice: $e");
+      debugPrint('[GoogleFonts] Runtime fetch notice: $e');
     }
 
-    // Launch app immediately to ensure smooth, unblocked UI presentation
+    // 6. Launch Flutter application UI immediately
     runApp(SmartXAcademyApp(prefs: prefs));
 
-    // Non-blocking background initialization of remote and local cache services
+    // 7. Non-blocking background initialization of secondary services
     _initServicesBackground();
   }, (Object error, StackTrace stack) {
-    // Catch uncaught asynchronous errors globally
     debugPrint('[runZonedGuarded] Uncaught Async Exception: $error');
     debugPrint(stack.toString());
   });
+}
+
+/// Safely initializes Firebase without blocking app execution if offline or unconfigured.
+Future<void> _initFirebaseSafely() async {
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp().timeout(const Duration(seconds: 3));
+      debugPrint('[Firebase] Successfully initialized with native platform configuration.');
+    } else {
+      debugPrint('[Firebase] Already initialized with active apps: ${Firebase.apps.map((a) => a.name).join(', ')}');
+    }
+
+    // Log app open analytics event safely in background
+    AnalyticsService.logEvent(name: 'app_open');
+  } on TimeoutException {
+    debugPrint('[Firebase] Initialization timed out (device offline or slow network). Proceeding in offline mode.');
+  } catch (e) {
+    debugPrint('[Firebase] Firebase.initializeApp notice (offline/config fallback): $e');
+  }
 }
 
 /// A developer-friendly fallback UI displayed whenever a rendering crash or unhandled UI error occurs.
@@ -264,14 +278,14 @@ Future<void> _initServicesBackground() async {
   try {
     await OfflineManager.init();
   } catch (e) {
-    debugPrint("OfflineManager local init notice: $e");
+    debugPrint('[OfflineManager] Local init notice: $e');
   }
   
   // Initialize Mobile Ads SDK silently in background
   try {
     await MobileAds.instance.initialize().timeout(const Duration(seconds: 4));
   } catch (e) {
-    debugPrint("MobileAds background init notice: $e");
+    debugPrint('[MobileAds] Background init notice: $e');
   }
 
   // Initialize Supabase client silently in background
@@ -283,7 +297,7 @@ Future<void> _initServicesBackground() async {
       ).timeout(const Duration(seconds: 4));
     }
   } catch (e) {
-    debugPrint("Supabase background init notice: $e");
+    debugPrint('[Supabase] Background init notice: $e');
   }
 }
 
@@ -340,6 +354,7 @@ class _SmartXAcademyAppState extends State<SmartXAcademyApp> {
     if (widget.prefs != null) {
       await widget.prefs!.setBool('isDarkMode', _isDarkMode);
     }
+    AnalyticsService.logThemeChanged(_isDarkMode);
   }
 
   void toggleLanguage() async {
@@ -349,6 +364,7 @@ class _SmartXAcademyAppState extends State<SmartXAcademyApp> {
     if (widget.prefs != null) {
       await widget.prefs!.setString('languageCode', _languageCode);
     }
+    AnalyticsService.logLanguageChanged(_languageCode);
   }
 
   @override
@@ -362,13 +378,13 @@ class _SmartXAcademyAppState extends State<SmartXAcademyApp> {
         title: 'Smart X ET',
         debugShowCheckedModeBanner: false,
         
-        // Sophisticated Light & Dark Themes matching the user's sleek palette
+        // Modern palette for light & dark modes
         theme: ThemeData(
           useMaterial3: true,
           brightness: Brightness.light,
           colorScheme: const ColorScheme.light(
-            primary: Color(0xFF00BFFF), // Elegant DeepSkyBlue (#00BFFF)
-            surface: Color(0xFFF1F5F9), // Soft slate background
+            primary: Color(0xFF00BFFF),
+            surface: Color(0xFFF1F5F9),
             onPrimary: Colors.white,
             onSurface: Color(0xFF1E2843),
           ),
@@ -381,8 +397,8 @@ class _SmartXAcademyAppState extends State<SmartXAcademyApp> {
           useMaterial3: true,
           brightness: Brightness.dark,
           colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF00BFFF), // Elegant DeepSkyBlue (#00BFFF)
-            surface: Color(0xFF0F172A), // Deep dark-slate background
+            primary: Color(0xFF00BFFF),
+            surface: Color(0xFF0F172A),
             onPrimary: Color(0xFF0F172A),
             onSurface: Color(0xFFFAFAFA),
           ),
@@ -393,12 +409,12 @@ class _SmartXAcademyAppState extends State<SmartXAcademyApp> {
         ),
         themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
         
-        // Automated Navigation Observer for Firebase Analytics
+        // Automated screen navigation observer for Google Analytics
         navigatorObservers: [
           AnalyticsService.observer,
         ],
         
-        // Launch the beautiful animated open-application process (Splash Screen)
+        // Launch splash screen with named route settings for automated GA screen capture
         home: SplashScreen(
           isDarkMode: _isDarkMode,
           languageCode: _languageCode,
