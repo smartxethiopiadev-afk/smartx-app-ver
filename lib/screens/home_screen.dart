@@ -309,6 +309,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () async {
+                            AnalyticsService.logTelegramBannerClicked(source: 'home_popup');
                             Navigator.of(dialogContext).pop();
                             final uri = Uri.parse('https://t.me/SmartX_Discussion');
                             if (await canLaunchUrl(uri)) {

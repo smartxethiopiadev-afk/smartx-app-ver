@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Android Native Splash Screen for Smart X ET -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Seamless background matching the Flutter splash screen dark theme (#0F172A) -->
+    <!-- Seamless background matching the Flutter splash screen dark theme (#080E1E) -->
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#0F172A" />
+            <solid android:color="#080E1E" />
         </shape>
     </item>
 </layer-list>

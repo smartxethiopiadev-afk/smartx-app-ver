@@ -69,7 +69,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
   // Animation Controllers
   late AnimationController _ambientController;
+  late AnimationController _pulseController;
   late AnimationController _entranceController;
+  
+  late Animation<double> _emblemScaleAnimation;
   late Animation<double> _titleFadeAnimation;
   late Animation<Offset> _titleSlideAnimation;
   late Animation<double> _spinnerFadeAnimation;
@@ -84,36 +87,49 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     // Continuous smooth ambient rotation for geometric abstract background
     _ambientController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 18),
+      duration: const Duration(seconds: 20),
     )..repeat();
 
-    // Entrance animation for typography and spinner
+    // Gentle breathing pulse for the vector emblem
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat(reverse: true);
+
+    // Entrance animation for emblem, typography, and spinner
     _entranceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1400),
+    );
+
+    _emblemScaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
+      ),
     );
 
     _titleFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _entranceController,
-        curve: const Interval(0.1, 0.7, curve: Curves.easeOutCubic),
+        curve: const Interval(0.2, 0.75, curve: Curves.easeOutCubic),
       ),
     );
 
     _titleSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.15),
+      begin: const Offset(0, 0.2),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
         parent: _entranceController,
-        curve: const Interval(0.1, 0.8, curve: Curves.easeOutCubic),
+        curve: const Interval(0.2, 0.85, curve: Curves.easeOutCubic),
       ),
     );
 
     _spinnerFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _entranceController,
-        curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
+        curve: const Interval(0.6, 1.0, curve: Curves.easeIn),
       ),
     );
 
@@ -127,6 +143,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   void dispose() {
     _autoNavigateTimer?.cancel();
     _ambientController.dispose();
+    _pulseController.dispose();
     _entranceController.dispose();
     super.dispose();
   }
@@ -188,7 +205,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
     // 4. Navigate to destination after smooth splash timing
     _autoNavigateTimer?.cancel();
-    _autoNavigateTimer = Timer(const Duration(milliseconds: 2000), () {
+    _autoNavigateTimer = Timer(const Duration(milliseconds: 2100), () {
       if (!mounted) return;
       if (hasSeenOnboarding) {
         debugPrint('[Splash] Direct offline-first route -> HomeScreen');
@@ -291,7 +308,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               ),
             ),
 
-            // Layer 3: Central Brand Identity & Understated Loader
+            // Layer 3: Central Brand Identity & Modern Vector Emblem
             SafeArea(
               child: Center(
                 child: Column(
@@ -300,51 +317,25 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   children: [
                     const Spacer(flex: 12),
 
-                    // Central Circular App Icon
-                    SlideTransition(
-                      position: _titleSlideAnimation,
-                      child: FadeTransition(
-                        opacity: _titleFadeAnimation,
-                        child: Container(
-                          width: 90,
-                          height: 90,
-                          margin: const EdgeInsets.only(bottom: 22),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF00D2FF),
-                                Color(0xFF0072FF),
-                              ],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF00D2FF).withValues(alpha: 0.35),
-                                blurRadius: 24,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
+                    // Refined Custom Vector Brand Emblem (No bitmap icon)
+                    AnimatedBuilder(
+                      animation: Listenable.merge([_entranceController, _pulseController]),
+                      builder: (context, child) {
+                        final double scale = _emblemScaleAnimation.value;
+                        final double pulse = 1.0 + (_pulseController.value * 0.035);
+                        final double opacity = _titleFadeAnimation.value;
+
+                        return Opacity(
+                          opacity: opacity,
+                          child: Transform.scale(
+                            scale: scale * pulse,
+                            child: const _ModernVectorBrandMark(),
                           ),
-                          padding: const EdgeInsets.all(2.5),
-                          child: ClipOval(
-                            child: Container(
-                              color: const Color(0xFF0F172A),
-                              child: Image.asset(
-                                'assets/images/app_icon.png',
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => const Icon(
-                                  Icons.school_rounded,
-                                  size: 44,
-                                  color: Color(0xFF00D2FF),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
+
+                    const SizedBox(height: 28),
 
                     // Central App Name: "Smart X Ethiopian"
                     SlideTransition(
@@ -363,9 +354,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                 Text(
                                   'Smart ',
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 34,
+                                    fontSize: 32,
                                     fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.5,
+                                    letterSpacing: -0.4,
                                     color: Colors.white,
                                     shadows: [
                                       Shadow(
@@ -376,28 +367,35 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                     ],
                                   ),
                                 ),
-                                Text(
-                                  'X',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 35,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.5,
-                                    color: const Color(0xFF00D2FF), // Vibrant Teal/Cyan accent
-                                    shadows: [
-                                      Shadow(
-                                        color: const Color(0xFF00D2FF).withValues(alpha: 0.55),
-                                        blurRadius: 18,
-                                        offset: const Offset(0, 0),
-                                      ),
-                                    ],
+                                ShaderMask(
+                                  shaderCallback: (bounds) => const LinearGradient(
+                                    colors: [Color(0xFF00F0FF), Color(0xFF0099FF)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ).createShader(bounds),
+                                  child: Text(
+                                    'X',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 34,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                      color: Colors.white,
+                                      shadows: [
+                                        Shadow(
+                                          color: const Color(0xFF00D2FF).withValues(alpha: 0.6),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 0),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                                 Text(
                                   ' Ethiopian',
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 34,
+                                    fontSize: 32,
                                     fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.5,
+                                    letterSpacing: 0.4,
                                     color: Colors.white,
                                     shadows: [
                                       Shadow(
@@ -418,8 +416,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                               'INTELLIGENT LEARNING PLATFORM',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 10.5,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 2.8,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 3.2,
                                 color: const Color(0xFF94A3B8).withValues(alpha: 0.85),
                               ),
                             ),
@@ -428,19 +426,19 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                       ),
                     ),
 
-                    const SizedBox(height: 36),
+                    const SizedBox(height: 38),
 
-                    // Understated Teal Blue Loading Spinner
+                    // Understated Minimal Teal Blue Loading Spinner
                     FadeTransition(
                       opacity: _spinnerFadeAnimation,
                       child: Container(
-                        width: 26,
-                        height: 26,
+                        width: 24,
+                        height: 24,
                         padding: const EdgeInsets.all(2),
                         child: const CircularProgressIndicator(
-                          strokeWidth: 2.0,
+                          strokeWidth: 2.2,
                           strokeCap: StrokeCap.round,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00C9E8)), // Teal Blue
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00D2FF)),
                         ),
                       ),
                     ),
@@ -454,14 +452,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                         'ETHIOPIAN CURRICULUM EXCELLENCE',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 9.5,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 2.2,
-                          color: const Color(0xFF64748B).withValues(alpha: 0.6),
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2.4,
+                          color: const Color(0xFF64748B).withValues(alpha: 0.65),
                         ),
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 22),
                   ],
                 ),
               ),
@@ -471,6 +469,148 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       ),
     );
   }
+}
+
+/// A modern, high-definition pure vector emblem for "Smart X".
+/// Features dual glowing energy bands, illuminated intersection, and layered geometric framing.
+class _ModernVectorBrandMark extends StatelessWidget {
+  const _ModernVectorBrandMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 96,
+      height: 96,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [
+            const Color(0xFF00D2FF).withValues(alpha: 0.22),
+            const Color(0xFF0072FF).withValues(alpha: 0.08),
+            Colors.transparent,
+          ],
+          radius: 0.75,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF00D2FF).withValues(alpha: 0.25),
+            blurRadius: 28,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Center(
+        child: Container(
+          width: 78,
+          height: 78,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0xFF0B1426),
+            border: Border.all(
+              color: const Color(0xFF00D2FF).withValues(alpha: 0.45),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.4),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: CustomPaint(
+            painter: _VectorXInsigniaPainter(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Custom vector painter that renders a geometric glowing "X" brand mark.
+class _VectorXInsigniaPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    final Offset center = Offset(w / 2, h / 2);
+
+    final Paint glowPaint = Paint()
+      ..color = const Color(0xFF00D2FF).withValues(alpha: 0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+
+    // Primary diagonal stroke (\): Cyan to Blue Gradient
+    final Paint mainStrokePaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFF00FFFF),
+          Color(0xFF00BFFF),
+          Color(0xFF0072FF),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, w, h))
+      ..strokeWidth = 6.2
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    // Secondary diagonal stroke (/): Sapphire to Cyan Gradient
+    final Paint secondStrokePaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.bottomLeft,
+        end: Alignment.topRight,
+        colors: [
+          Color(0xFF38BDF8),
+          Color(0xFF00E5FF),
+          Color(0xFF67E8F9),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, w, h))
+      ..strokeWidth = 6.2
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    final double pad = w * 0.26;
+
+    // Draw blurred glow behind
+    canvas.drawLine(
+      Offset(pad, pad),
+      Offset(w - pad, h - pad),
+      glowPaint..strokeWidth = 10,
+    );
+    canvas.drawLine(
+      Offset(w - pad, pad),
+      Offset(pad, h - pad),
+      glowPaint..strokeWidth = 10,
+    );
+
+    // Draw main diagonal (\)
+    canvas.drawLine(
+      Offset(pad, pad),
+      Offset(w - pad, h - pad),
+      mainStrokePaint,
+    );
+
+    // Draw secondary diagonal (/)
+    canvas.drawLine(
+      Offset(w - pad, pad),
+      Offset(pad, h - pad),
+      secondStrokePaint,
+    );
+
+    // Illuminated central spark node
+    final Paint sparkPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, 2.5, sparkPaint);
+
+    final Paint outerSparkGlow = Paint()
+      ..color = const Color(0xFF00FFFF).withValues(alpha: 0.6)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, 4.5, outerSparkGlow);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Custom painter that renders clean, sophisticated geometric patterns,
