@@ -447,10 +447,9 @@ class _NotesScreenState extends State<NotesScreen> {
 
   Map<String, Style> _buildHtmlStyles(bool isDark) {
     final Color textColor = isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B);
-    final Color headingColor = isDark ? Colors.white : const Color(0xFF0F172A);
-    final Color borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
-    final Color calloutBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
-    final Color formulaBg = isDark ? const Color(0xFF0F2338) : const Color(0xFFEFF6FF);
+    final Color textColor = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B);
+    final Color headingBlue = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
+    final Color tableBorderColor = isDark ? const Color(0xFF0284C7) : const Color(0xFF38BDF8);
 
     return {
       "body": Style(
@@ -459,97 +458,127 @@ class _NotesScreenState extends State<NotesScreen> {
         fontSize: FontSize(15.5),
         lineHeight: LineHeight(1.65),
         color: textColor,
-        fontFamily: 'Georgia',
       ),
       "h1": Style(
-        fontSize: FontSize(21.0),
-        fontWeight: FontWeight.w900,
-        color: headingColor,
-        margin: Margins.only(top: 18, bottom: 12),
-        fontFamily: 'Georgia',
+        fontSize: FontSize(22.0),
+        fontWeight: FontWeight.w800,
+        color: isDark ? Colors.white : const Color(0xFF0F172A),
+        margin: Margins.only(top: 14, bottom: 10),
       ),
       "h2": Style(
-        fontSize: FontSize(18.5),
+        fontSize: FontSize(17.5),
         fontWeight: FontWeight.w800,
-        color: widget.themeColor,
-        margin: Margins.only(top: 16, bottom: 10),
-        fontFamily: 'Georgia',
+        color: headingBlue,
+        margin: Margins.only(top: 16, bottom: 8),
       ),
       "h3": Style(
-        fontSize: FontSize(16.0),
+        fontSize: FontSize(16.5),
         fontWeight: FontWeight.w700,
-        color: headingColor,
+        color: headingBlue,
         margin: Margins.only(top: 14, bottom: 8),
-        fontFamily: 'Georgia',
       ),
       "p": Style(
         margin: Margins.only(bottom: 12),
-        lineHeight: LineHeight(1.65),
+        lineHeight: LineHeight(1.6),
+        color: textColor,
       ),
       "ul": Style(
-        margin: Margins.only(left: 8, bottom: 12),
+        margin: Margins.only(left: 4, bottom: 12),
         padding: HtmlPaddings.only(left: 12),
       ),
       "ol": Style(
-        margin: Margins.only(left: 8, bottom: 12),
+        margin: Margins.only(left: 4, bottom: 12),
         padding: HtmlPaddings.only(left: 12),
       ),
       "li": Style(
-        margin: Margins.only(bottom: 6),
-        lineHeight: LineHeight(1.5),
+        margin: Margins.only(bottom: 8),
+        lineHeight: LineHeight(1.55),
+        color: textColor,
       ),
       "strong": Style(
         fontWeight: FontWeight.w800,
-        color: headingColor,
+        color: isDark ? Colors.white : const Color(0xFF0F172A),
       ),
       "em": Style(
         fontStyle: FontStyle.italic,
       ),
+      "hr": Style(
+        margin: Margins.symmetric(vertical: 14),
+        border: const Border(bottom: BorderSide(color: Color(0xFF38BDF8), width: 2.0)),
+        backgroundColor: Colors.transparent,
+      ),
       "table": Style(
-        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-        border: Border.all(color: borderColor, width: 1.0),
-        margin: Margins.symmetric(vertical: 12),
+        backgroundColor: Colors.transparent,
+        border: Border.all(color: tableBorderColor, width: 1.5),
+        margin: Margins.symmetric(vertical: 14),
       ),
       "th": Style(
-        backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+        backgroundColor: Colors.transparent,
         padding: HtmlPaddings.symmetric(horizontal: 10, vertical: 8),
         fontWeight: FontWeight.w800,
-        color: headingColor,
-        border: Border.all(color: borderColor, width: 0.8),
+        color: headingBlue,
+        border: Border.all(color: tableBorderColor, width: 1.0),
       ),
       "td": Style(
+        backgroundColor: Colors.transparent,
         padding: HtmlPaddings.symmetric(horizontal: 10, vertical: 8),
-        border: Border.all(color: borderColor, width: 0.8),
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFF0F172A), width: 1.0),
+        color: textColor,
       ),
       "code": Style(
-        backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-        color: widget.themeColor,
+        backgroundColor: Colors.transparent,
+        color: const Color(0xFF0284C7),
         fontFamily: 'monospace',
-        padding: HtmlPaddings.symmetric(horizontal: 6, vertical: 2),
+        fontSize: FontSize(14.5),
+        fontWeight: FontWeight.w600,
+        padding: HtmlPaddings.symmetric(horizontal: 4, vertical: 2),
       ),
       ".callout": Style(
-        backgroundColor: calloutBg,
-        border: Border(left: BorderSide(color: widget.themeColor, width: 4.0)),
-        padding: HtmlPaddings.all(14),
-        margin: Margins.symmetric(vertical: 12),
+        backgroundColor: Colors.transparent,
+        border: const Border(left: BorderSide(color: Color(0xFF0EA5E9), width: 4.0)),
+        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
+        margin: Margins.symmetric(vertical: 14),
+        fontStyle: FontStyle.italic,
       ),
-      ".formula": Style(
-        backgroundColor: formulaBg,
-        border: Border.all(color: widget.themeColor.withValues(alpha: 0.35), width: 1.2),
-        padding: HtmlPaddings.all(14),
-        margin: Margins.symmetric(vertical: 12),
+      ".keynote": Style(
+        backgroundColor: Colors.transparent,
+        border: const Border(left: BorderSide(color: Color(0xFF0EA5E9), width: 4.0)),
+        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
+        margin: Margins.symmetric(vertical: 14),
       ),
       ".definition": Style(
-        backgroundColor: isDark ? const Color(0xFF1F2937) : const Color(0xFFF0FDF4),
-        border: Border(left: BorderSide(color: const Color(0xFF10B981), width: 4.0)),
-        padding: HtmlPaddings.all(14),
-        margin: Margins.symmetric(vertical: 12),
+        backgroundColor: Colors.transparent,
+        border: const Border(left: BorderSide(color: Color(0xFFF59E0B), width: 4.0)),
+        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
+        margin: Margins.symmetric(vertical: 14),
       ),
       ".example": Style(
-        backgroundColor: isDark ? const Color(0xFF28241D) : const Color(0xFFFEFCE8),
-        border: Border(left: BorderSide(color: const Color(0xFFF59E0B), width: 4.0)),
-        padding: HtmlPaddings.all(14),
-        margin: Margins.symmetric(vertical: 12),
+        backgroundColor: Colors.transparent,
+        border: const Border(left: BorderSide(color: Color(0xFF8B5CF6), width: 4.0)),
+        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
+        margin: Margins.symmetric(vertical: 14),
+      ),
+      "blockquote": Style(
+        backgroundColor: Colors.transparent,
+        border: const Border(left: BorderSide(color: Color(0xFF0EA5E9), width: 4.0)),
+        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
+        margin: Margins.symmetric(vertical: 14),
+      ),
+      ".formula": Style(
+        backgroundColor: isDark ? const Color(0xFF2A1515).withValues(alpha: 0.3) : const Color(0xFFFFF1F2),
+        border: Border.all(color: const Color(0xFFFCA5A5), width: 1.2),
+        padding: HtmlPaddings.symmetric(horizontal: 16, vertical: 14),
+        margin: Margins.symmetric(vertical: 16),
+        color: const Color(0xFFB91C1C),
+        fontWeight: FontWeight.w700,
+      ),
+      ".formula-box": Style(
+        backgroundColor: isDark ? const Color(0xFF2A1515).withValues(alpha: 0.3) : const Color(0xFFFFF1F2),
+        border: Border.all(color: const Color(0xFFFCA5A5), width: 1.2),
+        padding: HtmlPaddings.symmetric(horizontal: 16, vertical: 14),
+        margin: Margins.symmetric(vertical: 16),
+        color: const Color(0xFFB91C1C),
+        fontWeight: FontWeight.w700,
       ),
     };
   }
@@ -754,116 +783,73 @@ class _NotesScreenState extends State<NotesScreen> {
         : widget.unitTitle;
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF1C2541) : Colors.white,
+        backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
         foregroundColor: textColor,
-        elevation: 0.5,
+        elevation: 0,
         centerTitle: false,
-        titleSpacing: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "${widget.subjectId.toUpperCase()} • Unit ${widget.unitNumber}",
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                color: widget.themeColor,
-                letterSpacing: 0.4,
-              ),
+        leadingWidth: 100,
+        leading: InkWell(
+          onTap: () => Navigator.of(context).pop(),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 16,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isEn ? "Back" : "ተመለስ",
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 2),
-            Text(
-              activeTitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w800,
-                color: textColor,
-              ),
-            ),
-          ],
+          ),
         ),
         actions: [
-          // 1. Offline Download Toggle
+          // 1. Dark/Light Mode Toggle (Moon icon)
           IconButton(
-            icon: _isDownloading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2.2),
-                  )
-                : Icon(
-                    _isDownloaded ? Icons.download_done_rounded : Icons.download_rounded,
-                    color: _isDownloaded ? const Color(0xFF10B981) : textColor,
-                    size: 21,
-                  ),
-            tooltip: _isDownloaded ? "Saved Offline" : "Save Offline",
-            onPressed: _toggleOfflineDownload,
+            icon: Icon(
+              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              color: isDark ? const Color(0xFFFBBF24) : const Color(0xFF0F172A),
+              size: 22,
+            ),
+            tooltip: isDark ? "Light Mode" : "Dark Mode",
+            onPressed: _toggleThemeMode,
           ),
 
           // 2. Bookmark Toggle
           IconButton(
             icon: Icon(
               _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-              color: _isBookmarked ? const Color(0xFFFFB703) : textColor,
-              size: 21,
+              color: _isBookmarked ? const Color(0xFF0284C7) : (isDark ? Colors.white : const Color(0xFF0F172A)),
+              size: 23,
             ),
             tooltip: "Bookmark",
             onPressed: _toggleBookmark,
           ),
 
-          // 3. Dark/Light Mode Toggle
+          // 3. Share
           IconButton(
-            icon: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              transitionBuilder: (child, anim) => RotationTransition(
-                turns: anim,
-                child: FadeTransition(opacity: anim, child: child),
-              ),
-              child: Icon(
-                isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                key: ValueKey<bool>(isDark),
-                color: isDark ? const Color(0xFFFBBF24) : const Color(0xFF334155),
-                size: 21,
-              ),
+            icon: Icon(
+              Icons.share_outlined,
+              size: 21,
+              color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
             ),
-            tooltip: isDark ? "Switch to Light Mode" : "Switch to Dark Mode",
-            onPressed: _toggleThemeMode,
-          ),
-
-          // 4. Share
-          IconButton(
-            icon: const Icon(Icons.share_rounded, size: 19),
             tooltip: "Share",
             onPressed: _shareNote,
           ),
-
-          // 5. Search in note toggle
-          IconButton(
-            icon: Icon(
-              _isSearchOpen ? Icons.close_rounded : Icons.search_rounded,
-              size: 21,
-            ),
-            tooltip: "Search in note",
-            onPressed: () {
-              setState(() {
-                _isSearchOpen = !_isSearchOpen;
-                if (!_isSearchOpen) {
-                  _searchQuery = '';
-                  _searchController.clear();
-                }
-              });
-            },
-          ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
@@ -917,102 +903,32 @@ class _NotesScreenState extends State<NotesScreen> {
           // Bottom Action & Navigation Bar (Strictly bottom-aligned, no top tabs)
           if (!_isLoading && !_hasError && _notesList.isNotEmpty)
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1C2541) : Colors.white,
+                color: isDark ? const Color(0xFF0F172A) : Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -3),
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, -2),
                   ),
                 ],
                 border: Border(
                   top: BorderSide(
-                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
                     width: 1.0,
                   ),
                 ),
               ),
               child: SafeArea(
                 top: false,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                child: Row(
                   children: [
-                    // Official Telegram Channel Banner
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _openTelegramChannel,
-                        borderRadius: BorderRadius.circular(14),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF229ED9), Color(0xFF0088CC)],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF229ED9).withValues(alpha: 0.28),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(4.5),
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.send_rounded,
-                                  color: Color(0xFF0088CC),
-                                  size: 13,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  isEn
-                                      ? "Join Telegram for Daily Study Tips & Quizzes"
-                                      : "ለተጨማሪ የትምህርት መርጃዎች ቴሌግራማችንን ይቀላቀሉ",
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                    letterSpacing: 0.1,
-                                  ),
-                                ),
-                              ),
-                              const Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                color: Colors.white70,
-                                size: 12,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Bottom Navigation Controls Row (Back Button, Progress Badge, Next/Finish Button)
-                    Row(
-                      children: [
-                        // Back Button
+                    // PREV Button (Outlined Red Pill)
                         Expanded(
                           flex: 3,
                           child: SizedBox(
-                            height: 48,
+                            height: 44,
                             child: OutlinedButton.icon(
                               onPressed: _currentPageIndex > 0
                                   ? () {
@@ -1022,62 +938,60 @@ class _NotesScreenState extends State<NotesScreen> {
                                       );
                                     }
                                   : null,
-                              icon: const Icon(Icons.arrow_back_rounded, size: 17),
+                              icon: const Icon(Icons.arrow_back_rounded, size: 16),
                               label: Text(
-                                isEn ? "Back" : "ወደ ኋላ",
-                                style: GoogleFonts.plusJakartaSans(
+                                isEn ? "PREV" : "ወደ ኋላ",
+                                style: const TextStyle(
                                   fontSize: 13.5,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.4,
                                 ),
                               ),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+                                foregroundColor: const Color(0xFFDC2626),
                                 disabledForegroundColor:
                                     isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
                                 side: BorderSide(
                                   color: _currentPageIndex > 0
-                                      ? (isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1))
-                                      : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)),
-                                  width: 1.2,
+                                      ? const Color(0xFFFCA5A5)
+                                      : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                                  width: 1.5,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                             ),
                           ),
                         ),
 
-                        // Center Page Progress Indicator Badge
+                        // Center Page Progress Indicator Badge (Pill)
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
                           child: Container(
-                            height: 48,
+                            height: 38,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF0B132B) : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                              ),
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
                               "${_currentPageIndex + 1} / ${_notesList.length}",
-                              style: GoogleFonts.plusJakartaSans(
+                              style: TextStyle(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w800,
-                                color: widget.themeColor,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
                               ),
                             ),
                           ),
                         ),
 
-                        // Next / Finish Button
+                        // NEXT / Finish Button (Solid Red Pill)
                         Expanded(
                           flex: 4,
                           child: SizedBox(
-                            height: 48,
+                            height: 44,
                             child: ElevatedButton(
                               onPressed: () {
                                 if (_currentPageIndex < _notesList.length - 1) {
@@ -1090,33 +1004,32 @@ class _NotesScreenState extends State<NotesScreen> {
                                 }
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _currentPageIndex == _notesList.length - 1
-                                    ? const Color(0xFF10B981)
-                                    : widget.themeColor,
+                                backgroundColor: const Color(0xFFDC2626),
                                 foregroundColor: Colors.white,
-                                elevation: 1.5,
+                                elevation: 0,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    _currentPageIndex == _notesList.length - 1
-                                        ? (isEn ? "Finish" : "ጨርስ")
-                                        : (isEn ? "Next" : "ቀጣይ"),
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
                                   Icon(
                                     _currentPageIndex == _notesList.length - 1
                                         ? Icons.check_circle_rounded
                                         : Icons.arrow_forward_rounded,
-                                    size: 17,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _currentPageIndex == _notesList.length - 1
+                                        ? (isEn ? "FINISH" : "ጨርስ")
+                                        : (isEn ? "NEXT" : "ቀጣይ"),
+                                    style: const TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.4,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1125,10 +1038,8 @@ class _NotesScreenState extends State<NotesScreen> {
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
         ],
       ),
     );
@@ -1325,83 +1236,27 @@ class _NotesScreenState extends State<NotesScreen> {
 
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           child: Center(
             child: Container(
               constraints: const BoxConstraints(maxWidth: 760),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Subject & Grade Header Tag with modern pill design
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: widget.themeColor.withValues(alpha: isDark ? 0.18 : 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: widget.themeColor.withValues(alpha: isDark ? 0.35 : 0.25),
-                            width: 1.0,
-                          ),
-                        ),
-                        child: Text(
-                          "GRADE ${widget.grade} • ${_getNormalizedSubjectName().toUpperCase()}",
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w900,
-                            color: widget.themeColor,
-                            letterSpacing: 0.6,
-                          ),
-                        ),
-                      ),
-                      if (_isDownloaded)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0xFF065F46).withValues(alpha: 0.3)
-                                : const Color(0xFFD1FAE5),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.4),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.offline_pin_rounded, size: 14, color: Color(0xFF10B981)),
-                              const SizedBox(width: 4),
-                              Text(
-                                "Offline Ready",
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF065F46),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Section Title
+                  // Section Title (Bold and Clean)
                   Text(
                     noteTitle,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 20,
+                    style: TextStyle(
+                      fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: textColor,
-                      height: 1.3,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                      letterSpacing: -0.2,
+                      height: 1.25,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
 
-                  // Rich HTML Content rendered with custom responsive styling & scrollable tables
+                  // Rich HTML Content rendered with custom HTML styles from JSON database
                   Html(
                     data: sanitizedHtml,
                     style: _buildHtmlStyles(isDark),
@@ -1409,50 +1264,7 @@ class _NotesScreenState extends State<NotesScreen> {
                       TableHtmlExtension(),
                     ],
                   ),
-
-                  const SizedBox(height: 32),
-                  Divider(
-                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                    thickness: 1,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // End of Note Footer
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "Smart X Ethiopian • Educational Notes",
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: subColor,
-                        ),
-                      ),
-                      InkWell(
-                        onTap: _shareNote,
-                        borderRadius: BorderRadius.circular(10),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          child: Row(
-                            children: [
-                              Icon(Icons.share_rounded, size: 15, color: widget.themeColor),
-                              const SizedBox(width: 5),
-                              Text(
-                                widget.languageCode == 'en' ? "Share Note" : "አጋራ",
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: widget.themeColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 36),
                 ],
               ),
             ),

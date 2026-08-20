@@ -150,16 +150,6 @@ jobs:
             --build-number=${{ github.run_number }}
 
       # ------------------------------------------------------------------------
-      # ARTIFACT UPLOAD (actions/upload-artifact@v4 - Captures all 3 APKs)
-      # ------------------------------------------------------------------------
-      - name: Upload Release APK Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: smart-x-release-split-apks-build-${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/*.apk
-          retention-days: 30
-
-      # ------------------------------------------------------------------------
       # GITHUB RELEASE CREATION
       # ------------------------------------------------------------------------
       - name: Publish GitHub Release
