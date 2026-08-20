@@ -48,7 +48,6 @@ class _NotesScreenState extends State<NotesScreen> {
   bool _isBookmarked = false;
   bool _isLoading = true;
   bool _hasError = false;
-  bool _isDownloaded = false;
   late bool _isDarkMode;
 
   NotesErrorType _errorType = NotesErrorType.none;
@@ -60,8 +59,6 @@ class _NotesScreenState extends State<NotesScreen> {
   bool _isSearchOpen = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-
-  static const String _telegramChannelUrl = 'https://t.me/smart_x_academy';
 
   @override
   void initState() {
@@ -82,7 +79,6 @@ class _NotesScreenState extends State<NotesScreen> {
     );
 
     _checkBookmarkStatus();
-    _checkOfflineStatus();
     _fetchNotes();
   }
 
@@ -180,16 +176,6 @@ class _NotesScreenState extends State<NotesScreen> {
     if (sub.contains('econ') || sub.contains('eco')) return 'economics';
     if (sub.contains('eng')) return 'english';
     return sub;
-  }
-
-  Future<void> _checkOfflineStatus() async {
-    final String unitId = _getUnitId();
-    final bool downloaded = await OfflineManager.isDownloaded(unitId);
-    if (mounted) {
-      setState(() {
-        _isDownloaded = downloaded;
-      });
-    }
   }
 
   /// Sanitizes HTML to prevent duplicated headers and enforce clean nested markup.
