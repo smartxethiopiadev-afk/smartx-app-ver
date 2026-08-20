@@ -103,6 +103,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
       // Attempt to save directly into 'profiles' table first
       bool insertSuccess = false;
+      dynamic lastError;
       try {
         await supabase.from('profiles').insert({
           'id': profileId,
@@ -110,25 +111,36 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           'phone_number': formattedPhone,
           'grade': _selectedGrade,
           'created_at': nowIso,
-        });
+        }).timeout(const Duration(seconds: 10));
         insertSuccess = true;
         debugPrint("Successfully inserted user registration details into Supabase 'profiles' table.");
       } catch (e) {
+        lastError = e;
         debugPrint("Failed insert into 'profiles' table, attempting fallback to 'student_profiles' table: $e");
       }
 
       // Fallback to 'student_profiles' if 'profiles' insert failed or table doesn't exist
       if (!insertSuccess) {
-        await supabase.from('student_profiles').insert({
-          'id': profileId,
-          'full_name': fullName,
-          'phone_number': formattedPhone,
-          'grade': _selectedGrade,
-        });
-        debugPrint("Successfully inserted user registration details into fallback Supabase 'student_profiles' table.");
+        try {
+          await supabase.from('student_profiles').insert({
+            'id': profileId,
+            'full_name': fullName,
+            'phone_number': formattedPhone,
+            'grade': _selectedGrade,
+          }).timeout(const Duration(seconds: 10));
+          insertSuccess = true;
+          debugPrint("Successfully inserted user registration details into fallback Supabase 'student_profiles' table.");
+        } catch (e2) {
+          lastError = e2;
+          debugPrint("Failed insert into 'student_profiles' table: $e2");
+        }
       }
 
-      // Save registration state in SharedPreferences
+      if (!insertSuccess) {
+        throw lastError ?? Exception("Database registration failed");
+      }
+
+      // Save registration state in SharedPreferences ONLY after verified database insert
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_registered', true);
       await prefs.setBool('is_authenticated', true);

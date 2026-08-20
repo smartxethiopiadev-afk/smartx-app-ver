@@ -233,18 +233,12 @@ class _NotesScreenState extends State<NotesScreen> {
         fetchedNotes = await OfflineManager.getOfflineNotes(unitId);
       } else {
         if (!hasConnection) {
-          // If no connection and not downloaded, check fallback
-          final fallback = _generateCurriculumFallbackNotes();
-          if (fallback.isNotEmpty) {
-            fetchedNotes = fallback;
-          } else {
-            setState(() {
-              _isLoading = false;
-              _hasError = true;
-              _errorType = NotesErrorType.noInternet;
-            });
-            return;
-          }
+          setState(() {
+            _isLoading = false;
+            _hasError = true;
+            _errorType = NotesErrorType.noInternet;
+          });
+          return;
         } else {
           final String normalizedSubject = _getNormalizedSubjectName();
 
@@ -263,11 +257,6 @@ class _NotesScreenState extends State<NotesScreen> {
             }
           } catch (e) {
             debugPrint('[Short Notes] Supabase query notice: $e');
-          }
-
-          // 2. Built-in High-Quality Curriculum Seed Fallback if server table not yet seeded
-          if (fetchedNotes.isEmpty) {
-            fetchedNotes = _generateCurriculumFallbackNotes();
           }
         }
       }
@@ -289,184 +278,21 @@ class _NotesScreenState extends State<NotesScreen> {
       });
     } on PostgrestException catch (e) {
       debugPrint('PostgrestException fetching short notes: ${e.code} - ${e.message}');
-      final fallback = _generateCurriculumFallbackNotes();
       setState(() {
-        if (fallback.isNotEmpty) {
-          _notesList = fallback;
-          _currentPageIndex = 0;
-          _hasError = false;
-          _isLoading = false;
-        } else {
-          _notesList = [];
-          _hasError = true;
-          _isLoading = false;
-          _errorType = NotesErrorType.serverError;
-        }
+        _notesList = [];
+        _hasError = true;
+        _isLoading = false;
+        _errorType = NotesErrorType.serverError;
       });
     } catch (e) {
       debugPrint('Error fetching short notes: $e');
-      final fallback = _generateCurriculumFallbackNotes();
       setState(() {
-        if (fallback.isNotEmpty) {
-          _notesList = fallback;
-          _currentPageIndex = 0;
-          _hasError = false;
-          _isLoading = false;
-        } else {
-          _notesList = [];
-          _hasError = true;
-          _isLoading = false;
-          _errorType = NotesErrorType.serverError;
-        }
+        _notesList = [];
+        _hasError = true;
+        _isLoading = false;
+        _errorType = NotesErrorType.serverError;
       });
     }
-  }
-
-  List<Map<String, dynamic>> _generateCurriculumFallbackNotes() {
-    final sub = _getNormalizedSubjectName();
-    final g = widget.grade;
-    final u = widget.unitNumber;
-
-    if (sub == 'physics') {
-      return [
-        {
-          'id': 'fallback_phys_${g}_$u',
-          'grade': g,
-          'subject': 'physics',
-          'unit_number': u,
-          'title': 'Core Principles & Formulations',
-          'html_content': '''
-            <div class="callout">
-              <strong>Unit Scope:</strong> Foundational physical quantities, vector operations, equations of motion, and analytical problem-solving.
-            </div>
-            
-            <h3>1. Fundamental Laws</h3>
-            <p>Every measurable physical interaction obeys rigorous conservation principles. Quantities must always be evaluated in consistent <em>SI Base Units</em>.</p>
-            
-            <div class="definition">
-              <strong>Work-Energy Theorem:</strong> The net work done by all acting forces equals the change in kinetic energy (<em>W<sub>net</sub> = &Delta;KE = &frac12;mv<sup>2</sup> - &frac12;mu<sup>2</sup></em>).
-            </div>
-
-            <h3>2. Kinematics & Motion Relationships</h3>
-            <div class="formula">
-              <ul>
-                <li><strong>Final Velocity:</strong> <em>v = u + at</em></li>
-                <li><strong>Displacement:</strong> <em>s = ut + &frac12;at<sup>2</sup></em></li>
-                <li><strong>Torricelli's Equation:</strong> <em>v<sup>2</sup> = u<sup>2</sup> + 2as</em></li>
-              </ul>
-            </div>
-
-            <div class="formula">
-              <ul>
-                <li><strong>Kinetic Energy:</strong> <em>KE = &frac12;mv<sup>2</sup></em></li>
-                <li><strong>Gravitational Potential Energy:</strong> <em>PE = mgh</em></li>
-                <li><strong>Instantaneous Power:</strong> <em>P = W / t = F &bull; v</em></li>
-              </ul>
-            </div>
-
-            <h3>3. Matric Exam Key Tips</h3>
-            <ul>
-              <li>Convert non-standard units (e.g., km/h &rarr; m/s, cm &rarr; m, grams &rarr; kg) before calculating.</li>
-              <li>Decompose vector quantities into orthogonal components (<em>F<sub>x</sub> = F cos&theta;</em>, <em>F<sub>y</sub> = F sin&theta;</em>).</li>
-              <li>Always check whether non-conservative forces (friction, drag) perform work on the system.</li>
-            </ul>
-          ''',
-          'created_at': DateTime.now().toIso8601String(),
-        },
-        {
-          'id': 'fallback_phys_${g}_${u}_summary',
-          'grade': g,
-          'subject': 'physics',
-          'unit_number': u,
-          'title': 'High-Frequency Exam Terms',
-          'html_content': '''
-            <div class="callout">
-              <strong>Summary Table:</strong> High-frequency examination definitions and corresponding SI units.
-            </div>
-            <table>
-              <thead>
-                <tr><th>Concept</th><th>Definition</th><th>SI Unit</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>Impulse</td><td>Product of average force and interaction time (J = F &Delta;t)</td><td>N&bull;s</td></tr>
-                <tr><td>Efficiency</td><td>(Useful Energy Output / Total Energy Input) &times; 100%</td><td>%</td></tr>
-                <tr><td>Torque</td><td>Turning effect of a force (&tau; = r &times; F)</td><td>N&bull;m</td></tr>
-                <tr><td>Centripetal Accel.</td><td>Acceleration directed toward center (a<sub>c</sub> = v<sup>2</sup> / r)</td><td>m/s<sup>2</sup></td></tr>
-              </tbody>
-            </table>
-          ''',
-          'created_at': DateTime.now().toIso8601String(),
-        }
-      ];
-    }
-
-    if (sub == 'mathematics') {
-      return [
-        {
-          'id': 'fallback_math_${g}_$u',
-          'grade': g,
-          'subject': 'mathematics',
-          'unit_number': u,
-          'title': 'Core Theorems & Algebraic Rules',
-          'html_content': '''
-            <div class="callout">
-              <strong>Unit Scope:</strong> Foundational theorems, logarithm rules, polynomial factorization, and analytical solutions.
-            </div>
-
-            <h3>1. Algebraic Identities</h3>
-            <div class="formula">
-              <ul>
-                <li>log<sub>b</sub>(xy) = log<sub>b</sub>(x) + log<sub>b</sub>(y)</li>
-                <li>log<sub>b</sub>(x/y) = log<sub>b</sub>(x) - log<sub>b</sub>(y)</li>
-                <li>log<sub>b</sub>(x<sup>k</sup>) = k &times; log<sub>b</sub>(x)</li>
-              </ul>
-            </div>
-
-            <h3>2. Problem-Solving Methodology</h3>
-            <div class="example">
-              <strong>Standard Steps:</strong>
-              <ol>
-                <li>State domain restrictions (e.g. non-zero denominators, strictly positive logarithms).</li>
-                <li>Simplify algebraic expressions by grouping terms or completing squares.</li>
-                <li>Substitute and check for extraneous solutions.</li>
-              </ol>
-            </div>
-          ''',
-          'created_at': DateTime.now().toIso8601String(),
-        }
-      ];
-    }
-
-    // Generic fallback for Chemistry, Biology, Economics, Geography, etc.
-    return [
-      {
-        'id': 'fallback_${sub}_${g}_$u',
-        'grade': g,
-        'subject': sub,
-        'unit_number': u,
-        'title': 'Study Guide & Key Concepts',
-        'html_content': '''
-          <div class="callout">
-            <strong>Overview:</strong> High-yield revision summary aligned with the Ethiopian National Educational Curriculum.
-          </div>
-
-          <h3>1. Core Theoretical Foundations</h3>
-          <p>Review the primary concepts, classifications, and system dynamics covered throughout Unit $u.</p>
-
-          <div class="definition">
-            <strong>Key Terminology:</strong> Master core definitions and apply them to standard examination questions.
-          </div>
-
-          <h3>2. Essential Takeaways</h3>
-          <ul>
-            <li>Understand the relationship between theoretical concepts and practical applications.</li>
-            <li>Solve sample problems from previous Ethiopian national matriculation examinations.</li>
-            <li>Review the formulas and comparison tables before taking the unit quiz.</li>
-          </ul>
-        ''',
-        'created_at': DateTime.now().toIso8601String(),
-      }
-    ];
   }
 
   Future<void> _checkBookmarkStatus() async {

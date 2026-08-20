@@ -101,6 +101,8 @@ class _RegistrationOverlayState extends State<RegistrationOverlay> {
 
       // Write to profiles table with fallback to student_profiles
       bool insertSuccess = false;
+      dynamic lastDbError;
+
       try {
         await supabase.from('profiles').insert({
           'id': profileId,
@@ -108,10 +110,11 @@ class _RegistrationOverlayState extends State<RegistrationOverlay> {
           'phone_number': formattedPhone,
           'grade': _selectedGrade,
           'created_at': nowIso,
-        });
+        }).timeout(const Duration(seconds: 10));
         insertSuccess = true;
         debugPrint("Successfully registered in 'profiles' table.");
       } catch (e) {
+        lastDbError = e;
         debugPrint("Failed 'profiles' table write, attempting fallback to 'student_profiles': $e");
         try {
           await supabase.from('student_profiles').insert({
@@ -119,14 +122,20 @@ class _RegistrationOverlayState extends State<RegistrationOverlay> {
             'full_name': fullName,
             'phone_number': formattedPhone,
             'grade': _selectedGrade,
-          });
+          }).timeout(const Duration(seconds: 10));
           insertSuccess = true;
           debugPrint("Successfully registered in fallback 'student_profiles' table.");
         } catch (e2) {
-          debugPrint("Offline or network issue during registration insert: $e2");
+          lastDbError = e2;
+          debugPrint("Database write failed for both tables: $e2");
         }
       }
 
+      if (!insertSuccess) {
+        throw lastDbError ?? Exception("Failed to connect to database");
+      }
+
+      // Registration is strictly verified & saved only upon successful database insert
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_registered', true);
       await prefs.setBool('is_authenticated', true);
@@ -135,25 +144,12 @@ class _RegistrationOverlayState extends State<RegistrationOverlay> {
       await prefs.setString('user_phoneNumber', formattedPhone);
       await prefs.setString('user_grade', 'Grade $_selectedGrade');
 
-      if (!insertSuccess) {
-        // Store payload in pending sync queue
-        await prefs.setBool('has_pending_registration_sync', true);
-        final pendingPayload = {
-          'id': profileId,
-          'full_name': fullName,
-          'phone_number': formattedPhone,
-          'grade': _selectedGrade,
-          'created_at': nowIso,
-        };
-        await prefs.setString('pending_registration_payload', jsonEncode(pendingPayload));
-      }
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(insertSuccess
-                ? (isEn ? 'Successfully registered!' : 'በስኬት ተመዝግበዋል!')
-                : (isEn ? 'Registered offline! Your profile will sync when online.' : 'ከመስመር ውጭ ተመዝግበዋል። መረብ ሲገናኝ ይመሳሰላል።')),
+            content: Text(
+              isEn ? 'Successfully registered in database!' : 'በስኬት በመረጃ ቋቱ ውስጥ ተመዝግበዋል!',
+            ),
             backgroundColor: const Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
           ),
