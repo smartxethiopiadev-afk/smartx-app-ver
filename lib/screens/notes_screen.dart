@@ -6,7 +6,6 @@ import 'package:flutter_html_table/flutter_html_table.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../services/offline_manager.dart';
 import '../services/analytics_service.dart';
@@ -50,7 +49,6 @@ class _NotesScreenState extends State<NotesScreen> {
   bool _isLoading = true;
   bool _hasError = false;
   bool _isDownloaded = false;
-  bool _isDownloading = false;
   late bool _isDarkMode;
 
   NotesErrorType _errorType = NotesErrorType.none;
@@ -332,69 +330,6 @@ class _NotesScreenState extends State<NotesScreen> {
     } catch (_) {}
   }
 
-  Future<void> _toggleOfflineDownload() async {
-    final String unitId = _getUnitId();
-    if (_isDownloaded) {
-      await OfflineManager.removeDownload(unitId);
-      setState(() {
-        _isDownloaded = false;
-      });
-      _showFloatingSnackbar(
-        widget.languageCode == 'en'
-            ? 'Removed from offline storage.'
-            : 'ከስልክዎ ማከማቻ ተሰርዟል።',
-      );
-    } else {
-      setState(() {
-        _isDownloading = true;
-      });
-
-      _showFloatingSnackbar(
-        widget.languageCode == 'en'
-            ? 'Saving note for offline reading...'
-            : 'ለስልክዎ ማስታወሻው በማስቀመጥ ላይ...',
-        isInfo: true,
-      );
-
-      try {
-        if (_notesList.isNotEmpty) {
-          await OfflineManager.saveOfflineNotes(
-            unitId,
-            _notesList,
-            grade: widget.grade,
-            unit: widget.unitNumber,
-          );
-          await OfflineManager.addDownload(unitId);
-        }
-
-        if (mounted) {
-          setState(() {
-            _isDownloaded = true;
-            _isDownloading = false;
-          });
-          _showFloatingSnackbar(
-            widget.languageCode == 'en'
-                ? 'Saved offline! You can read anytime without internet.'
-                : 'በስኬት ተቀምጧል! ያለ ኢንተርኔት በማንኛውም ጊዜ ማንበብ ይችላሉ።',
-            isSuccess: true,
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _isDownloading = false;
-          });
-          _showFloatingSnackbar(
-            widget.languageCode == 'en'
-                ? 'Failed to save offline: $e'
-                : 'ማስቀመጥ አልተሳካም፡ $e',
-            isError: true,
-          );
-        }
-      }
-    }
-  }
-
   void _shareNote() {
     if (_notesList.isEmpty) return;
     final currentNote = _notesList[_currentPageIndex];
@@ -424,29 +359,7 @@ class _NotesScreenState extends State<NotesScreen> {
     }
   }
 
-  Future<void> _openTelegramChannel() async {
-    final Uri telegramUri = Uri.parse(_telegramChannelUrl);
-    try {
-      final bool launched = await launchUrl(
-        telegramUri,
-        mode: LaunchMode.externalApplication,
-      );
-      if (!launched) {
-        await launchUrl(telegramUri, mode: LaunchMode.platformDefault);
-      }
-    } catch (e) {
-      debugPrint('Telegram launch note: $e');
-      _showFloatingSnackbar(
-        widget.languageCode == 'en'
-            ? 'Opening Telegram: @smart_x_academy'
-            : 'ቴሌግራም በመክፈት ላይ: @smart_x_academy',
-        isInfo: true,
-      );
-    }
-  }
-
   Map<String, Style> _buildHtmlStyles(bool isDark) {
-    final Color textColor = isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B);
     final Color textColor = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B);
     final Color headingBlue = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
     final Color tableBorderColor = isDark ? const Color(0xFF0284C7) : const Color(0xFF38BDF8);
@@ -772,15 +685,10 @@ class _NotesScreenState extends State<NotesScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isDark = _isDarkMode;
-    final Color bgColor = isDark ? const Color(0xFF0B132B) : const Color(0xFFF8FAFC);
     final Color cardBg = isDark ? const Color(0xFF1C2541) : Colors.white;
     final Color textColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final Color subColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final bool isEn = widget.languageCode == 'en';
-
-    final String activeTitle = _notesList.isNotEmpty
-        ? (_notesList[_currentPageIndex]['title']?.toString() ?? widget.unitTitle)
-        : widget.unitTitle;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
