@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:flutter_html_table/flutter_html_table.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -192,6 +194,20 @@ class _NotesScreenState extends State<NotesScreen> {
     }
   }
 
+  /// Sanitizes HTML to prevent duplicated headers and enforce clean nested markup.
+  String _sanitizeHtml(String rawHtml, String title) {
+    if (rawHtml.isEmpty) return '<p>No content available for this section.</p>';
+    String cleaned = rawHtml.trim();
+
+    // Strip duplicated <h1>/<h2> tags matching the section title
+    if (title.isNotEmpty) {
+      final escapedTitle = RegExp.escape(title.trim());
+      cleaned = cleaned.replaceAll(RegExp(r'<h[1-2][^>]*>\s*' + escapedTitle + r'\s*<\/h[1-2]>', caseSensitive: false), '');
+    }
+
+    return cleaned;
+  }
+
   Future<void> _fetchNotes() async {
     try {
       setState(() {
@@ -204,7 +220,7 @@ class _NotesScreenState extends State<NotesScreen> {
       bool hasConnection = true;
       try {
         final connectivityResult = await Connectivity().checkConnectivity();
-        if (connectivityResult == ConnectivityResult.none) {
+        if (connectivityResult.isEmpty || connectivityResult.contains(ConnectivityResult.none)) {
           hasConnection = false;
         }
       } catch (_) {}
@@ -318,47 +334,42 @@ class _NotesScreenState extends State<NotesScreen> {
           'grade': g,
           'subject': 'physics',
           'unit_number': u,
-          'title': 'Unit $u: Core Concepts & Formulae',
+          'title': 'Core Principles & Formulations',
           'html_content': '''
-            <div class="note-container">
-              <h2>Grade $g Physics — Unit $u Summary</h2>
-              <div class="callout">
-                <strong>Unit Focus:</strong> Key physical laws, SI units, vector operations, and exam preparation strategies.
-              </div>
-              
-              <h3>1. Fundamental Principles</h3>
-              <p>In physics, every observed phenomenon is quantified through reproducible measurements and mathematical formulations. Always verify consistency using <em>SI Base Units</em>.</p>
-              
-              <div class="definition">
-                <strong>Standard Definition:</strong> Work done is defined as the scalar product of force and displacement vectors (<em>W = F &bull; d = Fd cos&theta;</em>).
-              </div>
+            <div class="callout">
+              <strong>Unit Scope:</strong> Foundational physical quantities, vector operations, equations of motion, and analytical problem-solving.
+            </div>
+            
+            <h3>1. Fundamental Laws</h3>
+            <p>Every measurable physical interaction obeys rigorous conservation principles. Quantities must always be evaluated in consistent <em>SI Base Units</em>.</p>
+            
+            <div class="definition">
+              <strong>Work-Energy Theorem:</strong> The net work done by all acting forces equals the change in kinetic energy (<em>W<sub>net</sub> = &Delta;KE = &frac12;mv<sup>2</sup> - &frac12;mu<sup>2</sup></em>).
+            </div>
 
-              <h3>2. Essential Formulas</h3>
-              <div class="formula">
-                <p><strong>Kinematics & Motion:</strong></p>
-                <ul>
-                  <li>v = u + at</li>
-                  <li>s = ut + &frac12;at<sup>2</sup></li>
-                  <li>v<sup>2</sup> = u<sup>2</sup> + 2as</li>
-                </ul>
-              </div>
-
-              <div class="formula">
-                <p><strong>Work, Energy & Power:</strong></p>
-                <ul>
-                  <li>Kinetic Energy: <em>KE = &frac12;mv<sup>2</sup></em></li>
-                  <li>Potential Energy: <em>PE = mgh</em></li>
-                  <li>Power: <em>P = W / t = F &times; v</em></li>
-                </ul>
-              </div>
-
-              <h3>3. Common Pitfalls & Exam Tips</h3>
+            <h3>2. Kinematics & Motion Relationships</h3>
+            <div class="formula">
               <ul>
-                <li>Always convert non-standard units (e.g., km/h &rarr; m/s, cm &rarr; m, grams &rarr; kg) before calculating.</li>
-                <li>Remember that vectors have both magnitude and direction; resolve components along orthogonal axes (<em>x</em> and <em>y</em>).</li>
-                <li>Check conservation principles (Conservation of Mechanical Energy, Conservation of Linear Momentum).</li>
+                <li><strong>Final Velocity:</strong> <em>v = u + at</em></li>
+                <li><strong>Displacement:</strong> <em>s = ut + &frac12;at<sup>2</sup></em></li>
+                <li><strong>Torricelli's Equation:</strong> <em>v<sup>2</sup> = u<sup>2</sup> + 2as</em></li>
               </ul>
             </div>
+
+            <div class="formula">
+              <ul>
+                <li><strong>Kinetic Energy:</strong> <em>KE = &frac12;mv<sup>2</sup></em></li>
+                <li><strong>Gravitational Potential Energy:</strong> <em>PE = mgh</em></li>
+                <li><strong>Instantaneous Power:</strong> <em>P = W / t = F &bull; v</em></li>
+              </ul>
+            </div>
+
+            <h3>3. Matric Exam Key Tips</h3>
+            <ul>
+              <li>Convert non-standard units (e.g., km/h &rarr; m/s, cm &rarr; m, grams &rarr; kg) before calculating.</li>
+              <li>Decompose vector quantities into orthogonal components (<em>F<sub>x</sub> = F cos&theta;</em>, <em>F<sub>y</sub> = F sin&theta;</em>).</li>
+              <li>Always check whether non-conservative forces (friction, drag) perform work on the system.</li>
+            </ul>
           ''',
           'created_at': DateTime.now().toIso8601String(),
         },
@@ -367,24 +378,22 @@ class _NotesScreenState extends State<NotesScreen> {
           'grade': g,
           'subject': 'physics',
           'unit_number': u,
-          'title': 'Quick Revision & Key Terms',
+          'title': 'High-Frequency Exam Terms',
           'html_content': '''
-            <div class="note-container">
-              <h2>Key Terms & Definitions</h2>
-              <div class="callout">
-                <strong>Summary Table:</strong> High-frequency matric examination definitions and SI units.
-              </div>
-              <table>
-                <thead>
-                  <tr><th>Concept</th><th>Definition</th><th>SI Unit</th></tr>
-                </thead>
-                <tbody>
-                  <tr><td>Impulse</td><td>Change in linear momentum (J = F &Delta;t)</td><td>N&bull;s or kg&bull;m/s</td></tr>
-                  <tr><td>Efficiency</td><td>(Useful Energy Output / Total Energy Input) &times; 100%</td><td>Percentage (%)</td></tr>
-                  <tr><td>Torque</td><td>Turning effect of a force (&tau; = r &times; F)</td><td>N&bull;m</td></tr>
-                </tbody>
-              </table>
+            <div class="callout">
+              <strong>Summary Table:</strong> High-frequency examination definitions and corresponding SI units.
             </div>
+            <table>
+              <thead>
+                <tr><th>Concept</th><th>Definition</th><th>SI Unit</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Impulse</td><td>Product of average force and interaction time (J = F &Delta;t)</td><td>N&bull;s</td></tr>
+                <tr><td>Efficiency</td><td>(Useful Energy Output / Total Energy Input) &times; 100%</td><td>%</td></tr>
+                <tr><td>Torque</td><td>Turning effect of a force (&tau; = r &times; F)</td><td>N&bull;m</td></tr>
+                <tr><td>Centripetal Accel.</td><td>Acceleration directed toward center (a<sub>c</sub> = v<sup>2</sup> / r)</td><td>m/s<sup>2</sup></td></tr>
+              </tbody>
+            </table>
           ''',
           'created_at': DateTime.now().toIso8601String(),
         }
@@ -398,33 +407,29 @@ class _NotesScreenState extends State<NotesScreen> {
           'grade': g,
           'subject': 'mathematics',
           'unit_number': u,
-          'title': 'Unit $u: Core Theorems & Rules',
+          'title': 'Core Theorems & Algebraic Rules',
           'html_content': '''
-            <div class="note-container">
-              <h2>Grade $g Mathematics — Unit $u Short Note</h2>
-              <div class="callout">
-                <strong>Objective:</strong> Master foundational theorems, identities, algebraic manipulations, and graphical interpretations.
-              </div>
+            <div class="callout">
+              <strong>Unit Scope:</strong> Foundational theorems, logarithm rules, polynomial factorization, and analytical solutions.
+            </div>
 
-              <h3>1. Key Identities & Rules</h3>
-              <div class="formula">
-                <p><strong>Logarithmic Properties:</strong></p>
-                <ul>
-                  <li>log<sub>b</sub>(xy) = log<sub>b</sub>(x) + log<sub>b</sub>(y)</li>
-                  <li>log<sub>b</sub>(x/y) = log<sub>b</sub>(x) - log<sub>b</sub>(y)</li>
-                  <li>log<sub>b</sub>(x<sup>k</sup>) = k &times; log<sub>b</sub>(x)</li>
-                </ul>
-              </div>
+            <h3>1. Algebraic Identities</h3>
+            <div class="formula">
+              <ul>
+                <li>log<sub>b</sub>(xy) = log<sub>b</sub>(x) + log<sub>b</sub>(y)</li>
+                <li>log<sub>b</sub>(x/y) = log<sub>b</sub>(x) - log<sub>b</sub>(y)</li>
+                <li>log<sub>b</sub>(x<sup>k</sup>) = k &times; log<sub>b</sub>(x)</li>
+              </ul>
+            </div>
 
-              <h3>2. Step-by-Step Problem Strategy</h3>
-              <div class="example">
-                <strong>Standard Method:</strong>
-                <ol>
-                  <li>Identify domain constraints and given conditions.</li>
-                  <li>Simplify equations by grouping like terms or factoring.</li>
-                  <li>Substitute values and verify candidate solutions against the original domain.</li>
-                </ol>
-              </div>
+            <h3>2. Problem-Solving Methodology</h3>
+            <div class="example">
+              <strong>Standard Steps:</strong>
+              <ol>
+                <li>State domain restrictions (e.g. non-zero denominators, strictly positive logarithms).</li>
+                <li>Simplify algebraic expressions by grouping terms or completing squares.</li>
+                <li>Substitute and check for extraneous solutions.</li>
+              </ol>
             </div>
           ''',
           'created_at': DateTime.now().toIso8601String(),
@@ -432,35 +437,32 @@ class _NotesScreenState extends State<NotesScreen> {
       ];
     }
 
-    // Generic fallback for Chemistry, Biology, English, etc.
+    // Generic fallback for Chemistry, Biology, Economics, Geography, etc.
     return [
       {
         'id': 'fallback_${sub}_${g}_$u',
         'grade': g,
         'subject': sub,
         'unit_number': u,
-        'title': 'Unit $u: Study Guide & Key Points',
+        'title': 'Study Guide & Key Concepts',
         'html_content': '''
-          <div class="note-container">
-            <h2>Grade $g ${widget.subjectId.toUpperCase()} — Unit $u Notes</h2>
-            <div class="callout">
-              <strong>Overview:</strong> Comprehensive review notes curated according to Ethiopian National Curriculum standards.
-            </div>
-
-            <h3>1. Fundamental Concepts</h3>
-            <p>Review the main principles, classifications, and core observations covered in Unit $u.</p>
-
-            <div class="definition">
-              <strong>Core Terminology:</strong> Make sure you understand the foundational definitions and their practical applications.
-            </div>
-
-            <h3>2. Key Takeaways</h3>
-            <ul>
-              <li>Understand the relationship between theoretical models and real-world applications.</li>
-              <li>Practice standard unit test and national examination sample problems regularly.</li>
-              <li>Review the summary tables before taking unit practice quizzes.</li>
-            </ul>
+          <div class="callout">
+            <strong>Overview:</strong> High-yield revision summary aligned with the Ethiopian National Educational Curriculum.
           </div>
+
+          <h3>1. Core Theoretical Foundations</h3>
+          <p>Review the primary concepts, classifications, and system dynamics covered throughout Unit $u.</p>
+
+          <div class="definition">
+            <strong>Key Terminology:</strong> Master core definitions and apply them to standard examination questions.
+          </div>
+
+          <h3>2. Essential Takeaways</h3>
+          <ul>
+            <li>Understand the relationship between theoretical concepts and practical applications.</li>
+            <li>Solve sample problems from previous Ethiopian national matriculation examinations.</li>
+            <li>Review the formulas and comparison tables before taking the unit quiz.</li>
+          </ul>
         ''',
         'created_at': DateTime.now().toIso8601String(),
       }
@@ -507,7 +509,6 @@ class _NotesScreenState extends State<NotesScreen> {
   Future<void> _toggleOfflineDownload() async {
     final String unitId = _getUnitId();
     if (_isDownloaded) {
-      // Remove offline download
       await OfflineManager.removeDownload(unitId);
       setState(() {
         _isDownloaded = false;
@@ -518,7 +519,6 @@ class _NotesScreenState extends State<NotesScreen> {
             : 'ከስልክዎ ማከማቻ ተሰርዟል።',
       );
     } else {
-      // Download and cache
       setState(() {
         _isDownloading = true;
       });
@@ -623,7 +623,7 @@ class _NotesScreenState extends State<NotesScreen> {
     final Color textColor = isDark ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B);
     final Color headingColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final Color borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
-    final Color calloutBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+    final Color calloutBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
     final Color formulaBg = isDark ? const Color(0xFF0F2338) : const Color(0xFFEFF6FF);
 
     return {
@@ -636,21 +636,21 @@ class _NotesScreenState extends State<NotesScreen> {
         fontFamily: 'Georgia',
       ),
       "h1": Style(
-        fontSize: FontSize(22.0),
+        fontSize: FontSize(21.0),
         fontWeight: FontWeight.w900,
         color: headingColor,
         margin: Margins.only(top: 18, bottom: 12),
         fontFamily: 'Georgia',
       ),
       "h2": Style(
-        fontSize: FontSize(19.0),
+        fontSize: FontSize(18.5),
         fontWeight: FontWeight.w800,
         color: widget.themeColor,
         margin: Margins.only(top: 16, bottom: 10),
         fontFamily: 'Georgia',
       ),
       "h3": Style(
-        fontSize: FontSize(16.5),
+        fontSize: FontSize(16.0),
         fontWeight: FontWeight.w700,
         color: headingColor,
         margin: Margins.only(top: 14, bottom: 8),
@@ -661,11 +661,11 @@ class _NotesScreenState extends State<NotesScreen> {
         lineHeight: LineHeight(1.65),
       ),
       "ul": Style(
-        margin: Margins.only(left: 12, bottom: 14),
+        margin: Margins.only(left: 8, bottom: 12),
         padding: HtmlPaddings.only(left: 12),
       ),
       "ol": Style(
-        margin: Margins.only(left: 12, bottom: 14),
+        margin: Margins.only(left: 8, bottom: 12),
         padding: HtmlPaddings.only(left: 12),
       ),
       "li": Style(
@@ -682,10 +682,10 @@ class _NotesScreenState extends State<NotesScreen> {
       "table": Style(
         backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
         border: Border.all(color: borderColor, width: 1.0),
-        margin: Margins.symmetric(vertical: 14),
+        margin: Margins.symmetric(vertical: 12),
       ),
       "th": Style(
-        backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFF8FAFC),
+        backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
         padding: HtmlPaddings.symmetric(horizontal: 10, vertical: 8),
         fontWeight: FontWeight.w800,
         color: headingColor,
@@ -705,25 +705,25 @@ class _NotesScreenState extends State<NotesScreen> {
         backgroundColor: calloutBg,
         border: Border(left: BorderSide(color: widget.themeColor, width: 4.0)),
         padding: HtmlPaddings.all(14),
-        margin: Margins.symmetric(vertical: 14),
+        margin: Margins.symmetric(vertical: 12),
       ),
       ".formula": Style(
         backgroundColor: formulaBg,
         border: Border.all(color: widget.themeColor.withValues(alpha: 0.35), width: 1.2),
         padding: HtmlPaddings.all(14),
-        margin: Margins.symmetric(vertical: 14),
+        margin: Margins.symmetric(vertical: 12),
       ),
       ".definition": Style(
-        backgroundColor: isDark ? const Color(0xFF1F2937) : const Color(0xFFF3F4F6),
+        backgroundColor: isDark ? const Color(0xFF1F2937) : const Color(0xFFF0FDF4),
         border: Border(left: BorderSide(color: const Color(0xFF10B981), width: 4.0)),
         padding: HtmlPaddings.all(14),
-        margin: Margins.symmetric(vertical: 14),
+        margin: Margins.symmetric(vertical: 12),
       ),
       ".example": Style(
-        backgroundColor: isDark ? const Color(0xFF28241D) : const Color(0xFFFEF9C3),
+        backgroundColor: isDark ? const Color(0xFF28241D) : const Color(0xFFFEFCE8),
         border: Border(left: BorderSide(color: const Color(0xFFF59E0B), width: 4.0)),
         padding: HtmlPaddings.all(14),
-        margin: Margins.symmetric(vertical: 14),
+        margin: Margins.symmetric(vertical: 12),
       ),
     };
   }
@@ -748,8 +748,8 @@ class _NotesScreenState extends State<NotesScreen> {
               children: [
                 // Celebration Badge
                 Container(
-                  width: 76,
-                  height: 76,
+                  width: 72,
+                  height: 72,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
@@ -771,18 +771,18 @@ class _NotesScreenState extends State<NotesScreen> {
                   child: const Icon(
                     Icons.verified_rounded,
                     color: Colors.white,
-                    size: 42,
+                    size: 38,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
 
                 // Congratulatory Title
                 Text(
                   isEn ? "Thanks for reading!" : "እንኳን ደስ አለዎት!",
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
                     color: isDark ? Colors.white : const Color(0xFF0F172A),
                   ),
                 ),
@@ -794,7 +794,7 @@ class _NotesScreenState extends State<NotesScreen> {
                       : "የትምህርቱን ማጠቃለያ በስኬት ጨርሰዋል።",
                   textAlign: TextAlign.center,
                   style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     color: widget.themeColor,
                   ),
@@ -805,7 +805,7 @@ class _NotesScreenState extends State<NotesScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
@@ -843,7 +843,7 @@ class _NotesScreenState extends State<NotesScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 22),
 
                 // Primary Action: Return to Units List
                 SizedBox(
@@ -917,8 +917,8 @@ class _NotesScreenState extends State<NotesScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isDark = _isDarkMode;
-    final Color bgColor = isDark ? const Color(0xFF0F172A) : Colors.white;
-    final Color cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final Color bgColor = isDark ? const Color(0xFF0B132B) : const Color(0xFFF8FAFC);
+    final Color cardBg = isDark ? const Color(0xFF1C2541) : Colors.white;
     final Color textColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final Color subColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final bool isEn = widget.languageCode == 'en';
@@ -930,13 +930,13 @@ class _NotesScreenState extends State<NotesScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+        backgroundColor: isDark ? const Color(0xFF1C2541) : Colors.white,
         foregroundColor: textColor,
-        elevation: 0,
+        elevation: 0.5,
         centerTitle: false,
         titleSpacing: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 19),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Column(
@@ -946,10 +946,10 @@ class _NotesScreenState extends State<NotesScreen> {
             Text(
               "${widget.subjectId.toUpperCase()} • Unit ${widget.unitNumber}",
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w800,
                 color: widget.themeColor,
-                letterSpacing: 0.5,
+                letterSpacing: 0.4,
               ),
             ),
             const SizedBox(height: 2),
@@ -958,7 +958,7 @@ class _NotesScreenState extends State<NotesScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 15,
+                fontSize: 14.5,
                 fontWeight: FontWeight.w800,
                 color: textColor,
               ),
@@ -977,7 +977,7 @@ class _NotesScreenState extends State<NotesScreen> {
                 : Icon(
                     _isDownloaded ? Icons.download_done_rounded : Icons.download_rounded,
                     color: _isDownloaded ? const Color(0xFF10B981) : textColor,
-                    size: 22,
+                    size: 21,
                   ),
             tooltip: _isDownloaded ? "Saved Offline" : "Save Offline",
             onPressed: _toggleOfflineDownload,
@@ -988,13 +988,13 @@ class _NotesScreenState extends State<NotesScreen> {
             icon: Icon(
               _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
               color: _isBookmarked ? const Color(0xFFFFB703) : textColor,
-              size: 22,
+              size: 21,
             ),
             tooltip: "Bookmark",
             onPressed: _toggleBookmark,
           ),
 
-          // 3. Dark/Light Mode Toggle (Requested in Top Bar)
+          // 3. Dark/Light Mode Toggle
           IconButton(
             icon: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
@@ -1006,7 +1006,7 @@ class _NotesScreenState extends State<NotesScreen> {
                 isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
                 key: ValueKey<bool>(isDark),
                 color: isDark ? const Color(0xFFFBBF24) : const Color(0xFF334155),
-                size: 22,
+                size: 21,
               ),
             ),
             tooltip: isDark ? "Switch to Light Mode" : "Switch to Dark Mode",
@@ -1015,7 +1015,7 @@ class _NotesScreenState extends State<NotesScreen> {
 
           // 4. Share
           IconButton(
-            icon: const Icon(Icons.share_rounded, size: 20),
+            icon: const Icon(Icons.share_rounded, size: 19),
             tooltip: "Share",
             onPressed: _shareNote,
           ),
@@ -1024,7 +1024,7 @@ class _NotesScreenState extends State<NotesScreen> {
           IconButton(
             icon: Icon(
               _isSearchOpen ? Icons.close_rounded : Icons.search_rounded,
-              size: 22,
+              size: 21,
             ),
             tooltip: "Search in note",
             onPressed: () {
@@ -1046,16 +1046,16 @@ class _NotesScreenState extends State<NotesScreen> {
           if (_isSearchOpen)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              color: isDark ? const Color(0xFF1C2541) : Colors.white,
               child: Row(
                 children: [
-                  const Icon(Icons.search_rounded, size: 20, color: Colors.grey),
+                  const Icon(Icons.search_rounded, size: 19, color: Colors.grey),
                   const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
                       controller: _searchController,
                       autofocus: true,
-                      style: TextStyle(color: textColor, fontSize: 14),
+                      style: TextStyle(color: textColor, fontSize: 13.5),
                       decoration: InputDecoration(
                         hintText: widget.languageCode == 'en' ? "Search key concepts..." : "ፅንሰ-ሀሳቦችን ይፈልጉ...",
                         hintStyle: TextStyle(color: subColor, fontSize: 13),
@@ -1093,17 +1093,17 @@ class _NotesScreenState extends State<NotesScreen> {
             Container(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                color: isDark ? const Color(0xFF1C2541) : Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, -3),
                   ),
                 ],
                 border: Border(
                   top: BorderSide(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                     width: 1.0,
                   ),
                 ),
@@ -1113,7 +1113,7 @@ class _NotesScreenState extends State<NotesScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Premium Telegram Channel Banner
+                    // Official Telegram Channel Banner
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -1230,7 +1230,7 @@ class _NotesScreenState extends State<NotesScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              color: isDark ? const Color(0xFF0B132B) : const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                 color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
@@ -1495,6 +1495,7 @@ class _NotesScreenState extends State<NotesScreen> {
         final String htmlRaw = note['html_content']?.toString() ??
             note['content']?.toString() ??
             '<p>No content available for this section.</p>';
+        final String sanitizedHtml = _sanitizeHtml(htmlRaw, noteTitle);
 
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -1574,15 +1575,18 @@ class _NotesScreenState extends State<NotesScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // Rich HTML Content rendered dynamically with flutter_html
+                  // Rich HTML Content rendered with custom responsive styling & scrollable tables
                   Html(
-                    data: htmlRaw,
+                    data: sanitizedHtml,
                     style: _buildHtmlStyles(isDark),
+                    extensions: const [
+                      TableHtmlExtension(),
+                    ],
                   ),
 
                   const SizedBox(height: 32),
                   Divider(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                     thickness: 1,
                   ),
                   const SizedBox(height: 16),
@@ -1632,4 +1636,3 @@ class _NotesScreenState extends State<NotesScreen> {
     );
   }
 }
-
