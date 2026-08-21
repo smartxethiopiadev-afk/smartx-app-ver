@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../services/offline_manager.dart';
 import '../services/analytics_service.dart';
+import '../widgets/math_text.dart';
 import '../main.dart';
 
 enum NotesErrorType {
@@ -190,6 +191,12 @@ class _NotesScreenState extends State<NotesScreen> {
       final escapedTitle = RegExp.escape(title.trim());
       cleaned = cleaned.replaceAll(RegExp(r'<h[1-2][^>]*>\s*' + escapedTitle + r'\s*<\/h[1-2]>', caseSensitive: false), '');
     }
+
+    // Convert LaTeX math delimiters ($...$, $$...$$, \(...\), \[...\]) to clean formatted text
+    cleaned = cleaned.replaceAllMapped(RegExp(r'\$\$([\s\S]+?)\$\$|\$([\s\S]+?)\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)'), (m) {
+      final mathExpr = m.group(1) ?? m.group(2) ?? m.group(3) ?? m.group(4) ?? '';
+      return ' <i><b>${MathText.formatMathString(mathExpr)}</b></i> ';
+    });
 
     return cleaned;
   }

@@ -11,6 +11,7 @@ import '../services/ad_helper.dart';
 import '../main.dart';
 import '../widgets/ad_loading_dialog.dart';
 import '../widgets/quiz_result_dialog.dart';
+import '../widgets/math_text.dart';
 import '../services/analytics_service.dart';
 
 enum QuizMode {
@@ -900,81 +901,10 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Widget _buildMathText(String text, TextStyle baseStyle, {TextAlign align = TextAlign.center}) {
-    if (!text.contains(r'$') && !text.contains(r'\(') && !text.contains(r'\[') && !text.contains(r'\\(') && !text.contains(r'\\[')) {
-      return Text(
-        text,
-        style: baseStyle,
-        textAlign: align,
-      );
-    }
-
-    final List<InlineSpan> spans = [];
-    final regex = RegExp(
-      r'\$\$([\s\S]+?)\$\$|'
-      r'\$([\s\S]+?)\$|'
-      r'\\\[([\s\S]+?)\\\]|'
-      r'\\\(([\s\S]+?)\\\)|'
-      r'\\\\\[([\s\S]+?)\\\\\]|'
-      r'\\\\\(([\s\S]+?)\\\\\)'
-    );
-    int lastIndex = 0;
-
-    for (final match in regex.allMatches(text)) {
-      if (match.start > lastIndex) {
-        spans.add(TextSpan(
-          text: text.substring(lastIndex, match.start),
-          style: baseStyle,
-        ));
-      }
-
-      final mathExpr = match.group(1) ??
-          match.group(2) ??
-          match.group(3) ??
-          match.group(4) ??
-          match.group(5) ??
-          match.group(6) ??
-          '';
-
-      if (mathExpr.isNotEmpty) {
-        String cleanedMath = mathExpr.trim()
-            .replaceAll(r'\frac', '')
-            .replaceAll(r'\times', '×')
-            .replaceAll(r'\div', '÷')
-            .replaceAll(r'\pm', '±')
-            .replaceAll(r'\cdot', '·')
-            .replaceAll(r'\le', '≤')
-            .replaceAll(r'\ge', '≥')
-            .replaceAll(r'\neq', '≠')
-            .replaceAll(r'\approx', '≈')
-            .replaceAll(r'\pi', 'π')
-            .replaceAll(r'\theta', 'θ')
-            .replaceAll(r'\alpha', 'α')
-            .replaceAll(r'\beta', 'β')
-            .replaceAll(r'\sqrt', '√')
-            .replaceAll(r'\{', '{')
-            .replaceAll(r'\}', '}');
-
-        spans.add(TextSpan(
-          text: ' $cleanedMath ',
-          style: baseStyle.copyWith(
-            fontStyle: FontStyle.italic,
-            fontWeight: FontWeight.w600,
-          ),
-        ));
-      }
-      lastIndex = match.end;
-    }
-
-    if (lastIndex < text.length) {
-      spans.add(TextSpan(
-        text: text.substring(lastIndex),
-        style: baseStyle,
-      ));
-    }
-
-    return RichText(
+    return MathText(
+      text,
+      style: baseStyle,
       textAlign: align,
-      text: TextSpan(children: spans),
     );
   }
 
