@@ -979,6 +979,22 @@ class _QuizScreenState extends State<QuizScreen> {
           backgroundColor: Colors.transparent,
           foregroundColor: titleTextColor,
           centerTitle: true,
+          actions: [
+            IconButton(
+              icon: Icon(
+                isLight ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                color: isLight ? const Color(0xFF0F172A) : const Color(0xFFFBBF24),
+                size: 22,
+              ),
+              tooltip: isLight ? "Dark Mode" : "Light Mode",
+              onPressed: () {
+                try {
+                  AppStateProvider.of(context).onToggleTheme();
+                } catch (_) {}
+              },
+            ),
+            const SizedBox(width: 8),
+          ],
         ),
         body: Stack(
           children: [
@@ -1257,10 +1273,10 @@ class _QuizScreenState extends State<QuizScreen> {
 
                   // Unified white card box containing both question text and options
                   Container(
-                    padding: const EdgeInsets.all(20.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16.0),
                     decoration: BoxDecoration(
                       color: isLight ? Colors.white : const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(24.0),
+                      borderRadius: BorderRadius.circular(20.0),
                       border: Border.all(
                         color: isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155),
                         width: 1.5,
@@ -1268,33 +1284,33 @@ class _QuizScreenState extends State<QuizScreen> {
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.16),
-                          blurRadius: 16.0,
-                          offset: const Offset(0, 6),
+                          blurRadius: 14.0,
+                          offset: const Offset(0, 4),
                         )
                       ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Question text (rendered with Georgia font & display math support)
+                        // Question text (optimized font size for math/physics formulas and compact display)
                         _buildMathText(
                           qText,
                           TextStyle(
                             fontFamily: 'Georgia',
                             fontFamilyFallback: const ['Georgia', 'serif'],
-                            fontSize: 17.5,
+                            fontSize: 15.0,
                             fontWeight: FontWeight.w700,
-                            height: 1.5,
+                            height: 1.45,
                             color: isLight ? const Color(0xFF0F172A) : Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 14),
                         Divider(
                           height: 1,
                           thickness: 1,
                           color: isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 14),
 
                         // Options
                         if (optionsData.isEmpty)
@@ -1351,11 +1367,11 @@ class _QuizScreenState extends State<QuizScreen> {
                               },
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 180),
-                                margin: const EdgeInsets.only(bottom: 16.0), // Generous spacing between boxes
-                                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0), // Generous inner padding
+                                margin: const EdgeInsets.only(bottom: 12.0),
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 13.0),
                                 decoration: BoxDecoration(
                                   color: bgCol,
-                                  borderRadius: BorderRadius.circular(16.0),
+                                  borderRadius: BorderRadius.circular(14.0),
                                   border: Border.all(
                                     color: borderCol,
                                     width: isOptSelected || (showFeedback && q.options[optIdx].isCorrect) ? 2.0 : 1.5,
@@ -1364,8 +1380,8 @@ class _QuizScreenState extends State<QuizScreen> {
                                       ? [
                                           BoxShadow(
                                             color: const Color(0xFFF59E0B).withValues(alpha: isLight ? 0.15 : 0.25),
-                                            blurRadius: 10.0,
-                                            offset: const Offset(0, 4),
+                                            blurRadius: 8.0,
+                                            offset: const Offset(0, 3),
                                           )
                                         ]
                                       : null,
@@ -1380,16 +1396,16 @@ class _QuizScreenState extends State<QuizScreen> {
                                       subjectColor: _getSubjectThemeColor(),
                                       isLight: isLight,
                                     ),
-                                    const SizedBox(width: 14),
+                                    const SizedBox(width: 12),
                                     Expanded(
                                       child: _buildMathText(
                                         optText,
                                         TextStyle(
-                                          fontSize: 14.5,
-                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14.0,
+                                          fontWeight: FontWeight.w600,
                                           color: txtCol,
                                         ),
-                                        align: TextAlign.left, // Left align inside rows for premium bento style
+                                        align: TextAlign.left,
                                       ),
                                     ),
                                   ],

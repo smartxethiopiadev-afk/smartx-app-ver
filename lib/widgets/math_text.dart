@@ -120,29 +120,68 @@ class MathText extends StatelessWidget {
     s = s.replaceAll(r'\left[', '[').replaceAll(r'\right]', ']');
     s = s.replaceAll(r'\left\{', '{').replaceAll(r'\right\}', '}');
     s = s.replaceAll(r'\{', '{').replaceAll(r'\}', '}');
-    s = s.replaceAll(r'\,', ' ').replaceAll(r'\;', ' ').replaceAll(r'\quad', '  ');
+    s = s.replaceAll(r'\,', ' ').replaceAll(r'\;', ' ').replaceAll(r'\quad', '  ').replaceAll(r'\qquad', '   ');
 
-    // B. Handle \text{...}, \mathrm{...}, \mathbf{...}, \mathit{...}
-    s = s.replaceAllMapped(RegExp(r'\\(?:text|mathrm|mathbf|mathit|textbf|textrm)\{([^}]+)\}'), (m) => m.group(1) ?? '');
+    // B. Strip LaTeX text and font wrappers
+    s = s.replaceAllMapped(RegExp(r'\\(?:text|mathrm|mathbf|mathit|textbf|textrm|mathbb|mathcal)\{([^}]+)\}'), (m) => m.group(1) ?? '');
 
-    // C. Handle Fractions: \frac{a}{b} -> (a / b) or a/b
+    // C. Common Math Functions (remove leading backslash)
+    s = s.replaceAll(r'\log', 'log');
+    s = s.replaceAll(r'\ln', 'ln');
+    s = s.replaceAll(r'\sin', 'sin');
+    s = s.replaceAll(r'\cos', 'cos');
+    s = s.replaceAll(r'\tan', 'tan');
+    s = s.replaceAll(r'\cot', 'cot');
+    s = s.replaceAll(r'\sec', 'sec');
+    s = s.replaceAll(r'\csc', 'csc');
+    s = s.replaceAll(r'\arcsin', 'arcsin');
+    s = s.replaceAll(r'\arccos', 'arccos');
+    s = s.replaceAll(r'\arctan', 'arctan');
+    s = s.replaceAll(r'\sinh', 'sinh');
+    s = s.replaceAll(r'\cosh', 'cosh');
+    s = s.replaceAll(r'\tanh', 'tanh');
+    s = s.replaceAll(r'\exp', 'exp');
+    s = s.replaceAll(r'\lim', 'lim');
+    s = s.replaceAll(r'\det', 'det');
+    s = s.replaceAll(r'\gcd', 'gcd');
+    s = s.replaceAll(r'\min', 'min');
+    s = s.replaceAll(r'\max', 'max');
+    s = s.replaceAll(r'\sup', 'sup');
+    s = s.replaceAll(r'\inf', 'inf');
+
+    // D. Vector & Accent Notations
+    s = s.replaceAllMapped(RegExp(r'\\vec\{([^}]+)\}'), (m) => '${m.group(1)}⃗');
+    s = s.replaceAllMapped(RegExp(r'\\hat\{i\}'), (m) => 'î');
+    s = s.replaceAllMapped(RegExp(r'\\hat\{j\}'), (m) => 'ĵ');
+    s = s.replaceAllMapped(RegExp(r'\\hat\{k\}'), (m) => 'k̂');
+    s = s.replaceAllMapped(RegExp(r'\\hat\{([^}]+)\}'), (m) => '${m.group(1)}̂');
+    s = s.replaceAllMapped(RegExp(r'\\bar\{([^}]+)\}'), (m) => '${m.group(1)}̄');
+    s = s.replaceAllMapped(RegExp(r'\\dot\{([^}]+)\}'), (m) => '${m.group(1)}̇');
+    s = s.replaceAllMapped(RegExp(r'\\ddot\{([^}]+)\}'), (m) => '${m.group(1)}̈');
+
+    // E. Handle Fractions: \frac{a}{b} -> (a / b) or a/b
     s = s.replaceAllMapped(RegExp(r'\\(?:frac|dfrac)\{([^}]+)\}\{([^}]+)\}'), (m) {
       final num = m.group(1)!.trim();
       final den = m.group(2)!.trim();
+      if (num == '1' && den == '2') return '½';
+      if (num == '1' && den == '3') return '⅓';
+      if (num == '2' && den == '3') return '⅔';
+      if (num == '1' && den == '4') return '¼';
+      if (num == '3' && den == '4') return '¾';
       if (num.length <= 3 && den.length <= 3 && !num.contains(' ') && !den.contains(' ')) {
         return '$num/$den';
       }
       return '($num / $den)';
     });
 
-    // D. Square Roots: \sqrt[3]{x} -> ∛(x), \sqrt{x} -> √(x), sqrt(x) -> √(x)
+    // F. Square Roots: \sqrt[3]{x} -> ∛(x), \sqrt{x} -> √(x), sqrt(x) -> √(x)
     s = s.replaceAllMapped(RegExp(r'\\sqrt\[3\]\{([^}]+)\}'), (m) => '∛(${m.group(1)})');
     s = s.replaceAllMapped(RegExp(r'\\sqrt\[4\]\{([^}]+)\}'), (m) => '∜(${m.group(1)})');
     s = s.replaceAllMapped(RegExp(r'\\sqrt\{([^}]+)\}'), (m) => '√(${m.group(1)})');
     s = s.replaceAllMapped(RegExp(r'\bsqrt\(([^)]+)\)'), (m) => '√(${m.group(1)})');
     s = s.replaceAll(r'\sqrt', '√');
 
-    // E. LaTeX Symbols & Relations
+    // G. LaTeX Symbols & Relations
     s = s.replaceAll(r'\times', '×');
     s = s.replaceAll(r'\cdot', '·');
     s = s.replaceAll(r'\div', '÷');
@@ -167,7 +206,7 @@ class MathText extends StatelessWidget {
     s = s.replaceAll(r'\nabla', '∇');
     s = s.replaceAll(r'\degree', '°').replaceAll(r'^\circ', '°').replaceAll(r'\circ', '°');
 
-    // F. Greek Letters (LaTeX Commands)
+    // H. Greek Letters (LaTeX Commands)
     s = s.replaceAll(r'\pi', 'π').replaceAll(r'\Pi', 'Π');
     s = s.replaceAll(r'\theta', 'θ').replaceAll(r'\Theta', 'Θ');
     s = s.replaceAll(r'\alpha', 'α').replaceAll(r'\Alpha', 'Α');
@@ -272,6 +311,10 @@ class MathText extends StatelessWidget {
       '=': '⁼',
       '(': '⁽',
       ')': '⁾',
+      '/': 'ᐟ',
+      '⁄': 'ᐟ',
+      '.': '˙',
+      ',': '﹐',
       'a': 'ᵃ',
       'b': 'ᵇ',
       'c': 'ᶜ',

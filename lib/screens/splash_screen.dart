@@ -471,8 +471,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 }
 
-/// A modern, high-definition pure vector emblem for "Smart X".
-/// Features dual glowing energy bands, illuminated intersection, and layered geometric framing.
+/// A modern, high-definition vector knowledge emblem (no X icon).
+/// Features glowing concentric rings, golden-cyan knowledge star, and subtle illuminated aura.
 class _ModernVectorBrandMark extends StatelessWidget {
   const _ModernVectorBrandMark();
 
@@ -519,7 +519,7 @@ class _ModernVectorBrandMark extends StatelessWidget {
             ],
           ),
           child: CustomPaint(
-            painter: _VectorXInsigniaPainter(),
+            painter: _AcademicKnowledgeEmblemPainter(),
           ),
         ),
       ),
@@ -527,86 +527,81 @@ class _ModernVectorBrandMark extends StatelessWidget {
   }
 }
 
-/// Custom vector painter that renders a geometric glowing "X" brand mark.
-class _VectorXInsigniaPainter extends CustomPainter {
+/// Custom vector painter that renders an elegant illuminated academic emblem (book & knowledge crest).
+class _AcademicKnowledgeEmblemPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final double w = size.width;
     final double h = size.height;
     final Offset center = Offset(w / 2, h / 2);
 
-    final Paint glowPaint = Paint()
-      ..color = const Color(0xFF00D2FF).withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    // 1. Subtle Outer Ring
+    final Paint ringPaint = Paint()
+      ..color = const Color(0xFF00D2FF).withValues(alpha: 0.35)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    canvas.drawCircle(center, w * 0.36, ringPaint);
 
-    // Primary diagonal stroke (\): Cyan to Blue Gradient
-    final Paint mainStrokePaint = Paint()
+    // 2. Open Book / Academic Arch Vector
+    final Paint bookPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
           Color(0xFF00FFFF),
           Color(0xFF00BFFF),
-          Color(0xFF0072FF),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, w, h))
-      ..strokeWidth = 6.2
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    // Secondary diagonal stroke (/): Sapphire to Cyan Gradient
-    final Paint secondStrokePaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.bottomLeft,
-        end: Alignment.topRight,
-        colors: [
           Color(0xFF38BDF8),
-          Color(0xFF00E5FF),
-          Color(0xFF67E8F9),
         ],
       ).createShader(Rect.fromLTWH(0, 0, w, h))
-      ..strokeWidth = 6.2
+      ..strokeWidth = 2.8
       ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
 
-    final double pad = w * 0.26;
-
-    // Draw blurred glow behind
-    canvas.drawLine(
-      Offset(pad, pad),
-      Offset(w - pad, h - pad),
-      glowPaint..strokeWidth = 10,
+    final Path bookPath = Path();
+    // Left page
+    bookPath.moveTo(center.dx, center.dy + 8);
+    bookPath.cubicTo(
+      center.dx - 10, center.dy + 12,
+      center.dx - 18, center.dy + 10,
+      center.dx - 22, center.dy + 3,
     );
-    canvas.drawLine(
-      Offset(w - pad, pad),
-      Offset(pad, h - pad),
-      glowPaint..strokeWidth = 10,
+    bookPath.lineTo(center.dx - 22, center.dy - 9);
+    bookPath.cubicTo(
+      center.dx - 18, center.dy - 3,
+      center.dx - 10, center.dy - 1,
+      center.dx, center.dy - 5,
     );
+    bookPath.close();
 
-    // Draw main diagonal (\)
-    canvas.drawLine(
-      Offset(pad, pad),
-      Offset(w - pad, h - pad),
-      mainStrokePaint,
+    // Right page
+    bookPath.moveTo(center.dx, center.dy + 8);
+    bookPath.cubicTo(
+      center.dx + 10, center.dy + 12,
+      center.dx + 18, center.dy + 10,
+      center.dx + 22, center.dy + 3,
     );
-
-    // Draw secondary diagonal (/)
-    canvas.drawLine(
-      Offset(w - pad, pad),
-      Offset(pad, h - pad),
-      secondStrokePaint,
+    bookPath.lineTo(center.dx + 22, center.dy - 9);
+    bookPath.cubicTo(
+      center.dx + 18, center.dy - 3,
+      center.dx + 10, center.dy - 1,
+      center.dx, center.dy - 5,
     );
+    bookPath.close();
 
-    // Illuminated central spark node
+    canvas.drawPath(bookPath, bookPaint);
+
+    // 3. Illuminated Golden Wisdom Spark at apex
     final Paint sparkPaint = Paint()
-      ..color = Colors.white
+      ..color = const Color(0xFFFBBF24)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 2.5, sparkPaint);
+    canvas.drawCircle(Offset(center.dx, center.dy - 14), 3.0, sparkPaint);
 
-    final Paint outerSparkGlow = Paint()
-      ..color = const Color(0xFF00FFFF).withValues(alpha: 0.6)
+    // Soft spark aura
+    final Paint sparkGlow = Paint()
+      ..color = const Color(0xFF00D2FF).withValues(alpha: 0.6)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 4.5, outerSparkGlow);
+    canvas.drawCircle(Offset(center.dx, center.dy - 14), 5.5, sparkGlow);
   }
 
   @override

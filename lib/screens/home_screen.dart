@@ -2904,7 +2904,7 @@ class HelpSupportScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           languageCode == 'en' ? 'Help & Support' : 'እርዳታ እና ድጋፍ',
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 18),
         ),
         backgroundColor: const Color(0xFFFF6D00),
         elevation: 0,
@@ -2912,32 +2912,45 @@ class HelpSupportScreen extends StatelessWidget {
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 22.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Section 1: Application Developer Company
-            Text(
-              languageCode == 'en' ? 'APPLICATION DEVELOPER' : 'የመተግበሪያው አልሚ ድርጅት',
-              style: const TextStyle(
-                fontSize: 13.0,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFFFF6D00),
-                letterSpacing: 1.2,
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF6D00),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  languageCode == 'en' ? 'APPLICATION DEVELOPER' : 'የመተግበሪያው አልሚ ድርጅት',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFFF6D00),
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 10.0),
+            const SizedBox(height: 12.0),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(18.0),
+              padding: const EdgeInsets.all(20.0),
               decoration: BoxDecoration(
                 color: cardColor,
-                borderRadius: BorderRadius.circular(16.0),
-                border: Border.all(color: borderColor, width: 1.0),
+                borderRadius: BorderRadius.circular(20.0),
+                border: Border.all(color: borderColor, width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isLight ? 0.03 : 0.15),
-                    blurRadius: 10,
+                    color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.2),
+                    blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -2948,15 +2961,15 @@ class HelpSupportScreen extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10.0),
+                        padding: const EdgeInsets.all(12.0),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF6D00).withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
+                          color: const Color(0xFFFF6D00).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Icon(
                           Icons.code_rounded,
                           color: Color(0xFFFF6D00),
-                          size: 24,
+                          size: 26,
                         ),
                       ),
                       const SizedBox(width: 14.0),
@@ -2967,14 +2980,14 @@ class HelpSupportScreen extends StatelessWidget {
                             Text(
                               'Hab-IT Solutions',
                               style: TextStyle(
-                                fontSize: 17.0,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 17.5,
+                                fontWeight: FontWeight.w800,
                                 color: textColor,
                               ),
                             ),
-                            const SizedBox(height: 2.0),
+                            const SizedBox(height: 3.0),
                             Text(
-                              '${languageCode == 'en' ? "Lead Developer: " : "ዋና አልሚ: "}Habtamu Yifiru',
+                              '${languageCode == 'en' ? "Lead Software Engineer: " : "ዋና አልሚ: "}Habtamu Yifiru',
                               style: TextStyle(
                                 fontSize: 13.0,
                                 color: subtextColor,
@@ -2988,10 +3001,10 @@ class HelpSupportScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16.0),
                   Divider(color: borderColor, height: 1.0),
-                  const SizedBox(height: 16.0),
+                  const SizedBox(height: 14.0),
                   Text(
                     languageCode == 'en'
-                        ? 'For any technical support, platform bugs, system failures, or customization requests, reach out directly to our software engineering support team.'
+                        ? 'For software inquiries, bug reports, custom educational modules, or technical assistance, reach out directly to the developer.'
                         : 'ለማንኛውም የቴክኒክ ድጋፍ፣ የስርዓት ስህተቶች ወይም ተጨማሪ አገልግሎቶች ሶፍትዌር ምህንድስና ክፍልን ማነጋገር ይችላሉ።',
                     style: TextStyle(
                       fontSize: 13.5,
@@ -2999,8 +3012,8 @@ class HelpSupportScreen extends StatelessWidget {
                       color: textColor,
                     ),
                   ),
-                  const SizedBox(height: 18.0),
-                  // Telegram Link Row
+                  const SizedBox(height: 16.0),
+                  // Telegram Developer Contact
                   InkWell(
                     onTap: () async {
                       final uri = Uri.parse('https://t.me/hab_dev');
@@ -3008,14 +3021,14 @@ class HelpSupportScreen extends StatelessWidget {
                         await launchUrl(uri, mode: LaunchMode.externalApplication);
                       }
                     },
-                    borderRadius: BorderRadius.circular(12.0),
+                    borderRadius: BorderRadius.circular(14.0),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12.0),
+                        color: const Color(0xFF0088CC).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14.0),
                         border: Border.all(
-                          color: Colors.blue.withValues(alpha: 0.3),
+                          color: const Color(0xFF0088CC).withValues(alpha: 0.3),
                           width: 1.0,
                         ),
                       ),
@@ -3023,15 +3036,15 @@ class HelpSupportScreen extends StatelessWidget {
                         children: [
                           const Icon(
                             Icons.telegram_rounded,
-                            color: Colors.blue,
-                            size: 20,
+                            color: Color(0xFF0088CC),
+                            size: 22,
                           ),
-                          const SizedBox(width: 10.0),
+                          const SizedBox(width: 12.0),
                           Text(
-                            languageCode == 'en' ? 'Contact on Telegram' : 'በቴሌግራም ያግኙ',
+                            languageCode == 'en' ? 'Telegram Developer' : 'በቴሌግራም ያግኙ',
                             style: const TextStyle(
-                              color: Colors.blue,
-                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0088CC),
+                              fontWeight: FontWeight.w800,
                               fontSize: 14.0,
                             ),
                           ),
@@ -3041,61 +3054,57 @@ class HelpSupportScreen extends StatelessWidget {
                             style: TextStyle(
                               color: textColor,
                               fontWeight: FontWeight.w800,
-                              fontSize: 14.0,
+                              fontSize: 13.5,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12.0),
-                  // Website Placeholder Button
+                  const SizedBox(height: 10.0),
+                  // Direct Email Support Button
                   InkWell(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            languageCode == 'en' 
-                                ? 'Developer Website coming soon!' 
-                                : 'የአልሚው ድረ-ገጽ በቅርቡ ይለቀቃል!',
-                          ),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                    onTap: () async {
+                      final uri = Uri.parse('mailto:habtamu.yifiru.official@gmail.com?subject=Smart%20X%20Ethiopian%20Support');
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri);
+                      }
                     },
-                    borderRadius: BorderRadius.circular(12.0),
+                    borderRadius: BorderRadius.circular(14.0),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF6D00).withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12.0),
+                        color: const Color(0xFFEA4335).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14.0),
                         border: Border.all(
-                          color: const Color(0xFFFF6D00).withValues(alpha: 0.3),
+                          color: const Color(0xFFEA4335).withValues(alpha: 0.3),
                           width: 1.0,
                         ),
                       ),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(
-                            Icons.language_rounded,
-                            color: Color(0xFFFF6D00),
-                            size: 20,
+                            Icons.mail_outline_rounded,
+                            color: Color(0xFFEA4335),
+                            size: 22,
                           ),
-                          const SizedBox(width: 10.0),
+                          const SizedBox(width: 12.0),
                           Text(
-                            languageCode == 'en' ? 'Visit Developer Website' : 'የአልሚውን ድረ-ገጽ ይጎብኙ',
+                            languageCode == 'en' ? 'Email Support' : 'በኢሜይል ያግኙ',
                             style: const TextStyle(
-                              color: Color(0xFFFF6D00),
-                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFEA4335),
+                              fontWeight: FontWeight.w800,
                               fontSize: 14.0,
                             ),
                           ),
                           const Spacer(),
-                          const Icon(
-                            Icons.chevron_right_rounded,
-                            color: Color(0xFFFF6D00),
-                            size: 18,
+                          Text(
+                            'Gmail',
+                            style: TextStyle(
+                              color: textColor,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13.5,
+                            ),
                           ),
                         ],
                       ),
@@ -3107,27 +3116,40 @@ class HelpSupportScreen extends StatelessWidget {
             const SizedBox(height: 28.0),
 
             // Section 2: Application Owner (Smart X Ethiopian)
-            Text(
-              languageCode == 'en' ? 'APPLICATION OWNER' : 'የመተግበሪያው ባለቤት',
-              style: const TextStyle(
-                fontSize: 13.0,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF0D2353),
-                letterSpacing: 1.2,
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0EA5E9),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  languageCode == 'en' ? 'APPLICATION OWNER' : 'የመተግበሪያው ባለቤት',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0EA5E9),
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 10.0),
+            const SizedBox(height: 12.0),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(18.0),
+              padding: const EdgeInsets.all(20.0),
               decoration: BoxDecoration(
                 color: cardColor,
-                borderRadius: BorderRadius.circular(16.0),
-                border: Border.all(color: borderColor, width: 1.0),
+                borderRadius: BorderRadius.circular(20.0),
+                border: Border.all(color: borderColor, width: 1.2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isLight ? 0.03 : 0.15),
-                    blurRadius: 10,
+                    color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.2),
+                    blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -3138,15 +3160,15 @@ class HelpSupportScreen extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10.0),
+                        padding: const EdgeInsets.all(12.0),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0D2353).withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
+                          color: const Color(0xFF0EA5E9).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Icon(
-                          Icons.business_rounded,
-                          color: Color(0xFF0D2353),
-                          size: 24,
+                          Icons.school_rounded,
+                          color: Color(0xFF0EA5E9),
+                          size: 26,
                         ),
                       ),
                       const SizedBox(width: 14.0),
@@ -3157,18 +3179,18 @@ class HelpSupportScreen extends StatelessWidget {
                             Text(
                               'Smart X Ethiopian',
                               style: TextStyle(
-                                fontSize: 16.0,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 17.0,
+                                fontWeight: FontWeight.w800,
                                 color: textColor,
                               ),
                             ),
-                            const SizedBox(height: 2.0),
+                            const SizedBox(height: 3.0),
                             Text(
-                              languageCode == 'en' ? 'Official Educational Partner' : 'ይፋዊ የትምህርት አጋር',
+                              languageCode == 'en' ? 'Official Educational Platform' : 'ይፋዊ የትምህርት መድረክ',
                               style: TextStyle(
-                                fontSize: 12.0,
+                                fontSize: 12.5,
                                 color: subtextColor,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -3178,18 +3200,18 @@ class HelpSupportScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16.0),
                   Divider(color: borderColor, height: 1.0),
-                  const SizedBox(height: 16.0),
+                  const SizedBox(height: 14.0),
                   Text(
                     languageCode == 'en'
-                        ? 'Learn more about academic content updates, new matric cheat sheets, and release dates. Connect with our community and follow the official Smart X Ethiopian information channels.'
-                        : 'ስለ አዳዲስ የትምህርት ማጠቃለያዎች፣ የማትሪክ ጥያቄዎች እና የፊልም ማስረዳቶች ይወቁ። ከማህበረሰባችን ጋር ለመገናኘት የቴሌግራም ቻናላችንን ይቀላቀሉ።',
+                        ? 'Follow our official channels for new Ethiopian matric question packs, short notes updates, and video lectures.'
+                        : 'ስለ አዳዲስ የትምህርት ማጠቃለያዎች፣ የማትሪክ ጥያቄዎች እና የቪዲዮ ማስረዳቶች ለማግኘት ይፋዊ ቻናላችንን ይቀላቀሉ።',
                     style: TextStyle(
                       fontSize: 13.5,
                       height: 1.5,
                       color: textColor,
                     ),
                   ),
-                  const SizedBox(height: 18.0),
+                  const SizedBox(height: 16.0),
                   // Phone Row
                   InkWell(
                     onTap: () async {
@@ -3198,14 +3220,14 @@ class HelpSupportScreen extends StatelessWidget {
                         await launchUrl(uri);
                       }
                     },
-                    borderRadius: BorderRadius.circular(12.0),
+                    borderRadius: BorderRadius.circular(14.0),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0D2353).withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(12.0),
+                        color: const Color(0xFF0EA5E9).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14.0),
                         border: Border.all(
-                          color: const Color(0xFF0D2353).withValues(alpha: 0.2),
+                          color: const Color(0xFF0EA5E9).withValues(alpha: 0.3),
                           width: 1.0,
                         ),
                       ),
@@ -3213,15 +3235,15 @@ class HelpSupportScreen extends StatelessWidget {
                         children: [
                           const Icon(
                             Icons.phone_android_rounded,
-                            color: Color(0xFF0D2353),
-                            size: 20,
+                            color: Color(0xFF0EA5E9),
+                            size: 22,
                           ),
-                          const SizedBox(width: 10.0),
+                          const SizedBox(width: 12.0),
                           Text(
-                            languageCode == 'en' ? 'Call Owner' : 'ባለቤቱን ይደውሉ',
+                            languageCode == 'en' ? 'Direct Hotline' : 'ስልክ ቁጥር',
                             style: const TextStyle(
-                              color: Color(0xFF0D2353),
-                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0EA5E9),
+                              fontWeight: FontWeight.w800,
                               fontSize: 14.0,
                             ),
                           ),
@@ -3231,15 +3253,15 @@ class HelpSupportScreen extends StatelessWidget {
                             style: TextStyle(
                               color: textColor,
                               fontWeight: FontWeight.w800,
-                              fontSize: 14.0,
+                              fontSize: 13.5,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12.0),
-                  // Telegram Link Row
+                  const SizedBox(height: 10.0),
+                  // Telegram Channel Row
                   InkWell(
                     onTap: () async {
                       final uri = Uri.parse('https://t.me/smartx_et');
@@ -3247,14 +3269,14 @@ class HelpSupportScreen extends StatelessWidget {
                         await launchUrl(uri, mode: LaunchMode.externalApplication);
                       }
                     },
-                    borderRadius: BorderRadius.circular(12.0),
+                    borderRadius: BorderRadius.circular(14.0),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0D2353).withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(12.0),
+                        color: const Color(0xFF0088CC).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14.0),
                         border: Border.all(
-                          color: const Color(0xFF0D2353).withValues(alpha: 0.2),
+                          color: const Color(0xFF0088CC).withValues(alpha: 0.3),
                           width: 1.0,
                         ),
                       ),
@@ -3263,23 +3285,23 @@ class HelpSupportScreen extends StatelessWidget {
                         children: [
                           const Icon(
                             Icons.telegram_rounded,
-                            color: Color(0xFF0D2353),
+                            color: Color(0xFF0088CC),
                             size: 22,
                           ),
-                          const SizedBox(width: 10.0),
+                          const SizedBox(width: 12.0),
                           Text(
                             languageCode == 'en' ? 'Join Telegram Channel' : 'የቴሌግራም ቻናል ይቀላቀሉ',
                             style: const TextStyle(
-                              color: Color(0xFF0D2353),
-                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0088CC),
+                              fontWeight: FontWeight.w800,
                               fontSize: 14.0,
                             ),
                           ),
                           const Spacer(),
                           const Icon(
                             Icons.open_in_new_rounded,
-                            color: Color(0xFF0D2353),
-                            size: 16,
+                            color: Color(0xFF0088CC),
+                            size: 18,
                           ),
                         ],
                       ),

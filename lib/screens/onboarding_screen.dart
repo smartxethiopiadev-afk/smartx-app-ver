@@ -284,19 +284,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               left: 0,
               right: 0,
               bottom: 0,
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 350),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.92),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.95),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    width: 1,
+                    color: (_slides[_currentPage]['color'] as Color).withValues(alpha: 0.25),
+                    width: 1.2,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      blurRadius: 32,
-                      offset: const Offset(0, -10),
+                      color: (_slides[_currentPage]['color'] as Color).withValues(alpha: 0.15),
+                      blurRadius: 36,
+                      offset: const Offset(0, -8),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      blurRadius: 28,
+                      offset: const Offset(0, -4),
                     ),
                   ],
                 ),
@@ -312,23 +318,37 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                               decoration: BoxDecoration(
-                                color: (_slides[_currentPage]['color'] as Color).withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(12),
+                                color: (_slides[_currentPage]['color'] as Color).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: (_slides[_currentPage]['color'] as Color).withValues(alpha: 0.6),
                                   width: 1,
                                 ),
                               ),
-                              child: Text(
-                                '0${_currentPage + 1} / 0${_slides.length}',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: _slides[_currentPage]['color'] as Color,
-                                  letterSpacing: 0.5,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: _slides[_currentPage]['color'] as Color,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'FEATURE 0${_currentPage + 1} OF 0${_slides.length}',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: _slides[_currentPage]['color'] as Color,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -356,10 +376,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   ? _slides[_currentPage]['titleAm']!
                                   : _slides[_currentPage]['titleEn']!,
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 24,
+                                fontSize: 23,
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
-                                letterSpacing: -0.5,
+                                letterSpacing: -0.4,
+                                height: 1.25,
                               ),
                             ),
                           ),
@@ -377,8 +398,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   ? _slides[_currentPage]['descAm']!
                                   : _slides[_currentPage]['descEn']!,
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 14.5,
-                                height: 1.5,
+                                fontSize: 14.0,
+                                height: 1.55,
                                 color: const Color(0xFFCBD5E1),
                                 fontWeight: FontWeight.w400,
                               ),
@@ -398,7 +419,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 final Color accentColor = _slides[_currentPage]['color'] as Color;
                                 return AnimatedContainer(
                                   duration: const Duration(milliseconds: 300),
-                                  width: isActive ? 24.0 : 8.0,
+                                  width: isActive ? 26.0 : 8.0,
                                   height: 8.0,
                                   margin: const EdgeInsets.only(right: 6.0),
                                   decoration: BoxDecoration(
@@ -406,6 +427,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     color: isActive
                                         ? accentColor
                                         : Colors.white.withValues(alpha: 0.2),
+                                    boxShadow: isActive
+                                        ? [
+                                            BoxShadow(
+                                              color: accentColor.withValues(alpha: 0.5),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ]
+                                        : null,
                                   ),
                                 );
                               }),
@@ -443,9 +473,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 }
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF00BFFF),
+                                backgroundColor: _slides[_currentPage]['color'] as Color,
                                 foregroundColor: Colors.white,
-                                elevation: 0,
+                                elevation: 4,
+                                shadowColor: (_slides[_currentPage]['color'] as Color).withValues(alpha: 0.5),
                                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
@@ -459,7 +490,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                         ? (isAm ? 'ይጀምሩ' : 'Get Started')
                                         : (isAm ? 'ቀጣይ' : 'Next'),
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 15,
+                                      fontSize: 14.5,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.white,
                                     ),
