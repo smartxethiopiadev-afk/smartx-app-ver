@@ -24,9 +24,12 @@ class MathText extends StatelessWidget {
   Widget build(BuildContext context) {
     final DefaultTextStyle defaultTextStyle = DefaultTextStyle.of(context);
     final TextStyle effectiveStyle = defaultTextStyle.style.merge(
-      style ?? GoogleFonts.inter(
-        fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
-      ),
+      style ??
+          GoogleFonts.inter(
+            fontSize: 14.0,
+          ).copyWith(
+            fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
+          ),
     );
 
     // If text is empty, return empty text

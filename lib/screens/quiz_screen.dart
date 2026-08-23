@@ -1297,11 +1297,12 @@ class _QuizScreenState extends State<QuizScreen> {
                         _buildMathText(
                           qText,
                           GoogleFonts.inter(
-                            fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
                             fontSize: 15.0,
                             fontWeight: FontWeight.w700,
                             height: 1.45,
                             color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                          ).copyWith(
+                            fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
                           ),
                         ),
                         const SizedBox(height: 14),
@@ -1321,6 +1322,7 @@ class _QuizScreenState extends State<QuizScreen> {
                               style: GoogleFonts.inter(
                                 color: descColor, 
                                 fontStyle: FontStyle.italic,
+                              ).copyWith(
                                 fontFamilyFallback: const ['Roboto', 'sans-serif'],
                               ),
                             ),
@@ -1405,10 +1407,11 @@ class _QuizScreenState extends State<QuizScreen> {
                                       child: _buildMathText(
                                         optText,
                                         GoogleFonts.inter(
-                                          fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
                                           fontSize: 14.0,
                                           fontWeight: FontWeight.w600,
                                           color: txtCol,
+                                        ).copyWith(
+                                          fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
                                         ),
                                         align: TextAlign.left,
                                       ),
