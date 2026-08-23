@@ -317,7 +317,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   children: [
                     const Spacer(flex: 12),
 
-                    // Refined Custom Vector Brand Emblem (No bitmap icon)
+                    // Refined Brand Logo Image with luminous glowing frame
                     AnimatedBuilder(
                       animation: Listenable.merge([_entranceController, _pulseController]),
                       builder: (context, child) {
@@ -329,7 +329,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                           opacity: opacity,
                           child: Transform.scale(
                             scale: scale * pulse,
-                            child: const _ModernVectorBrandMark(),
+                            child: const _ModernBrandLogoImage(),
                           ),
                         );
                       },
@@ -471,141 +471,84 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 }
 
-/// A modern, high-definition vector knowledge emblem (no X icon).
-/// Features glowing concentric rings, golden-cyan knowledge star, and subtle illuminated aura.
-class _ModernVectorBrandMark extends StatelessWidget {
-  const _ModernVectorBrandMark();
+/// A modern, high-definition brand logo image component with glowing aura and sleek rounded frame.
+class _ModernBrandLogoImage extends StatelessWidget {
+  const _ModernBrandLogoImage();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 96,
-      height: 96,
+      width: 108,
+      height: 108,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(
           colors: [
-            const Color(0xFF00D2FF).withValues(alpha: 0.22),
-            const Color(0xFF0072FF).withValues(alpha: 0.08),
+            const Color(0xFF00D2FF).withValues(alpha: 0.30),
+            const Color(0xFF0072FF).withValues(alpha: 0.12),
             Colors.transparent,
           ],
-          radius: 0.75,
+          radius: 0.85,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D2FF).withValues(alpha: 0.25),
-            blurRadius: 28,
-            spreadRadius: 2,
+            color: const Color(0xFF00D2FF).withValues(alpha: 0.35),
+            blurRadius: 32,
+            spreadRadius: 3,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Center(
         child: Container(
-          width: 78,
-          height: 78,
+          width: 88,
+          height: 88,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: const Color(0xFF0B1426),
             border: Border.all(
-              color: const Color(0xFF00D2FF).withValues(alpha: 0.45),
-              width: 1.5,
+              color: const Color(0xFF00E5FF).withValues(alpha: 0.6),
+              width: 2.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
+                color: const Color(0xFF00D2FF).withValues(alpha: 0.25),
+                blurRadius: 16,
               ),
             ],
           ),
-          child: CustomPaint(
-            painter: _AcademicKnowledgeEmblemPainter(),
+          child: ClipOval(
+            child: Image.asset(
+              'assets/images/smart_x_logo.png',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Image.asset(
+                  'assets/images/app_icon.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error2, stackTrace2) {
+                    return Container(
+                      color: const Color(0xFF0F172A),
+                      child: const Center(
+                        child: Icon(
+                          Icons.auto_stories_rounded,
+                          color: Color(0xFF00D2FF),
+                          size: 40,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ),
       ),
     );
   }
-}
-
-/// Custom vector painter that renders an elegant illuminated academic emblem (book & knowledge crest).
-class _AcademicKnowledgeEmblemPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-    final Offset center = Offset(w / 2, h / 2);
-
-    // 1. Subtle Outer Ring
-    final Paint ringPaint = Paint()
-      ..color = const Color(0xFF00D2FF).withValues(alpha: 0.35)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-    canvas.drawCircle(center, w * 0.36, ringPaint);
-
-    // 2. Open Book / Academic Arch Vector
-    final Paint bookPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Color(0xFF00FFFF),
-          Color(0xFF00BFFF),
-          Color(0xFF38BDF8),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, w, h))
-      ..strokeWidth = 2.8
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..style = PaintingStyle.stroke;
-
-    final Path bookPath = Path();
-    // Left page
-    bookPath.moveTo(center.dx, center.dy + 8);
-    bookPath.cubicTo(
-      center.dx - 10, center.dy + 12,
-      center.dx - 18, center.dy + 10,
-      center.dx - 22, center.dy + 3,
-    );
-    bookPath.lineTo(center.dx - 22, center.dy - 9);
-    bookPath.cubicTo(
-      center.dx - 18, center.dy - 3,
-      center.dx - 10, center.dy - 1,
-      center.dx, center.dy - 5,
-    );
-    bookPath.close();
-
-    // Right page
-    bookPath.moveTo(center.dx, center.dy + 8);
-    bookPath.cubicTo(
-      center.dx + 10, center.dy + 12,
-      center.dx + 18, center.dy + 10,
-      center.dx + 22, center.dy + 3,
-    );
-    bookPath.lineTo(center.dx + 22, center.dy - 9);
-    bookPath.cubicTo(
-      center.dx + 18, center.dy - 3,
-      center.dx + 10, center.dy - 1,
-      center.dx, center.dy - 5,
-    );
-    bookPath.close();
-
-    canvas.drawPath(bookPath, bookPaint);
-
-    // 3. Illuminated Golden Wisdom Spark at apex
-    final Paint sparkPaint = Paint()
-      ..color = const Color(0xFFFBBF24)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(center.dx, center.dy - 14), 3.0, sparkPaint);
-
-    // Soft spark aura
-    final Paint sparkGlow = Paint()
-      ..color = const Color(0xFF00D2FF).withValues(alpha: 0.6)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(center.dx, center.dy - 14), 5.5, sparkGlow);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Custom painter that renders clean, sophisticated geometric patterns,
@@ -685,7 +628,7 @@ class _GeometricAbstractPainter extends CustomPainter {
     _drawGeometricRing(
       canvas: canvas,
       center: center,
-      radius: 95,
+      radius: 105,
       rotation: angle * 0.8,
       dashCount: 4,
       dashRatio: 0.65,

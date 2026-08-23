@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// A rich, high-performance mathematics and physics formula parser and renderer.
 /// Converts LaTeX, plain text formulas, Greek letter names, superscripts, subscripts,
@@ -22,7 +23,11 @@ class MathText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final DefaultTextStyle defaultTextStyle = DefaultTextStyle.of(context);
-    final TextStyle effectiveStyle = defaultTextStyle.style.merge(style);
+    final TextStyle effectiveStyle = defaultTextStyle.style.merge(
+      style ?? GoogleFonts.inter(
+        fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
+      ),
+    );
 
     // If text is empty, return empty text
     if (text.trim().isEmpty) {
@@ -74,7 +79,7 @@ class MathText extends StatelessWidget {
           result.add(TextSpan(
             text: formatted,
             style: baseStyle.copyWith(
-              fontFamilyFallback: const ['Georgia', 'Cambria', 'Times New Roman', 'serif'],
+              fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
               fontWeight: FontWeight.w600,
               letterSpacing: 0.2,
             ),

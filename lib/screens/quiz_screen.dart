@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../models/question_model.dart';
@@ -1292,12 +1293,11 @@ class _QuizScreenState extends State<QuizScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Question text (optimized font size for math/physics formulas and compact display)
+                        // Question text (optimized font size for math/physics formulas and clean Inter/Roboto typography)
                         _buildMathText(
                           qText,
-                          TextStyle(
-                            fontFamily: 'Georgia',
-                            fontFamilyFallback: const ['Georgia', 'serif'],
+                          GoogleFonts.inter(
+                            fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
                             fontSize: 15.0,
                             fontWeight: FontWeight.w700,
                             height: 1.45,
@@ -1318,7 +1318,11 @@ class _QuizScreenState extends State<QuizScreen> {
                             padding: const EdgeInsets.all(16.0),
                             child: Text(
                               "No options available.",
-                              style: TextStyle(color: descColor, fontStyle: FontStyle.italic),
+                              style: GoogleFonts.inter(
+                                color: descColor, 
+                                fontStyle: FontStyle.italic,
+                                fontFamilyFallback: const ['Roboto', 'sans-serif'],
+                              ),
                             ),
                           )
                         else
@@ -1400,7 +1404,8 @@ class _QuizScreenState extends State<QuizScreen> {
                                     Expanded(
                                       child: _buildMathText(
                                         optText,
-                                        TextStyle(
+                                        GoogleFonts.inter(
+                                          fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
                                           fontSize: 14.0,
                                           fontWeight: FontWeight.w600,
                                           color: txtCol,
