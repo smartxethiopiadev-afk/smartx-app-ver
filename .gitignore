@@ -47,6 +47,7 @@ local.properties
 .packages
 .pub-cache/
 .pub/
+pubspec.lock
 build/
 /build/
 **/doc/api/
@@ -116,6 +117,8 @@ migrate_working_dir/
 # ------------------------------------------------------------------------------
 # 6. LOCAL WEB PREVIEW & DEMO ONLY FILES (Kept local, excluded from Mobile Git)
 # ------------------------------------------------------------------------------
+web/
+/web/
 /src/
 src/
 node_modules/
