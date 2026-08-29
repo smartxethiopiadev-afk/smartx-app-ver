@@ -1,1179 +1,127 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_html/flutter_html.dart';
-import 'package:flutter_html_table/flutter_html_table.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import '../services/offline_manager.dart';
-import '../services/analytics_service.dart';
-import '../widgets/math_text.dart';
-import '../main.dart';
+import 'package:provider/provider.dart';
+import '../config/app_config.dart';
+import '../models/subject_model.dart';
+import '../models/note_model.dart';
+import '../services/offline_service.dart';
 
-enum NotesErrorType {
-  none,
-  noInternet,
-  emptyData,
-  serverError,
-}
-
-class NotesScreen extends StatefulWidget {
+class NotesScreen extends StatelessWidget {
+  final UnitModel unit;
+  final SubjectConfig subject;
   final int grade;
-  final String subjectId;
-  final int unitNumber;
-  final String unitTitle;
-  final Color themeColor;
-  final bool isDarkMode;
-  final String languageCode;
-  final VoidCallback? onToggleTheme;
 
   const NotesScreen({
     super.key,
+    required this.unit,
+    required this.subject,
     required this.grade,
-    required this.subjectId,
-    required this.unitNumber,
-    required this.unitTitle,
-    required this.themeColor,
-    required this.isDarkMode,
-    required this.languageCode,
-    this.onToggleTheme,
   });
 
   @override
-  State<NotesScreen> createState() => _NotesScreenState();
-}
-
-class _NotesScreenState extends State<NotesScreen> {
-  bool _isBookmarked = false;
-  bool _isLoading = true;
-  bool _hasError = false;
-  late bool _isDarkMode;
-
-  NotesErrorType _errorType = NotesErrorType.none;
-
-  List<Map<String, dynamic>> _notesList = [];
-  int _currentPageIndex = 0;
-  late PageController _pageController;
-
-  bool _isSearchOpen = false;
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-
-  static const String _telegramChannelUrl = 'https://t.me/smart_x_academy';
-
-  @override
-  void initState() {
-    super.initState();
-    _isDarkMode = widget.isDarkMode;
-    _pageController = PageController(initialPage: 0);
-
-    // Firebase Analytics tracking for screen view and custom event
-    logScreen('ShortNotesScreen');
-    logEvent(
-      name: 'short_note_opened',
-      parameters: {
-        'unit': widget.unitTitle,
-        'subject': widget.subjectId,
-        'grade': widget.grade,
-        'unit_number': widget.unitNumber,
-      },
-    );
-
-    _checkBookmarkStatus();
-    _fetchNotes();
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _showFloatingSnackbar(
-    String message, {
-    bool isError = false,
-    bool isSuccess = false,
-    bool isInfo = false,
-  }) {
-    if (!mounted) return;
-    Color bgColor = const Color(0xFF1E293B);
-    IconData iconData = Icons.info_outline_rounded;
-    if (isError) {
-      bgColor = const Color(0xFFDC2626);
-      iconData = Icons.error_outline_rounded;
-    } else if (isSuccess) {
-      bgColor = const Color(0xFF059669);
-      iconData = Icons.check_circle_outline_rounded;
-    } else if (isInfo) {
-      bgColor = const Color(0xFF0284C7);
-      iconData = Icons.downloading_rounded;
-    }
-
-    ScaffoldMessenger.of(context).removeCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(iconData, color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: bgColor,
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: isError ? 4 : 2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  String _getUnitId() {
-    String sub = widget.subjectId.toLowerCase();
-    String prefix = 'phys_u';
-    if (sub.contains('math')) {
-      prefix = 'math_u';
-    } else if (sub.contains('biol') || sub.contains('bio')) {
-      prefix = 'bio_u';
-    } else if (sub.contains('phys')) {
-      prefix = 'phys_u';
-    } else if (sub.contains('chem')) {
-      prefix = 'chem_u';
-    } else if (sub.contains('geog') || sub.contains('geo')) {
-      prefix = 'geo_u';
-    } else if (sub.contains('hist')) {
-      prefix = 'hist_u';
-    } else if (sub.contains('civ')) {
-      prefix = 'civ_u';
-    } else if (sub.contains('agri') || sub.contains('agr')) {
-      prefix = 'agri_u';
-    } else if (sub.contains('econ') || sub.contains('eco')) {
-      prefix = 'econ_u';
-    } else if (sub.contains('eng')) {
-      prefix = 'eng_u';
-    }
-    return 'g${widget.grade}_$prefix${widget.unitNumber}';
-  }
-
-  String _getNormalizedSubjectName() {
-    final sub = widget.subjectId.toLowerCase();
-    if (sub.contains('math')) return 'mathematics';
-    if (sub.contains('biol') || sub.contains('bio')) return 'biology';
-    if (sub.contains('phys')) return 'physics';
-    if (sub.contains('chem')) return 'chemistry';
-    if (sub.contains('geog') || sub.contains('geo')) return 'geography';
-    if (sub.contains('hist')) return 'history';
-    if (sub.contains('civ')) return 'civics';
-    if (sub.contains('agri') || sub.contains('agr')) return 'agriculture';
-    if (sub.contains('econ') || sub.contains('eco')) return 'economics';
-    if (sub.contains('eng')) return 'english';
-    return sub;
-  }
-
-  /// Sanitizes HTML to prevent duplicated headers and enforce clean nested markup.
-  String _sanitizeHtml(String rawHtml, String title) {
-    if (rawHtml.isEmpty) return '<p>No content available for this section.</p>';
-    String cleaned = rawHtml.trim();
-
-    // Strip duplicated <h1>/<h2> tags matching the section title
-    if (title.isNotEmpty) {
-      final escapedTitle = RegExp.escape(title.trim());
-      cleaned = cleaned.replaceAll(RegExp(r'<h[1-2][^>]*>\s*' + escapedTitle + r'\s*<\/h[1-2]>', caseSensitive: false), '');
-    }
-
-    // Convert LaTeX math delimiters ($...$, $$...$$, \(...\), \[...\]) to clean formatted text
-    cleaned = cleaned.replaceAllMapped(RegExp(r'\$\$([\s\S]+?)\$\$|\$([\s\S]+?)\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)'), (m) {
-      final mathExpr = m.group(1) ?? m.group(2) ?? m.group(3) ?? m.group(4) ?? '';
-      return ' <i><b>${MathText.formatMathString(mathExpr)}</b></i> ';
-    });
-
-    return cleaned;
-  }
-
-  Future<void> _fetchNotes() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _hasError = false;
-        _errorType = NotesErrorType.none;
-      });
-
-      // Check internet connection proactively
-      bool hasConnection = true;
-      try {
-        final connectivityResult = await Connectivity().checkConnectivity();
-        if (connectivityResult.isEmpty || connectivityResult.contains(ConnectivityResult.none)) {
-          hasConnection = false;
-        }
-      } catch (_) {}
-
-      final String unitId = _getUnitId();
-      final bool isNotesDownloaded = await OfflineManager.isDownloaded(unitId);
-      List<Map<String, dynamic>> fetchedNotes = [];
-
-      if (isNotesDownloaded) {
-        fetchedNotes = await OfflineManager.getOfflineNotes(unitId);
-      } else {
-        if (!hasConnection) {
-          setState(() {
-            _isLoading = false;
-            _hasError = true;
-            _errorType = NotesErrorType.noInternet;
-          });
-          return;
-        } else {
-          final String normalizedSubject = _getNormalizedSubjectName();
-
-          // 1. Primary Query: Supabase short_notes table strictly
-          try {
-            final shortNotesResponse = await Supabase.instance.client
-                .from('short_notes')
-                .select('id, grade, subject, unit_number, title, html_content, created_at')
-                .eq('grade', widget.grade)
-                .eq('unit_number', widget.unitNumber)
-                .ilike('subject', '%$normalizedSubject%')
-                .order('created_at', ascending: true);
-
-            if (shortNotesResponse.isNotEmpty) {
-              fetchedNotes = List<Map<String, dynamic>>.from(shortNotesResponse);
-            }
-          } catch (e) {
-            debugPrint('[Short Notes] Supabase query notice: $e');
-          }
-        }
-      }
-
-      if (fetchedNotes.isNotEmpty) {
-        _notesList = fetchedNotes;
-        _currentPageIndex = 0;
-      }
-
-      setState(() {
-        _isLoading = false;
-        if (_notesList.isEmpty) {
-          _hasError = true;
-          _errorType = !hasConnection ? NotesErrorType.noInternet : NotesErrorType.emptyData;
-        } else {
-          _hasError = false;
-          _errorType = NotesErrorType.none;
-        }
-      });
-    } on PostgrestException catch (e) {
-      debugPrint('PostgrestException fetching short notes: ${e.code} - ${e.message}');
-      setState(() {
-        _notesList = [];
-        _hasError = true;
-        _isLoading = false;
-        _errorType = NotesErrorType.serverError;
-      });
-    } catch (e) {
-      debugPrint('Error fetching short notes: $e');
-      setState(() {
-        _notesList = [];
-        _hasError = true;
-        _isLoading = false;
-        _errorType = NotesErrorType.serverError;
-      });
-    }
-  }
-
-  Future<void> _checkBookmarkStatus() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final bookmarks = prefs.getStringList('bookmarked_notes') ?? [];
-      final bookmarkId = '${widget.subjectId}_g${widget.grade}_u${widget.unitNumber}';
-      setState(() {
-        _isBookmarked = bookmarks.contains(bookmarkId);
-      });
-    } catch (_) {}
-  }
-
-  Future<void> _toggleBookmark() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final bookmarks = prefs.getStringList('bookmarked_notes') ?? [];
-      final bookmarkId = '${widget.subjectId}_g${widget.grade}_u${widget.unitNumber}';
-
-      if (_isBookmarked) {
-        bookmarks.remove(bookmarkId);
-      } else {
-        bookmarks.add(bookmarkId);
-      }
-
-      await prefs.setStringList('bookmarked_notes', bookmarks);
-      setState(() {
-        _isBookmarked = !_isBookmarked;
-      });
-
-      _showFloatingSnackbar(
-        _isBookmarked
-            ? (widget.languageCode == 'en' ? 'Short note bookmarked!' : 'ማስታወሻው ተቀምጧል!')
-            : (widget.languageCode == 'en' ? 'Bookmark removed' : 'ማስታወሻው ከምርጫዎች ተሰርዟል'),
-        isSuccess: _isBookmarked,
-      );
-    } catch (_) {}
-  }
-
-  void _shareNote() {
-    if (_notesList.isEmpty) return;
-    final currentNote = _notesList[_currentPageIndex];
-    final title = currentNote['title']?.toString() ?? widget.unitTitle;
-    final content = currentNote['html_content']?.toString() ?? '';
-    final cleanText = content.replaceAll(RegExp(r'<[^>]*>'), ' ').trim();
-    final shareContent = '📚 ${widget.subjectId.toUpperCase()} Grade ${widget.grade} — Unit ${widget.unitNumber}\n'
-        '$title\n\n'
-        '${cleanText.length > 300 ? cleanText.substring(0, 300) + '...' : cleanText}\n\n'
-        'Study with Smart X Ethiopian App!\n'
-        'Telegram: $_telegramChannelUrl';
-
-    Share.share(shareContent, subject: title);
-  }
-
-  void _toggleThemeMode() {
-    setState(() {
-      _isDarkMode = !_isDarkMode;
-    });
-
-    if (widget.onToggleTheme != null) {
-      widget.onToggleTheme!();
-    } else {
-      try {
-        AppStateProvider.of(context).onToggleTheme();
-      } catch (_) {}
-    }
-  }
-
-  Map<String, Style> _buildHtmlStyles(bool isDark) {
-    final Color textColor = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B);
-    final Color headingBlue = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
-    final Color tableBorderColor = isDark ? const Color(0xFF0284C7) : const Color(0xFF38BDF8);
-
-    return {
-      "body": Style(
-        margin: Margins.zero,
-        padding: HtmlPaddings.zero,
-        fontSize: FontSize(15.5),
-        lineHeight: LineHeight(1.65),
-        color: textColor,
-      ),
-      "h1": Style(
-        fontSize: FontSize(22.0),
-        fontWeight: FontWeight.w800,
-        color: isDark ? Colors.white : const Color(0xFF0F172A),
-        margin: Margins.only(top: 14, bottom: 10),
-      ),
-      "h2": Style(
-        fontSize: FontSize(17.5),
-        fontWeight: FontWeight.w800,
-        color: headingBlue,
-        margin: Margins.only(top: 16, bottom: 8),
-      ),
-      "h3": Style(
-        fontSize: FontSize(16.5),
-        fontWeight: FontWeight.w700,
-        color: headingBlue,
-        margin: Margins.only(top: 14, bottom: 8),
-      ),
-      "p": Style(
-        margin: Margins.only(bottom: 12),
-        lineHeight: LineHeight(1.6),
-        color: textColor,
-      ),
-      "ul": Style(
-        margin: Margins.only(left: 4, bottom: 12),
-        padding: HtmlPaddings.only(left: 12),
-      ),
-      "ol": Style(
-        margin: Margins.only(left: 4, bottom: 12),
-        padding: HtmlPaddings.only(left: 12),
-      ),
-      "li": Style(
-        margin: Margins.only(bottom: 8),
-        lineHeight: LineHeight(1.55),
-        color: textColor,
-      ),
-      "strong": Style(
-        fontWeight: FontWeight.w800,
-        color: isDark ? Colors.white : const Color(0xFF0F172A),
-      ),
-      "em": Style(
-        fontStyle: FontStyle.italic,
-      ),
-      "hr": Style(
-        margin: Margins.symmetric(vertical: 14),
-        border: const Border(bottom: BorderSide(color: Color(0xFF38BDF8), width: 2.0)),
-        backgroundColor: Colors.transparent,
-      ),
-      "table": Style(
-        backgroundColor: Colors.transparent,
-        border: Border.all(color: tableBorderColor, width: 1.5),
-        margin: Margins.symmetric(vertical: 14),
-      ),
-      "th": Style(
-        backgroundColor: Colors.transparent,
-        padding: HtmlPaddings.symmetric(horizontal: 10, vertical: 8),
-        fontWeight: FontWeight.w800,
-        color: headingBlue,
-        border: Border.all(color: tableBorderColor, width: 1.0),
-      ),
-      "td": Style(
-        backgroundColor: Colors.transparent,
-        padding: HtmlPaddings.symmetric(horizontal: 10, vertical: 8),
-        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFF0F172A), width: 1.0),
-        color: textColor,
-      ),
-      "code": Style(
-        backgroundColor: Colors.transparent,
-        color: const Color(0xFF0284C7),
-        fontFamily: 'monospace',
-        fontSize: FontSize(14.5),
-        fontWeight: FontWeight.w600,
-        padding: HtmlPaddings.symmetric(horizontal: 4, vertical: 2),
-      ),
-      ".callout": Style(
-        backgroundColor: Colors.transparent,
-        border: const Border(left: BorderSide(color: Color(0xFF0EA5E9), width: 4.0)),
-        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
-        margin: Margins.symmetric(vertical: 14),
-        fontStyle: FontStyle.italic,
-      ),
-      ".keynote": Style(
-        backgroundColor: Colors.transparent,
-        border: const Border(left: BorderSide(color: Color(0xFF0EA5E9), width: 4.0)),
-        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
-        margin: Margins.symmetric(vertical: 14),
-      ),
-      ".definition": Style(
-        backgroundColor: Colors.transparent,
-        border: const Border(left: BorderSide(color: Color(0xFFF59E0B), width: 4.0)),
-        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
-        margin: Margins.symmetric(vertical: 14),
-      ),
-      ".example": Style(
-        backgroundColor: Colors.transparent,
-        border: const Border(left: BorderSide(color: Color(0xFF8B5CF6), width: 4.0)),
-        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
-        margin: Margins.symmetric(vertical: 14),
-      ),
-      "blockquote": Style(
-        backgroundColor: Colors.transparent,
-        border: const Border(left: BorderSide(color: Color(0xFF0EA5E9), width: 4.0)),
-        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
-        margin: Margins.symmetric(vertical: 14),
-      ),
-      ".formula": Style(
-        backgroundColor: isDark ? const Color(0xFF2A1515).withValues(alpha: 0.3) : const Color(0xFFFFF1F2),
-        border: Border.all(color: const Color(0xFFFCA5A5), width: 1.2),
-        padding: HtmlPaddings.symmetric(horizontal: 16, vertical: 14),
-        margin: Margins.symmetric(vertical: 16),
-        color: const Color(0xFFB91C1C),
-        fontWeight: FontWeight.w700,
-      ),
-      ".formula-box": Style(
-        backgroundColor: isDark ? const Color(0xFF2A1515).withValues(alpha: 0.3) : const Color(0xFFFFF1F2),
-        border: Border.all(color: const Color(0xFFFCA5A5), width: 1.2),
-        padding: HtmlPaddings.symmetric(horizontal: 16, vertical: 14),
-        margin: Margins.symmetric(vertical: 16),
-        color: const Color(0xFFB91C1C),
-        fontWeight: FontWeight.w700,
-      ),
-    };
-  }
-
-  void _showCompletionDialog() {
-    final bool isDark = _isDarkMode;
-    final bool isEn = widget.languageCode == 'en';
-
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) {
-        return Dialog(
-          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Celebration Badge
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        widget.themeColor,
-                        widget.themeColor.withValues(alpha: 0.7),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: widget.themeColor.withValues(alpha: 0.35),
-                        blurRadius: 18,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.verified_rounded,
-                    color: Colors.white,
-                    size: 38,
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // Congratulatory Title
-                Text(
-                  isEn ? "Thanks for reading!" : "እንኳን ደስ አለዎት!",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 6),
-
-                Text(
-                  isEn
-                      ? "You have completed all summary notes for this unit."
-                      : "የትምህርቱን ማጠቃለያ በስኬት ጨርሰዋል።",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: widget.themeColor,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Unit details pill card
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.menu_book_rounded, size: 20, color: widget.themeColor),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Grade ${widget.grade} • ${widget.subjectId.toUpperCase()}",
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                              ),
-                            ),
-                            Text(
-                              "Unit ${widget.unitNumber}: ${widget.unitTitle}",
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 22),
-
-                // Primary Action: Return to Units List
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(ctx).pop();
-                      Navigator.of(context).pop();
-                    },
-                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                    label: Text(
-                      isEn ? "Return to Units List" : "ወደ ክፍሎች ዝርዝር ተመለስ",
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.themeColor,
-                      foregroundColor: Colors.white,
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Secondary Action: Review from Beginning
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.of(ctx).pop();
-                      _pageController.animateToPage(
-                        0,
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeInOut,
-                      );
-                    },
-                    icon: const Icon(Icons.restart_alt_rounded, size: 18),
-                    label: Text(
-                      isEn ? "Review from Beginning" : "ከመጀመሪያው ድጋሚ አንብብ",
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-                      side: BorderSide(
-                        color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final bool isDark = _isDarkMode;
-    final Color cardBg = isDark ? const Color(0xFF1C2541) : Colors.white;
-    final Color textColor = isDark ? Colors.white : const Color(0xFF0F172A);
-    final Color subColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final bool isEn = widget.languageCode == 'en';
+    final offline = context.watch<OfflineService>();
+    final isAm = offline.language == LanguageCode.am;
+    final note = offline.getShortNoteForUnit(unit.unitId, subject.enTitle, grade, unit.unitNumber);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+      backgroundColor: AppConfig.darkBackground,
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
-        foregroundColor: textColor,
+        backgroundColor: AppConfig.darkCard,
         elevation: 0,
-        centerTitle: false,
-        leadingWidth: 100,
-        leading: InkWell(
-          onTap: () => Navigator.of(context).pop(),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.only(left: 14),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 16,
-                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  isEn ? "Back" : "ተመለስ",
-                  style: TextStyle(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        title: Text(
+          '${subject.code} • Unit ${unit.unitNumber} Notes',
+          style: const TextStyle(fontSize: 16, color: Colors.white),
         ),
-        actions: [
-          // 1. Dark/Light Mode Toggle (Moon icon)
-          IconButton(
-            icon: Icon(
-              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-              color: isDark ? const Color(0xFFFBBF24) : const Color(0xFF0F172A),
-              size: 22,
-            ),
-            tooltip: isDark ? "Light Mode" : "Dark Mode",
-            onPressed: _toggleThemeMode,
-          ),
-
-          // 2. Bookmark Toggle
-          IconButton(
-            icon: Icon(
-              _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-              color: _isBookmarked ? const Color(0xFF0284C7) : (isDark ? Colors.white : const Color(0xFF0F172A)),
-              size: 23,
-            ),
-            tooltip: "Bookmark",
-            onPressed: _toggleBookmark,
-          ),
-
-          // 3. Share
-          IconButton(
-            icon: Icon(
-              Icons.share_outlined,
-              size: 21,
-              color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
-            ),
-            tooltip: "Share",
-            onPressed: _shareNote,
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
-      body: Column(
-        children: [
-          // Search Bar if toggled
-          if (_isSearchOpen)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: isDark ? const Color(0xFF1C2541) : Colors.white,
-              child: Row(
-                children: [
-                  const Icon(Icons.search_rounded, size: 19, color: Colors.grey),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      autofocus: true,
-                      style: TextStyle(color: textColor, fontSize: 13.5),
-                      decoration: InputDecoration(
-                        hintText: widget.languageCode == 'en' ? "Search key concepts..." : "ፅንሰ-ሀሳቦችን ይፈልጉ...",
-                        hintStyle: TextStyle(color: subColor, fontSize: 13),
-                        border: InputBorder.none,
-                        isDense: true,
-                      ),
-                      onChanged: (val) {
-                        setState(() {
-                          _searchQuery = val.trim();
-                        });
-                      },
-                    ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [subject.primaryColor.withOpacity(0.3), AppConfig.darkCard],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  if (_searchQuery.isNotEmpty)
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _searchQuery = '';
-                          _searchController.clear();
-                        });
-                      },
-                      child: const Icon(Icons.clear_rounded, size: 18, color: Colors.grey),
-                    ),
-                ],
-              ),
-            ),
-
-          // Main Paginated Reading View (PageView)
-          Expanded(
-            child: _buildPaginatedContent(isDark, cardBg, textColor, subColor),
-          ),
-
-          // Bottom Action & Navigation Bar (Strictly bottom-aligned, no top tabs)
-          if (!_isLoading && !_hasError && _notesList.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F172A) : Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-                border: Border(
-                  top: BorderSide(
-                    color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-                    width: 1.0,
-                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: subject.primaryColor.withOpacity(0.4)),
                 ),
-              ),
-              child: SafeArea(
-                top: false,
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // PREV Button (Outlined Red Pill)
-                        Expanded(
-                          flex: 3,
-                          child: SizedBox(
-                            height: 44,
-                            child: OutlinedButton.icon(
-                              onPressed: _currentPageIndex > 0
-                                  ? () {
-                                      _pageController.previousPage(
-                                        duration: const Duration(milliseconds: 300),
-                                        curve: Curves.easeInOutCubic,
-                                      );
-                                    }
-                                  : null,
-                              icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                              label: Text(
-                                isEn ? "PREV" : "ወደ ኋላ",
-                                style: const TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.4,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFFDC2626),
-                                disabledForegroundColor:
-                                    isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
-                                side: BorderSide(
-                                  color: _currentPageIndex > 0
-                                      ? const Color(0xFFFCA5A5)
-                                      : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-                                  width: 1.5,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: subject.primaryColor,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Grade $grade • Unit ${unit.unitNumber}',
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                           ),
                         ),
-
-                        // Center Page Progress Indicator Badge (Pill)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Container(
-                            height: 38,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              "${_currentPageIndex + 1} / ${_notesList.length}",
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w800,
-                                color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              ),
-                            ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white12,
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                        ),
-
-                        // NEXT / Finish Button (Solid Red Pill)
-                        Expanded(
-                          flex: 4,
-                          child: SizedBox(
-                            height: 44,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                if (_currentPageIndex < _notesList.length - 1) {
-                                  _pageController.nextPage(
-                                    duration: const Duration(milliseconds: 300),
-                                    curve: Curves.easeInOutCubic,
-                                  );
-                                } else {
-                                  _showCompletionDialog();
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFDC2626),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    _currentPageIndex == _notesList.length - 1
-                                        ? Icons.check_circle_rounded
-                                        : Icons.arrow_forward_rounded,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    _currentPageIndex == _notesList.length - 1
-                                        ? (isEn ? "FINISH" : "ጨርስ")
-                                        : (isEn ? "NEXT" : "ቀጣይ"),
-                                    style: const TextStyle(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.4,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.verified, color: AppConfig.primaryGreen, size: 12),
+                              SizedBox(width: 4),
+                              Text('NEAEA Aligned', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    Text(
+                      isAm ? unit.amTitle : unit.enTitle,
+                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      note.title,
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
                 ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStudentFriendlyError(bool isDark, Color cardBg, Color textColor, Color subColor) {
-    final bool isEn = widget.languageCode == 'en';
-
-    IconData iconData = Icons.cloud_off_rounded;
-    Color iconColor = const Color(0xFFEF4444);
-    String title = '';
-    String subtitle = '';
-
-    switch (_errorType) {
-      case NotesErrorType.noInternet:
-        iconData = Icons.wifi_off_rounded;
-        iconColor = const Color(0xFFF59E0B);
-        title = isEn ? "No Internet Connection" : "የኢንተርኔት ግንኙነት የለም";
-        subtitle = isEn
-            ? "No internet connection or network timed out. Please check your connection and try again."
-            : "ኢንተርኔት የለም ወይም ተቋርጧል። እባክዎ ኮኔክሽንዎን ፈትሸው ድጋሚ ይሞክሩ።";
-        break;
-
-      case NotesErrorType.emptyData:
-        iconData = Icons.menu_book_outlined;
-        iconColor = const Color(0xFF0EA5E9);
-        title = isEn ? "Notes Not Available" : "ማጠቃለያ አልተገኘም";
-        subtitle = isEn
-            ? "Summary notes for this unit have not been published yet. They will be uploaded soon!"
-            : "ለዚህ ክፍል የተዘጋጀ ማጠቃለያ አልተገኘም። በቅርቡ ይጫናል።";
-        break;
-
-      case NotesErrorType.serverError:
-      default:
-        iconData = Icons.cloud_sync_rounded;
-        iconColor = const Color(0xFFEF4444);
-        title = isEn ? "Server Connection Error" : "የሰርቨር ግንኙነት ችግር";
-        subtitle = isEn
-            ? "Could not load educational notes from the server right now. Please try again in a few minutes."
-            : "መረጃዎችን ከሰርቨር ላይ መጫን አልተቻለም። እባክዎ በጥቂት ደቂቃዎች ውስጥ ድጋሚ ይሞክሩ።";
-        break;
-    }
-
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(28.0),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 480),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+              const SizedBox(height: 16),
+
+              // Note Content Body
               Container(
-                width: 72,
-                height: 72,
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: iconColor.withValues(alpha: 0.12),
-                  border: Border.all(
-                    color: iconColor.withValues(alpha: 0.3),
-                    width: 2,
+                  color: AppConfig.darkCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Text(
+                  note.content,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    height: 1.6,
+                    fontFamily: 'monospace',
                   ),
                 ),
-                child: Icon(iconData, size: 36, color: iconColor),
               ),
-              const SizedBox(height: 20),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13.5,
-                  height: 1.5,
-                  fontWeight: FontWeight.w500,
-                  color: subColor,
-                ),
-              ),
-              const SizedBox(height: 26),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-                        side: BorderSide(
-                          color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text(
-                        isEn ? "Go Back" : "ተመለስ",
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _fetchNotes,
-                      icon: const Icon(Icons.refresh_rounded, size: 17),
-                      label: Text(
-                        isEn ? "Retry" : "ድጋሚ ይሞክሩ",
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 13),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: widget.themeColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              const SizedBox(height: 30),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildPaginatedContent(bool isDark, Color cardBg, Color textColor, Color subColor) {
-    if (_isLoading) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(widget.themeColor),
-              strokeWidth: 3,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              widget.languageCode == 'en'
-                  ? "Loading short notes..."
-                  : "አጫጭር ማስታወሻዎችን በመጫን ላይ...",
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: subColor,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_hasError || _notesList.isEmpty) {
-      return _buildStudentFriendlyError(isDark, cardBg, textColor, subColor);
-    }
-
-    return PageView.builder(
-      controller: _pageController,
-      physics: const BouncingScrollPhysics(),
-      itemCount: _notesList.length,
-      onPageChanged: (pageIndex) {
-        setState(() {
-          _currentPageIndex = pageIndex;
-        });
-      },
-      itemBuilder: (context, index) {
-        final note = _notesList[index];
-        final String noteTitle = note['title']?.toString() ?? 'Section ${index + 1}';
-        final String htmlRaw = note['html_content']?.toString() ??
-            note['content']?.toString() ??
-            '<p>No content available for this section.</p>';
-        final String sanitizedHtml = _sanitizeHtml(htmlRaw, noteTitle);
-
-        return SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-          child: Center(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 760),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Section Title (Bold and Clean)
-                  Text(
-                    noteTitle,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      letterSpacing: -0.2,
-                      height: 1.25,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Rich HTML Content rendered with custom HTML styles from JSON database
-                  Html(
-                    data: sanitizedHtml,
-                    style: _buildHtmlStyles(isDark),
-                    extensions: const [
-                      TableHtmlExtension(),
-                    ],
-                  ),
-                  const SizedBox(height: 36),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }
