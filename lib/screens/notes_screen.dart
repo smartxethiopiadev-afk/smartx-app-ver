@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../config/app_config.dart';
 import '../models/subject_model.dart';
-import '../models/note_model.dart';
 import '../services/offline_service.dart';
 
 class NotesScreen extends StatelessWidget {
@@ -44,12 +43,12 @@ class NotesScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [subject.primaryColor.withOpacity(0.3), AppConfig.darkCard],
+                    colors: [subject.primaryColor.withValues(alpha: 0.3), AppConfig.darkCard],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: subject.primaryColor.withOpacity(0.4)),
+                  border: Border.all(color: subject.primaryColor.withValues(alpha: 0.4)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

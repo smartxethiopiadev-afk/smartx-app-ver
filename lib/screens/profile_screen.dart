@@ -40,7 +40,7 @@ class ProfileScreen extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 32,
-                    backgroundColor: AppConfig.primaryGreen.withOpacity(0.2),
+                    backgroundColor: AppConfig.primaryGreen.withValues(alpha: 0.2),
                     child: const Icon(Icons.person, color: AppConfig.primaryGreen, size: 36),
                   ),
                   const SizedBox(width: 16),
@@ -65,7 +65,7 @@ class ProfileScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppConfig.primaryGreen.withOpacity(0.2),
+                            color: AppConfig.primaryGreen.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -103,7 +103,7 @@ class ProfileScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppConfig.darkCard,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppConfig.accentAmber.withOpacity(0.3)),
+                      border: Border.all(color: AppConfig.accentAmber.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,7 +129,7 @@ class ProfileScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppConfig.darkCard,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppConfig.primaryGreen.withOpacity(0.3)),
+                      border: Border.all(color: AppConfig.primaryGreen.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

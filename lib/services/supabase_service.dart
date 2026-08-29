@@ -8,8 +8,10 @@ class SupabaseService {
 
   static Future<void> initialize() async {
     try {
+      // ignore: deprecated_member_use
       await Supabase.initialize(
         url: AppConfig.supabaseUrl,
+        // ignore: deprecated_member_use
         anonKey: AppConfig.supabaseAnonKey,
       );
       _initialized = true;
@@ -48,7 +50,7 @@ class SupabaseService {
           .maybeSingle();
 
       if (response != null) {
-        return ShortNoteModel.fromJson(response as Map<String, dynamic>);
+        return ShortNoteModel.fromJson(response);
       }
       return null;
     } catch (e) {

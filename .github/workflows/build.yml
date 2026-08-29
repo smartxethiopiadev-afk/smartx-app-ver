@@ -39,8 +39,8 @@ jobs:
       # ------------------------------------------------------------------------
       # CODE ANALYSIS, LINT & UNUSED CODE CHECKS
       # ------------------------------------------------------------------------
-      - name: Strict Unused Code & Lint Check (dart analyze)
-        run: dart analyze --fatal-infos
+      - name: Strict Unused Code & Lint Check (flutter analyze)
+        run: flutter analyze --fatal-warnings
 
       - name: Detect Unreferenced & Unused Assets in assets/
         run: |

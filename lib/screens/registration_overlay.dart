@@ -41,7 +41,7 @@ class _RegistrationOverlayState extends State<RegistrationOverlay> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppConfig.primaryGreen.withOpacity(0.2),
+                      color: AppConfig.primaryGreen.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.person_outline, color: AppConfig.primaryGreen, size: 24),
@@ -74,9 +74,9 @@ class _RegistrationOverlayState extends State<RegistrationOverlay> {
                   padding: const EdgeInsets.all(10),
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    color: Colors.redAccent.withOpacity(0.2),
+                    color: Colors.redAccent.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+                    border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
                   ),
                   child: Text(
                     _error!,

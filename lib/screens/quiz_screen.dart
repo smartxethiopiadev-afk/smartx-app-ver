@@ -70,7 +70,7 @@ class _QuizScreenState extends State<QuizScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: widget.subject.primaryColor.withOpacity(0.2),
+                color: widget.subject.primaryColor.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -129,14 +129,14 @@ class _QuizScreenState extends State<QuizScreen> {
 
                     if (_isAnswered) {
                       if (option.isCorrect) {
-                        cardColor = AppConfig.primaryGreen.withOpacity(0.2);
+                        cardColor = AppConfig.primaryGreen.withValues(alpha: 0.2);
                         border = const BorderSide(color: AppConfig.primaryGreen, width: 2);
                       } else if (isSelected && !option.isCorrect) {
-                        cardColor = Colors.redAccent.withOpacity(0.2);
+                        cardColor = Colors.redAccent.withValues(alpha: 0.2);
                         border = const BorderSide(color: Colors.redAccent, width: 2);
                       }
                     } else if (isSelected) {
-                      cardColor = widget.subject.primaryColor.withOpacity(0.2);
+                      cardColor = widget.subject.primaryColor.withValues(alpha: 0.2);
                       border = BorderSide(color: widget.subject.primaryColor, width: 2);
                     }
 
