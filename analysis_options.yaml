@@ -1,0 +1,13 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - web/**
+    - node_modules/**
+    - dist/**
+
+linter:
+  rules:
+    # avoid_print: false
+    # prefer_single_quotes: true

@@ -6,6 +6,7 @@
 # ------------------------------------------------------------------------------
 # 1. CRITICAL SECURITY & SENSITIVE CREDENTIALS (DO NOT COMMIT)
 # ------------------------------------------------------------------------------
+# Android Signing Keystores & Certificates
 *.keystore
 *.jks
 *.p12
@@ -41,13 +42,13 @@ local.properties
 # ------------------------------------------------------------------------------
 # 2. FLUTTER & DART BUILD ARTIFACTS
 # ------------------------------------------------------------------------------
+pubspec.lock
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
 .pub-cache/
 .pub/
-pubspec.lock
 build/
 /build/
 **/doc/api/
@@ -65,7 +66,7 @@ build/
 **/android/app/build/
 **/android/.cxx/
 
-# Gradle wrapper binaries
+# Gradle wrapper binaries (optional if using checked-in wrapper)
 **/android/**/gradle-wrapper.jar
 **/android/gradlew
 **/android/gradlew.bat
@@ -87,7 +88,7 @@ build/
 **/ios/**/default.perspectivev3
 
 # ------------------------------------------------------------------------------
-# 5. IDE & SYSTEM ARTIFACTS
+# 5. IDE & EDITOR FILES
 # ------------------------------------------------------------------------------
 .idea/
 *.iml
@@ -98,6 +99,10 @@ build/
 .history
 .atom/
 .svn/
+
+# ------------------------------------------------------------------------------
+# 6. OPERATING SYSTEM ARTIFACTS & LOGS
+# ------------------------------------------------------------------------------
 .DS_Store
 .DS_Store?
 ._*
@@ -115,23 +120,18 @@ Thumbs.db
 migrate_working_dir/
 
 # ------------------------------------------------------------------------------
-# 6. LOCAL WEB PREVIEW & DEMO ONLY FILES (Kept local, excluded from Mobile Git)
+# 7. WEB / SERVER & NON-MOBILE TOOLING ARTIFACTS (Ignored for Flutter App)
 # ------------------------------------------------------------------------------
-web/
-/web/
-/src/
-src/
 node_modules/
 dist/
-bun.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+server.ts
+server.js
 package.json
 package-lock.json
 tsconfig.json
 vite.config.ts
-index.html
-metadata.json
-.aistudio/
-server.ts
-server.js
 *.ts
 *.map
