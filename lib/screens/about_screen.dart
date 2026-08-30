@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../config/app_config.dart';
+import '../constants/app_assets.dart';
 import '../services/offline_service.dart';
 
 class AboutScreen extends StatelessWidget {
@@ -33,6 +34,11 @@ class AboutScreen extends StatelessWidget {
                 color: AppConfig.darkCard,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppConfig.primaryGreen.withValues(alpha: 0.3)),
+                image: const DecorationImage(
+                  image: AssetImage(AppAssets.educationBgPattern),
+                  fit: BoxFit.cover,
+                  opacity: 0.08,
+                ),
               ),
               child: Column(
                 children: [
@@ -44,7 +50,13 @@ class AboutScreen extends StatelessWidget {
                       shape: BoxShape.circle,
                       border: Border.all(color: AppConfig.primaryGreen, width: 2),
                     ),
-                    child: const Icon(Icons.school, color: AppConfig.primaryGreen, size: 40),
+                    child: ClipOval(
+                      child: Image.asset(
+                        AppAssets.appIcon,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.school, color: AppConfig.primaryGreen, size: 40),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 14),
                   const Text(

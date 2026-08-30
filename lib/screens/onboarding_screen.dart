@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../config/app_config.dart';
+import '../constants/app_assets.dart';
 import '../services/offline_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -21,19 +22,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'title': 'Welcome to Smart X Ethiopia',
       'amTitle': 'እንኳን ወደ ስማርት ኤክስ ኢትዮጵያ በደህና መጡ',
       'description': 'Interactive Ethiopian high school curriculum (Grades 9-12) with model exam practice and cheatsheets.',
-      'image': 'assets/images/student_laptop.png',
+      'image': AppAssets.studentLaptop,
     },
     {
       'title': 'Offline Study & Instant Feedback',
       'amTitle': 'ያለ ኢንተርኔት ጥናት እና ፈጣን ውጤት',
       'description': 'Download curriculum units to study anywhere without internet. Track your streak and analyze strengths.',
-      'image': 'assets/images/student_tablet.png',
+      'image': AppAssets.studentTablet,
     },
     {
       'title': 'Connect With Ethiopian Students',
       'amTitle': 'ከኢትዮጵያውያን ተማሪዎች ጋር ይገናኙ',
       'description': 'Join thousands of Ethiopian students in our Telegram study groups to share notes and solve exam questions.',
-      'image': 'assets/images/student_phone.png',
+      'image': AppAssets.studentPhone,
     },
   ];
 
