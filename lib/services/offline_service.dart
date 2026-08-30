@@ -29,7 +29,7 @@ class UserProfileData {
 }
 
 class OfflineService extends ChangeNotifier {
-  late SharedPreferences _prefs;
+  SharedPreferences? _prefs;
   bool _isInitialized = false;
   String _deviceId = '';
 
@@ -82,68 +82,82 @@ class OfflineService extends ChangeNotifier {
   bool get isTelemetrySyncing => _isTelemetrySyncing;
 
   Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
-
-    // 1. Initialize Google Analytics Service
-    GoogleAnalyticsService.init();
-
-    // 2. Device ID
-    _deviceId = _prefs.getString('app_device_id') ?? '';
-    if (_deviceId.isEmpty) {
-      final random = Random().nextInt(999999);
-      _deviceId = 'eth_dev_${DateTime.now().millisecondsSinceEpoch}_$random';
-      await _prefs.setString('app_device_id', _deviceId);
+    try {
+      _prefs = await SharedPreferences.getInstance();
+    } catch (e) {
+      if (kDebugMode) {
+        print('[OfflineService] SharedPreferences error: $e');
+      }
     }
 
-    // 3. Profile
-    final name = _prefs.getString('user_full_name') ?? 'Ethiopian Student';
-    final phone = _prefs.getString('user_phone') ?? '+251912345678';
-    final grade = _prefs.getInt('user_grade') ?? 11;
-    final registered = _prefs.getBool('user_registered') ?? false;
-    final streak = _prefs.getInt('user_streak') ?? 3;
-    final langStr = _prefs.getString('app_language') ?? 'en';
+    try {
+      // 1. Initialize Google Analytics Service
+      GoogleAnalyticsService.init();
 
-    _profile = UserProfileData(
-      fullName: name,
-      phoneNumber: phone,
-      grade: grade,
-      isRegistered: registered,
-      streakDays: streak,
-    );
+      // 2. Device ID
+      _deviceId = _prefs?.getString('app_device_id') ?? '';
+      if (_deviceId.isEmpty) {
+        final random = Random().nextInt(999999);
+        _deviceId = 'eth_dev_${DateTime.now().millisecondsSinceEpoch}_$random';
+        await _prefs?.setString('app_device_id', _deviceId);
+      }
 
-    _language = langStr == 'am' ? LanguageCode.am : LanguageCode.en;
-    _currentGrade = grade;
+      // 3. Profile
+      final name = _prefs?.getString('user_full_name') ?? 'Ethiopian Student';
+      final phone = _prefs?.getString('user_phone') ?? '+251912345678';
+      final grade = _prefs?.getInt('user_grade') ?? 11;
+      final registered = _prefs?.getBool('user_registered') ?? false;
+      final streak = _prefs?.getInt('user_streak') ?? 3;
+      final langStr = _prefs?.getString('app_language') ?? 'en';
 
-    // 4. Load downloaded units detailed records
-    final savedDownloadsJson = _prefs.getString('downloaded_units_detailed');
-    if (savedDownloadsJson != null && savedDownloadsJson.isNotEmpty) {
-      try {
-        final List<dynamic> decoded = jsonDecode(savedDownloadsJson) as List<dynamic>;
-        _downloadedUnitsMap.clear();
-        for (var item in decoded) {
-          final info = DownloadedUnitInfo.fromJson(item as Map<String, dynamic>);
-          _downloadedUnitsMap[info.unitId] = info;
-          _downloadedUnitIds.add(info.unitId);
-        }
-      } catch (_) {}
-    } else {
-      _seedDefaultDownloads();
+      _profile = UserProfileData(
+        fullName: name,
+        phoneNumber: phone,
+        grade: grade,
+        isRegistered: registered,
+        streakDays: streak,
+      );
+
+      _language = langStr == 'am' ? LanguageCode.am : LanguageCode.en;
+      _currentGrade = grade;
+
+      // 4. Load downloaded units detailed records
+      final savedDownloadsJson = _prefs?.getString('downloaded_units_detailed');
+      if (savedDownloadsJson != null && savedDownloadsJson.isNotEmpty) {
+        try {
+          final List<dynamic> decoded = jsonDecode(savedDownloadsJson) as List<dynamic>;
+          _downloadedUnitsMap.clear();
+          for (var item in decoded) {
+            final info = DownloadedUnitInfo.fromJson(item as Map<String, dynamic>);
+            _downloadedUnitsMap[info.unitId] = info;
+            _downloadedUnitIds.add(info.unitId);
+          }
+        } catch (_) {}
+      } else {
+        _seedDefaultDownloads();
+      }
+
+      // 5. Load downloaded worksheets
+      final savedWs = _prefs?.getStringList('downloaded_worksheets');
+      if (savedWs != null) {
+        _downloadedWorksheetIds.addAll(savedWs);
+      }
+
+      // 6. Initial AdMob Telemetry Seeds
+      _seedAdMobLogs();
+    } catch (e) {
+      if (kDebugMode) {
+        print('[OfflineService] Initialization warning: $e');
+      }
+    } finally {
+      _isInitialized = true;
+      notifyListeners();
     }
-
-    // 5. Load downloaded worksheets
-    final savedWs = _prefs.getStringList('downloaded_worksheets');
-    if (savedWs != null) {
-      _downloadedWorksheetIds.addAll(savedWs);
-    }
-
-    // 6. Initial AdMob Telemetry Seeds
-    _seedAdMobLogs();
-
-    _isInitialized = true;
-    notifyListeners();
 
     // 7. Ping Active Session to Google Analytics
-    pingActiveSession();
+    try {
+      pingActiveSession();
+    } catch (_) {}
   }
 
   void _seedDefaultDownloads() {
@@ -215,8 +229,8 @@ class OfflineService extends ChangeNotifier {
 
   Future<void> _saveDownloadedUnitsToPrefs() async {
     final list = _downloadedUnitsMap.values.map((e) => e.toJson()).toList();
-    await _prefs.setString('downloaded_units_detailed', jsonEncode(list));
-    await _prefs.setStringList('downloaded_units', _downloadedUnitIds.toList());
+    await _prefs?.setString('downloaded_units_detailed', jsonEncode(list));
+    await _prefs?.setStringList('downloaded_units', _downloadedUnitIds.toList());
   }
 
   /// Ping heartbeat directly to Google Analytics GA4
@@ -243,14 +257,14 @@ class OfflineService extends ChangeNotifier {
   void setGrade(int grade) {
     _currentGrade = grade;
     _profile.grade = grade;
-    _prefs.setInt('user_grade', grade);
+    _prefs?.setInt('user_grade', grade);
     pingActiveSession();
     notifyListeners();
   }
 
   void setLanguage(LanguageCode lang) {
     _language = lang;
-    _prefs.setString('app_language', lang == LanguageCode.am ? 'am' : 'en');
+    _prefs?.setString('app_language', lang == LanguageCode.am ? 'am' : 'en');
     notifyListeners();
   }
 
@@ -263,11 +277,11 @@ class OfflineService extends ChangeNotifier {
       streakDays: _profile.streakDays + 1,
     );
     _currentGrade = grade;
-    await _prefs.setString('user_full_name', name);
-    await _prefs.setString('user_phone', phone);
-    await _prefs.setInt('user_grade', grade);
-    await _prefs.setBool('user_registered', true);
-    await _prefs.setInt('user_streak', _profile.streakDays);
+    await _prefs?.setString('user_full_name', name);
+    await _prefs?.setString('user_phone', phone);
+    await _prefs?.setInt('user_grade', grade);
+    await _prefs?.setBool('user_registered', true);
+    await _prefs?.setInt('user_streak', _profile.streakDays);
 
     GoogleAnalyticsService.logEvent(
       eventName: 'sign_up',
@@ -375,7 +389,7 @@ class OfflineService extends ChangeNotifier {
       );
       recordAdMobEvent('Banner', 'Worksheet Cached Offline');
     }
-    await _prefs.setStringList('downloaded_worksheets', _downloadedWorksheetIds.toList());
+    await _prefs?.setStringList('downloaded_worksheets', _downloadedWorksheetIds.toList());
     notifyListeners();
   }
 
