@@ -502,7 +502,7 @@ class OfflineService extends ChangeNotifier {
     if (grade == 9) {
       switch (subjectId) {
         case 'biology':
-          return [
+          return const [
             UnitModel(
               unitNumber: 1,
               unitId: 'bio_g9_u1',
@@ -565,7 +565,7 @@ class OfflineService extends ChangeNotifier {
             ),
           ];
         case 'physics':
-          return [
+          return const [
             UnitModel(
               unitNumber: 1,
               unitId: 'phy_g9_u1',
@@ -638,7 +638,7 @@ class OfflineService extends ChangeNotifier {
             ),
           ];
         case 'chemistry':
-          return [
+          return const [
             UnitModel(
               unitNumber: 1,
               unitId: 'chem_g9_u1',
@@ -691,7 +691,7 @@ class OfflineService extends ChangeNotifier {
             ),
           ];
         case 'history':
-          return [
+          return const [
             UnitModel(
               unitNumber: 1,
               unitId: 'hist_g9_u1',
@@ -784,7 +784,7 @@ class OfflineService extends ChangeNotifier {
             ),
           ];
         case 'economics':
-          return [
+          return const [
             UnitModel(
               unitNumber: 1,
               unitId: 'econ_g9_u1',
@@ -867,7 +867,7 @@ class OfflineService extends ChangeNotifier {
             ),
           ];
         case 'geography':
-          return [
+          return const [
             UnitModel(
               unitNumber: 1,
               unitId: 'geo_g9_u1',
@@ -950,7 +950,7 @@ class OfflineService extends ChangeNotifier {
             ),
           ];
         case 'mathematics':
-          return [
+          return const [
             UnitModel(
               unitNumber: 1,
               unitId: 'math_g9_u1',

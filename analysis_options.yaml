@@ -6,6 +6,7 @@ analyzer:
     - web/**
     - node_modules/**
     - dist/**
+    - android/**
 
 linter:
   rules:
