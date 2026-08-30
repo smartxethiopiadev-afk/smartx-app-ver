@@ -1,0 +1,6 @@
+{
+  "name": "Smart X Academy Ethiopia",
+  "description": "Ethiopian high school learning platform with offline unit notes, worksheets, model quizzes, download tracking, AdMob telemetry, and Telegram question feedback.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

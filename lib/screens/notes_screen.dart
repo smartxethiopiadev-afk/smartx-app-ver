@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../config/app_config.dart';
 import '../models/subject_model.dart';
@@ -21,6 +22,7 @@ class NotesScreen extends StatelessWidget {
     final offline = context.watch<OfflineService>();
     final isAm = offline.language == LanguageCode.am;
     final note = offline.getShortNoteForUnit(unit.unitId, subject.enTitle, grade, unit.unitNumber);
+    final isDownloaded = offline.isUnitDownloaded(unit.unitId);
 
     return Scaffold(
       backgroundColor: AppConfig.darkBackground,
@@ -31,6 +33,53 @@ class NotesScreen extends StatelessWidget {
           '${subject.code} • Unit ${unit.unitNumber} Notes',
           style: const TextStyle(fontSize: 16, color: Colors.white),
         ),
+        actions: [
+          // Download / Offline Toggle
+          IconButton(
+            icon: Icon(
+              isDownloaded ? Icons.offline_pin : Icons.download_outlined,
+              color: isDownloaded ? AppConfig.primaryGreen : Colors.white70,
+            ),
+            tooltip: isDownloaded ? 'Available Offline' : 'Download for Offline Study',
+            onPressed: () {
+              offline.toggleUnitDownload(unit, subject.id, grade);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    isDownloaded
+                        ? (isAm ? 'ዩኒቱ ከመሳሪያዎ ተሰርዟል' : 'Unit removed from offline storage')
+                        : (isAm ? 'ማጠቃለያውና ጥያቄዎቹ በተሳካ ሁኔታ ወርደዋል!' : 'Notes & questions downloaded for offline access!'),
+                  ),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+          // Telegram Share / Report Issue
+          IconButton(
+            icon: const Icon(Icons.send_rounded, color: Color(0xFF29B6F6), size: 20),
+            tooltip: 'Share / Ask on Telegram',
+            onPressed: () {
+              final text = '''
+[Smart X Ethiopia Notes]
+Subject: ${subject.code} (Grade $grade)
+Unit ${unit.unitNumber}: ${unit.enTitle}
+Official Channel: @smartx_ethiopia
+''';
+              Clipboard.setData(ClipboardData(text: text));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    isAm
+                        ? 'የማስታወሻው ሊንክ ተገልብጧል! በቴሌግራም ቻናል (@smartx_ethiopia) መጋራት ይችላሉ።'
+                        : 'Notes copied! Join discussion at @smartx_ethiopia',
+                  ),
+                  backgroundColor: const Color(0xFF0288D1),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -81,6 +130,23 @@ class NotesScreen extends StatelessWidget {
                             ],
                           ),
                         ),
+                        if (isDownloaded) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppConfig.primaryGreen.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.check_circle, color: AppConfig.primaryGreen, size: 12),
+                                SizedBox(width: 4),
+                                Text('Offline', style: TextStyle(color: AppConfig.primaryGreen, fontSize: 11, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 12),

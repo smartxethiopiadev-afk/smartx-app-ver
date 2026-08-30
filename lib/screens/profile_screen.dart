@@ -4,6 +4,11 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/app_config.dart';
 import '../services/offline_service.dart';
 import 'registration_overlay.dart';
+import 'downloads_screen.dart';
+import 'worksheets_screen.dart';
+import 'analytics_monitor_screen.dart';
+import 'feedback_screen.dart';
+import 'about_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -124,27 +129,30 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppConfig.darkCard,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppConfig.primaryGreen.withValues(alpha: 0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.offline_pin, color: AppConfig.primaryGreen, size: 28),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${offline.downloadedUnitIds.length} Units',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                        ),
-                        Text(
-                          isAm ? 'ያለ ኔትወርክ የወረዱ' : 'Downloaded',
-                          style: const TextStyle(color: Colors.white60, fontSize: 12),
-                        ),
-                      ],
+                  child: GestureDetector(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen())),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppConfig.darkCard,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppConfig.primaryGreen.withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.offline_pin, color: AppConfig.primaryGreen, size: 28),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${offline.downloadedUnitIds.length} Units',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                          ),
+                          Text(
+                            isAm ? 'ያለ ኔትወርክ የወረዱ' : 'Downloaded',
+                            style: const TextStyle(color: Colors.white60, fontSize: 12),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -152,7 +160,7 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Settings Tile Options
+            // Navigation & Quick Menus List
             Container(
               decoration: BoxDecoration(
                 color: AppConfig.darkCard,
@@ -162,7 +170,47 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.language, color: Colors.blueAccent),
+                    leading: const Icon(Icons.cloud_download_outlined, color: Colors.blueAccent),
+                    title: Text(isAm ? 'የወረዱ ዩኒቶች ማስተዳደሪያ' : 'Downloads & Offline Storage', style: const TextStyle(color: Colors.white)),
+                    subtitle: Text('${offline.downloadedUnitIds.length} units saved', style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen())),
+                  ),
+                  const Divider(color: Colors.white10, height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.assignment_outlined, color: AppConfig.accentAmber),
+                    title: Text(isAm ? 'የፈተና ዎርክሺቶችና ሞዴል ጥያቄዎች' : 'Worksheets & Model Drills', style: const TextStyle(color: Colors.white)),
+                    subtitle: Text(isAm ? 'የ 9ኛ-12ኛ ክፍል ዎርክሺቶች' : 'Unit drills for Grade 9-12', style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WorksheetsScreen())),
+                  ),
+                  const Divider(color: Colors.white10, height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.analytics_outlined, color: Colors.purpleAccent),
+                    title: Text(isAm ? 'አክቲቭ ተጠቃሚዎችና ማስታወቂያ ዳሽቦርድ' : 'Active Users & AdMob Telemetry', style: const TextStyle(color: Colors.white)),
+                    subtitle: Text('${offline.activeUsersToday} active students today', style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsMonitorScreen())),
+                  ),
+                  const Divider(color: Colors.white10, height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.rate_review_outlined, color: Colors.tealAccent),
+                    title: Text(isAm ? 'አስተያየት ይስጡ' : 'Send Feedback', style: const TextStyle(color: Colors.white)),
+                    subtitle: Text(isAm ? 'ጥያቄ፣ ሃሳብ ወይም ስህተት ይጠቁሙ' : 'Submit bug reports or suggestions', style: const TextStyle(color: Colors.white60, fontSize: 12)),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FeedbackScreen())),
+                  ),
+                  const Divider(color: Colors.white10, height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.info_outline_rounded, color: Colors.cyanAccent),
+                    title: Text(isAm ? 'ስለ ስማርት ኤክስ' : 'About Smart X Academy', style: const TextStyle(color: Colors.white)),
+                    subtitle: const Text('v1.0.2 • Ethiopian Curriculum', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                    trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen())),
+                  ),
+                  const Divider(color: Colors.white10, height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.language, color: Colors.amberAccent),
                     title: Text(isAm ? 'ቋንቋ ቀይር' : 'Language / ቋንቋ', style: const TextStyle(color: Colors.white)),
                     subtitle: Text(offline.language == LanguageCode.am ? 'አማርኛ' : 'English', style: const TextStyle(color: Colors.white60, fontSize: 12)),
                     trailing: const Icon(Icons.chevron_right, color: Colors.white54),

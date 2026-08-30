@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../config/app_config.dart';
 import '../models/subject_model.dart';
@@ -35,6 +36,145 @@ class _QuizScreenState extends State<QuizScreen> {
     _questions = offline.getQuestionsForUnit(widget.unit.unitId);
   }
 
+  void _showReportQuestionDialog(BuildContext context, QuestionModel question, bool isAm) {
+    final offline = Provider.of<OfflineService>(context, listen: false);
+    final reasonController = TextEditingController();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return AlertDialog(
+            backgroundColor: AppConfig.darkCard,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.bug_report_rounded, color: Colors.redAccent, size: 20),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isAm ? 'ጥያቄውን / ስህተት ጠቁም' : 'Report Question Error',
+                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${widget.subject.code} G${widget.grade} U${widget.unit.unitNumber} • Q#${_currentIndex + 1}',
+                          style: TextStyle(color: widget.subject.primaryColor, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          question.questionText,
+                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    isAm ? 'የተመለከቱት ስህተት ምንድን ነው?' : 'Describe the Issue / Typo / Error:',
+                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: reasonController,
+                    maxLines: 3,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: isAm ? 'ለምሳሌ፡ ትክክለኛው መልስ B ሳይሆን C ነው...' : 'e.g., Typo in equation, option B is correct...',
+                      hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                      filled: true,
+                      fillColor: AppConfig.darkSurface,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Colors.white12)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              // Telegram Share Option
+              TextButton.icon(
+                style: TextButton.styleFrom(foregroundColor: const Color(0xFF29B6F6)),
+                onPressed: () {
+                  final reportText = '''
+[Smart X Question Report]
+Subject: ${widget.subject.code} (Grade ${widget.grade})
+Unit: ${widget.unit.unitNumber} (${widget.unit.enTitle})
+Question #${_currentIndex + 1}: ${question.questionText}
+Report Reason: ${reasonController.text.trim().isEmpty ? "Error in question options/key" : reasonController.text.trim()}
+Student: ${offline.profile.fullName} (${offline.profile.phoneNumber})
+''';
+                  Clipboard.setData(ClipboardData(text: reportText));
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isAm
+                            ? 'የጥያቄው መረጃ ተገልብጧል! ወደ ቴሌግራም (@smartx_ethiopia) መላክ ይችላሉ።'
+                            : 'Report copied! You can now send it to Telegram @smartx_ethiopia',
+                      ),
+                      backgroundColor: const Color(0xFF0288D1),
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.send_rounded, size: 16),
+                label: const Text('Telegram', style: TextStyle(fontSize: 12)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppConfig.primaryGreen, foregroundColor: Colors.white),
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        setModalState(() => isSubmitting = true);
+                        await offline.reportQuestionError(
+                          questionId: question.id,
+                          unitId: widget.unit.unitId,
+                          questionText: question.questionText,
+                          reason: reasonController.text.trim().isEmpty ? 'Flagged by student' : reasonController.text.trim(),
+                        );
+                        if (mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(isAm ? 'ጥቆማዎ ለገምጋሚዎች ደርሷል!' : 'Question report submitted successfully!'),
+                              backgroundColor: AppConfig.primaryGreen,
+                            ),
+                          );
+                        }
+                      },
+                child: Text(isAm ? 'ላክ' : 'Submit'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final offline = context.watch<OfflineService>();
@@ -65,8 +205,14 @@ class _QuizScreenState extends State<QuizScreen> {
           style: const TextStyle(fontSize: 16, color: Colors.white),
         ),
         actions: [
+          // Question Report Icon (Telegram / Bug Report)
+          IconButton(
+            icon: const Icon(Icons.bug_report_outlined, color: Colors.redAccent, size: 20),
+            tooltip: isAm ? 'ስህተት ጠቁም / በቴሌግራም ላክ' : 'Report Error via Telegram',
+            onPressed: () => _showReportQuestionDialog(context, question, isAm),
+          ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -95,7 +241,7 @@ class _QuizScreenState extends State<QuizScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Question Card
+              // Question Card with Report Action
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -103,14 +249,42 @@ class _QuizScreenState extends State<QuizScreen> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: Colors.white10),
                 ),
-                child: Text(
-                  question.questionText,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    height: 1.4,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Question ${_currentIndex + 1}',
+                          style: TextStyle(color: widget.subject.primaryColor, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                        InkWell(
+                          onTap: () => _showReportQuestionDialog(context, question, isAm),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.flag_outlined, size: 14, color: Colors.redAccent),
+                              const SizedBox(width: 4),
+                              Text(
+                                isAm ? 'ስህተት ጠቁም' : 'Report',
+                                style: const TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      question.questionText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
@@ -233,6 +407,7 @@ class _QuizScreenState extends State<QuizScreen> {
                               _isAnswered = false;
                             });
                           } else {
+                            offline.recordAdMobEvent('Interstitial', 'Quiz Completed Ad Impression');
                             _showResultsDialog(context, isAm);
                           }
                         }
@@ -286,7 +461,7 @@ class _QuizScreenState extends State<QuizScreen> {
             const SizedBox(height: 8),
             Text(
               isAm
-                  ? 'ከ $_questions.length ጥያቄዎች $_score በትክክል መልሰዋል!'
+                  ? 'ከ ${_questions.length} ጥያቄዎች $_score በትክክል መልሰዋል!'
                   : 'You got $_score out of ${_questions.length} questions correct!',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white70, fontSize: 14),

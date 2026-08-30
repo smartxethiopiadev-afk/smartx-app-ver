@@ -1,9 +1,14 @@
+import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../models/subject_model.dart';
 import '../models/question_model.dart';
 import '../models/note_model.dart';
+import '../models/worksheet_model.dart';
+import '../models/download_analytics_model.dart';
+import 'supabase_service.dart';
 
 class UserProfileData {
   String fullName;
@@ -24,6 +29,7 @@ class UserProfileData {
 class OfflineService extends ChangeNotifier {
   late SharedPreferences _prefs;
   bool _isInitialized = false;
+  String _deviceId = '';
 
   UserProfileData _profile = UserProfileData(
     fullName: 'Ethiopian Student',
@@ -35,17 +41,54 @@ class OfflineService extends ChangeNotifier {
 
   LanguageCode _language = LanguageCode.en;
   int _currentGrade = 11;
+
+  // Set of downloaded unit IDs
   final Set<String> _downloadedUnitIds = {'math_g11_u1', 'bio_g11_u1', 'phy_g11_u1'};
+  // Detailed Map of downloaded units
+  final Map<String, DownloadedUnitInfo> _downloadedUnitsMap = {};
+
+  // Downloaded worksheets IDs
+  final Set<String> _downloadedWorksheetIds = {'ws_math_g11_u1', 'ws_phy_g11_u1'};
+
+  // AdMob telemetry events log
+  final List<AdMobTelemetryItem> _admobLogs = [];
+  int _adImpressionsCount = 14;
+  int _adClicksCount = 2;
+  double _adRevenueEst = 0.42;
+
+  // Live telemetry status
+  int _activeUsersToday = 186;
+  int _totalSystemDownloads = 942;
+  bool _isTelemetrySyncing = false;
 
   bool get isInitialized => _isInitialized;
+  String get deviceId => _deviceId;
   UserProfileData get profile => _profile;
   LanguageCode get language => _language;
   int get currentGrade => _currentGrade;
   Set<String> get downloadedUnitIds => _downloadedUnitIds;
+  List<DownloadedUnitInfo> get downloadedUnitsList => _downloadedUnitsMap.values.toList();
+  Set<String> get downloadedWorksheetIds => _downloadedWorksheetIds;
+  List<AdMobTelemetryItem> get admobLogs => List.unmodifiable(_admobLogs);
+  int get adImpressionsCount => _adImpressionsCount;
+  int get adClicksCount => _adClicksCount;
+  double get adRevenueEst => _adRevenueEst;
+  int get activeUsersToday => _activeUsersToday;
+  int get totalSystemDownloads => _totalSystemDownloads;
+  bool get isTelemetrySyncing => _isTelemetrySyncing;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
-    
+
+    // 1. Device ID
+    _deviceId = _prefs.getString('app_device_id') ?? '';
+    if (_deviceId.isEmpty) {
+      final random = Random().nextInt(999999);
+      _deviceId = 'eth_dev_${DateTime.now().millisecondsSinceEpoch}_$random';
+      await _prefs.setString('app_device_id', _deviceId);
+    }
+
+    // 2. Profile
     final name = _prefs.getString('user_full_name') ?? 'Ethiopian Student';
     final phone = _prefs.getString('user_phone') ?? '+251912345678';
     final grade = _prefs.getInt('user_grade') ?? 11;
@@ -63,13 +106,132 @@ class OfflineService extends ChangeNotifier {
 
     _language = langStr == 'am' ? LanguageCode.am : LanguageCode.en;
     _currentGrade = grade;
-    
-    final savedDownloads = _prefs.getStringList('downloaded_units');
-    if (savedDownloads != null) {
-      _downloadedUnitIds.addAll(savedDownloads);
+
+    // 3. Load downloaded units detailed records
+    final savedDownloadsJson = _prefs.getString('downloaded_units_detailed');
+    if (savedDownloadsJson != null && savedDownloadsJson.isNotEmpty) {
+      try {
+        final List<dynamic> decoded = jsonDecode(savedDownloadsJson) as List<dynamic>;
+        _downloadedUnitsMap.clear();
+        for (var item in decoded) {
+          final info = DownloadedUnitInfo.fromJson(item as Map<String, dynamic>);
+          _downloadedUnitsMap[info.unitId] = info;
+          _downloadedUnitIds.add(info.unitId);
+        }
+      } catch (_) {}
+    } else {
+      // Seed default initial downloads
+      _seedDefaultDownloads();
     }
 
+    // 4. Load downloaded worksheets
+    final savedWs = _prefs.getStringList('downloaded_worksheets');
+    if (savedWs != null) {
+      _downloadedWorksheetIds.addAll(savedWs);
+    }
+
+    // 5. Initial AdMob Telemetry Seeds
+    _seedAdMobLogs();
+
     _isInitialized = true;
+    notifyListeners();
+
+    // 6. Ping Active Session & Sync Telemetry
+    pingActiveSession();
+  }
+
+  void _seedDefaultDownloads() {
+    final now = DateTime.now();
+    final sampleDownloads = [
+      DownloadedUnitInfo(
+        unitId: 'math_g11_u1',
+        subjectId: 'mathematics',
+        grade: 11,
+        unitNumber: 1,
+        enTitle: 'Relations and Functions',
+        amTitle: 'ግንኙነቶችና ፈንክሽኖች',
+        downloadedAt: now.subtract(const Duration(days: 2)),
+        type: 'full_bundle',
+        sizeKb: 145,
+        questionCount: 15,
+      ),
+      DownloadedUnitInfo(
+        unitId: 'bio_g11_u1',
+        subjectId: 'biology',
+        grade: 11,
+        unitNumber: 1,
+        enTitle: 'The Science of Biology & Technology',
+        amTitle: 'የሥነ-ሕይወት ሳይንስ እና ቴክኖሎጂ',
+        downloadedAt: now.subtract(const Duration(days: 1)),
+        type: 'full_bundle',
+        sizeKb: 120,
+        questionCount: 15,
+      ),
+      DownloadedUnitInfo(
+        unitId: 'phy_g11_u1',
+        subjectId: 'physics',
+        grade: 11,
+        unitNumber: 1,
+        enTitle: 'Physics and Human Society / Vectors',
+        amTitle: 'ፊዚክስና ቬክተሮች',
+        downloadedAt: now,
+        type: 'full_bundle',
+        sizeKb: 160,
+        questionCount: 15,
+      ),
+    ];
+
+    for (var d in sampleDownloads) {
+      _downloadedUnitsMap[d.unitId] = d;
+      _downloadedUnitIds.add(d.unitId);
+    }
+    _saveDownloadedUnitsToPrefs();
+  }
+
+  void _seedAdMobLogs() {
+    _admobLogs.add(AdMobTelemetryItem(
+      id: 'adm_1',
+      adType: 'Banner (Adaptive)',
+      status: 'Impression Logged',
+      timestamp: DateTime.now().subtract(const Duration(minutes: 12)),
+      network: 'Google AdMob v23.0.0 (Ethiopia Region)',
+      estimatedEcpm: 1.80,
+    ));
+    _admobLogs.add(AdMobTelemetryItem(
+      id: 'adm_2',
+      adType: 'Interstitial',
+      status: 'Displayed on Quiz Finish',
+      timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
+      network: 'Google AdMob (AdUnit: ca-app-pub-3940256099942544/1033173712)',
+      estimatedEcpm: 4.20,
+    ));
+  }
+
+  Future<void> _saveDownloadedUnitsToPrefs() async {
+    final list = _downloadedUnitsMap.values.map((e) => e.toJson()).toList();
+    await _prefs.setString('downloaded_units_detailed', jsonEncode(list));
+    await _prefs.setStringList('downloaded_units', _downloadedUnitIds.toList());
+  }
+
+  /// Ping heartbeat to Supabase so active users graph updates in real time
+  Future<void> pingActiveSession() async {
+    _isTelemetrySyncing = true;
+    notifyListeners();
+
+    try {
+      await SupabaseService.pingActiveSession(
+        deviceId: _deviceId,
+        userName: _profile.fullName,
+        phone: _profile.phoneNumber,
+        grade: _currentGrade,
+      );
+
+      final telemetry = await SupabaseService.fetchLiveTelemetry();
+      _activeUsersToday = telemetry['active_users_today'] as int? ?? _activeUsersToday;
+      _totalSystemDownloads = telemetry['total_downloads'] as int? ?? _totalSystemDownloads;
+    } catch (_) {}
+
+    _isTelemetrySyncing = false;
     notifyListeners();
   }
 
@@ -77,6 +239,7 @@ class OfflineService extends ChangeNotifier {
     _currentGrade = grade;
     _profile.grade = grade;
     _prefs.setInt('user_grade', grade);
+    pingActiveSession();
     notifyListeners();
   }
 
@@ -100,6 +263,8 @@ class OfflineService extends ChangeNotifier {
     await _prefs.setInt('user_grade', grade);
     await _prefs.setBool('user_registered', true);
     await _prefs.setInt('user_streak', _profile.streakDays);
+    
+    pingActiveSession();
     notifyListeners();
   }
 
@@ -107,16 +272,212 @@ class OfflineService extends ChangeNotifier {
     return _downloadedUnitIds.contains(unitId);
   }
 
-  Future<void> toggleUnitDownload(String unitId) async {
-    if (_downloadedUnitIds.contains(unitId)) {
-      _downloadedUnitIds.remove(unitId);
-    } else {
-      _downloadedUnitIds.add(unitId);
-    }
-    await _prefs.setStringList('downloaded_units', _downloadedUnitIds.toList());
+  /// Download a unit with full metadata and log to database
+  Future<void> downloadUnit(
+    UnitModel unit,
+    String subjectId,
+    int grade, {
+    String type = 'full_bundle',
+  }) async {
+    final info = DownloadedUnitInfo(
+      unitId: unit.unitId,
+      subjectId: subjectId,
+      grade: grade,
+      unitNumber: unit.unitNumber,
+      enTitle: unit.enTitle,
+      amTitle: unit.amTitle,
+      downloadedAt: DateTime.now(),
+      type: type,
+      sizeKb: (unit.questionCount * 8) + 40,
+      questionCount: unit.questionCount,
+    );
+
+    _downloadedUnitsMap[unit.unitId] = info;
+    _downloadedUnitIds.add(unit.unitId);
+    await _saveDownloadedUnitsToPrefs();
+
+    // Trigger AdMob rewarded/interstitial impression event for download
+    recordAdMobEvent('Interstitial', 'Ad Served on Unit Download');
+
+    // Telemetry Sync to Supabase
+    SupabaseService.logDownload(
+      deviceId: _deviceId,
+      userName: _profile.fullName,
+      phone: _profile.phoneNumber,
+      grade: grade,
+      subject: subjectId,
+      unitId: unit.unitId,
+      unitNumber: unit.unitNumber,
+      type: type,
+    );
+
+    _totalSystemDownloads += 1;
     notifyListeners();
   }
 
+  /// Delete / remove downloaded unit from offline storage
+  Future<void> deleteDownloadedUnit(String unitId) async {
+    _downloadedUnitsMap.remove(unitId);
+    _downloadedUnitIds.remove(unitId);
+    await _saveDownloadedUnitsToPrefs();
+    notifyListeners();
+  }
+
+  /// Toggle unit download status
+  Future<void> toggleUnitDownload(
+    UnitModel unit,
+    String subjectId,
+    int grade,
+  ) async {
+    if (_downloadedUnitIds.contains(unit.unitId)) {
+      await deleteDownloadedUnit(unit.unitId);
+    } else {
+      await downloadUnit(unit, subjectId, grade);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Worksheets & Worksheets Downloads
+  // ---------------------------------------------------------------------------
+  bool isWorksheetDownloaded(String worksheetId) {
+    return _downloadedWorksheetIds.contains(worksheetId);
+  }
+
+  Future<void> toggleWorksheetDownload(WorksheetModel worksheet) async {
+    if (_downloadedWorksheetIds.contains(worksheet.id)) {
+      _downloadedWorksheetIds.remove(worksheet.id);
+    } else {
+      _downloadedWorksheetIds.add(worksheet.id);
+      
+      // Log to remote DB
+      SupabaseService.logDownload(
+        deviceId: _deviceId,
+        userName: _profile.fullName,
+        phone: _profile.phoneNumber,
+        grade: worksheet.grade,
+        subject: worksheet.subject,
+        unitId: 'ws_${worksheet.subject}_g${worksheet.grade}_u${worksheet.unitNumber}',
+        unitNumber: worksheet.unitNumber,
+        type: 'worksheet',
+      );
+      recordAdMobEvent('Banner', 'Worksheet Cached Offline');
+    }
+    await _prefs.setStringList('downloaded_worksheets', _downloadedWorksheetIds.toList());
+    notifyListeners();
+  }
+
+  List<WorksheetModel> getWorksheetsForSubject(String subjectId, int grade) {
+    return [
+      WorksheetModel(
+        id: 'ws_${subjectId}_g${grade}_u1',
+        grade: grade,
+        subject: subjectId,
+        unitNumber: 1,
+        title: 'Unit 1: Fundamentals & Model Exam Drill',
+        am_title: 'ምዕራፍ 1፡ መሠረታዊ ጥያቄዎችና የሞዴል ፈተና',
+        description: 'Comprehensive multiple-choice and conceptual practice questions with step-by-step solutions.',
+        totalQuestions: 20,
+        downloadCount: 142,
+        difficulty: 'National Exam Standard',
+        keyTopics: const ['Core Theorems', 'Calculations', 'Common Exam Traps', 'Fast Matrix Methods'],
+      ),
+      WorksheetModel(
+        id: 'ws_${subjectId}_g${grade}_u2',
+        grade: grade,
+        subject: subjectId,
+        unitNumber: 2,
+        title: 'Unit 2: Analytical & Mastery Worksheet',
+        am_title: 'ምዕራፍ 2፡ የትንታኔና የማጠቃለያ ልምምድ',
+        description: 'Advanced problems and structured questions targeting high-score performance.',
+        totalQuestions: 25,
+        downloadCount: 98,
+        difficulty: 'Medium',
+        keyTopics: const ['Formulas', 'Data Interpretation', 'Application Problems'],
+      ),
+      WorksheetModel(
+        id: 'ws_${subjectId}_g${grade}_u3',
+        grade: grade,
+        subject: subjectId,
+        unitNumber: 3,
+        title: 'Unit 3: Comprehensive Practice Test',
+        am_title: 'ምዕራፍ 3፡ ሁሉን አቀፍ የሙከራ ፈተና',
+        description: 'Time-managed practice worksheet designed for university entrance exam readiness.',
+        totalQuestions: 30,
+        downloadCount: 76,
+        difficulty: 'National Exam Standard',
+        keyTopics: const ['Speed Drills', 'Exam Strategy', 'Revision Matrix'],
+      ),
+    ];
+  }
+
+  // ---------------------------------------------------------------------------
+  // AdMob Telemetry & Events Tracking
+  // ---------------------------------------------------------------------------
+  void recordAdMobEvent(String adType, String status, {double ecpm = 2.10}) {
+    final item = AdMobTelemetryItem(
+      id: 'adm_${DateTime.now().millisecondsSinceEpoch}',
+      adType: adType,
+      status: status,
+      timestamp: DateTime.now(),
+      network: 'Google AdMob (App ID: ca-app-pub-3940256099942544~3347511713)',
+      estimatedEcpm: ecpm,
+    );
+    _admobLogs.insert(0, item);
+    if (_admobLogs.length > 20) {
+      _admobLogs.removeLast();
+    }
+    _adImpressionsCount += 1;
+    _adRevenueEst += (ecpm / 1000.0);
+    notifyListeners();
+  }
+
+  void recordAdClick() {
+    _adClicksCount += 1;
+    recordAdMobEvent('Interactive Ad', 'User Click Registered / Conversions Tracked', ecpm: 5.50);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Question Bug Reports & Feedback Submission
+  // ---------------------------------------------------------------------------
+  Future<bool> reportQuestionError({
+    required String questionId,
+    required String unitId,
+    required String questionText,
+    required String reason,
+  }) async {
+    final report = QuestionReportModel(
+      questionId: questionId,
+      unitId: unitId,
+      questionText: questionText,
+      reason: reason,
+      studentName: _profile.fullName,
+      studentPhone: _profile.phoneNumber,
+      createdAt: DateTime.now(),
+    );
+
+    return await SupabaseService.submitQuestionReport(report);
+  }
+
+  Future<bool> submitFeedback({
+    required int rating,
+    required String category,
+    required String message,
+  }) async {
+    final feedback = FeedbackReportModel(
+      userName: _profile.fullName,
+      phoneNumber: _profile.phoneNumber,
+      rating: rating,
+      category: category,
+      message: message,
+      createdAt: DateTime.now(),
+    );
+
+    return await SupabaseService.submitFeedback(feedback);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Curriculums, Units & Notes Database
+  // ---------------------------------------------------------------------------
   List<UnitModel> getUnitsForSubject(String subjectId, int grade) {
     switch (subjectId) {
       case 'mathematics':

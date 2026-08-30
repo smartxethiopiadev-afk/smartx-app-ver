@@ -3,8 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_config.dart';
 import '../services/offline_service.dart';
+import '../widgets/app_drawer.dart';
 import 'quiz_screen.dart';
 import 'notes_screen.dart';
+import 'downloads_screen.dart';
+import 'worksheets_screen.dart';
+import 'analytics_monitor_screen.dart';
 import 'registration_overlay.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -15,12 +19,21 @@ class HomeScreen extends StatelessWidget {
     final offline = context.watch<OfflineService>();
     final isAm = offline.language == LanguageCode.am;
     final currentGrade = offline.currentGrade;
+    final downloadedCount = offline.downloadedUnitIds.length;
 
     return Scaffold(
       backgroundColor: AppConfig.darkBackground,
+      drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: AppConfig.darkCard,
         elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu_rounded, color: Colors.white),
+            tooltip: 'Menu',
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
         title: Row(
           children: [
             Container(
@@ -39,6 +52,19 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          // Downloads quick action
+          IconButton(
+            icon: Badge(
+              label: Text('$downloadedCount'),
+              backgroundColor: AppConfig.primaryGreen,
+              isLabelVisible: downloadedCount > 0,
+              child: const Icon(Icons.cloud_download_outlined, color: Colors.white70),
+            ),
+            tooltip: isAm ? 'የወረዱ ዩኒቶች' : 'Downloaded Units',
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()));
+            },
+          ),
           IconButton(
             icon: Icon(
               offline.language == LanguageCode.am ? Icons.language : Icons.translate,
@@ -111,7 +137,154 @@ class HomeScreen extends StatelessWidget {
                       }).toList(),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
+
+                  // Quick Action Cards Row (Downloads, Worksheets, Analytics/AdMob)
+                  Row(
+                    children: [
+                      // Downloads Manager Card
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen())),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppConfig.darkCard,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppConfig.primaryGreen.withValues(alpha: 0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Icon(Icons.offline_pin_rounded, color: AppConfig.primaryGreen, size: 20),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: AppConfig.primaryGreen.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        '$downloadedCount ${isAm ? "የወረዱ" : "Offline"}',
+                                        style: const TextStyle(color: AppConfig.primaryGreen, fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  isAm ? 'የወረዱ ዩኒቶች' : 'Downloads',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                                Text(
+                                  isAm ? 'ሙሉ በሙሉ ያለ ኔትወርክ' : 'Access offline',
+                                  style: const TextStyle(color: Colors.white60, fontSize: 10),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Worksheets Card
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WorksheetsScreen())),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppConfig.darkCard,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppConfig.accentAmber.withValues(alpha: 0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Icon(Icons.assignment_outlined, color: AppConfig.accentAmber, size: 20),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: AppConfig.accentAmber.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        'New',
+                                        style: TextStyle(color: AppConfig.accentAmber, fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  isAm ? 'የፈተና ዎርክሺቶች' : 'Worksheets',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                                Text(
+                                  isAm ? 'የሞዴል ፈተናዎች' : 'Model Exam Drills',
+                                  style: const TextStyle(color: Colors.white60, fontSize: 10),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Real-time Analytics & AdMob Card
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsMonitorScreen())),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppConfig.darkCard,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Icon(Icons.analytics_outlined, color: Colors.blueAccent, size: 20),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blueAccent.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        '${offline.activeUsersToday} live',
+                                        style: const TextStyle(color: Colors.blueAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  isAm ? 'አክቲቭ ተጠቃሚዎች' : 'Analytics & Ad',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  isAm ? 'የ AdMob ዳታ' : 'Live telemetry',
+                                  style: const TextStyle(color: Colors.white60, fontSize: 10),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
 
                   // Telegram Community Banner
                   GestureDetector(
@@ -133,7 +306,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.send_rounded, color: Colors.white, size: 28),
+                          const Icon(Icons.send_rounded, color: Colors.white, size: 26),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -277,8 +450,8 @@ class HomeScreen extends StatelessWidget {
       ),
       builder: (ctx) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          maxChildSize: 0.9,
+          initialChildSize: 0.65,
+          maxChildSize: 0.92,
           minChildSize: 0.4,
           expand: false,
           builder: (_, controller) {
@@ -320,7 +493,7 @@ class HomeScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: AppConfig.darkCard,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white10),
+                            border: Border.all(color: isDownloaded ? AppConfig.primaryGreen.withValues(alpha: 0.4) : Colors.white10),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,9 +511,22 @@ class HomeScreen extends StatelessWidget {
                                     icon: Icon(
                                       isDownloaded ? Icons.offline_pin : Icons.download_outlined,
                                       color: isDownloaded ? AppConfig.primaryGreen : Colors.white54,
-                                      size: 20,
+                                      size: 22,
                                     ),
-                                    onPressed: () => offline.toggleUnitDownload(unit.unitId),
+                                    tooltip: isDownloaded ? 'Downloaded (Offline)' : 'Download Unit',
+                                    onPressed: () {
+                                      offline.toggleUnitDownload(unit, subject.id, grade);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            isDownloaded
+                                                ? (isAm ? 'ዩኒቱ ከመሳሪያዎ ተሰርዟል' : 'Unit removed from offline storage')
+                                                : (isAm ? 'ዩኒቱ በተሳካ ሁኔታ ወርዷል!' : 'Unit downloaded for offline study!'),
+                                          ),
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ],
                               ),
