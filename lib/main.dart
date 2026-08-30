@@ -149,7 +149,7 @@ class _SmartXAppRootState extends State<SmartXAppRoot> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppConfig.primaryGreen.withOpacity(0.3),
+                        color: AppConfig.primaryGreen.withValues(alpha: 0.3),
                         blurRadius: 20,
                         spreadRadius: 2,
                       )
@@ -208,7 +208,7 @@ class _SmartXAppRootState extends State<SmartXAppRoot> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.redAccent.withOpacity(0.12),
+                      color: Colors.redAccent.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -248,7 +248,7 @@ class _SmartXAppRootState extends State<SmartXAppRoot> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'የስህተት ዝርዝር (Error Log):',
                           style: TextStyle(
                             color: AppConfig.accentAmber,
