@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_html/flutter_html.dart';
-import 'package:flutter_html_table/flutter_html_table.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -352,143 +351,6 @@ class _NotesScreenState extends State<NotesScreen> {
         AppStateProvider.of(context).onToggleTheme();
       } catch (_) {}
     }
-  }
-
-  Map<String, Style> _buildHtmlStyles(bool isDark) {
-    final Color textColor = isDark ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B);
-    final Color headingBlue = isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7);
-    final Color tableBorderColor = isDark ? const Color(0xFF0284C7) : const Color(0xFF38BDF8);
-
-    return {
-      "body": Style(
-        margin: Margins.zero,
-        padding: HtmlPaddings.zero,
-        fontSize: FontSize(15.5),
-        lineHeight: LineHeight(1.65),
-        color: textColor,
-      ),
-      "h1": Style(
-        fontSize: FontSize(22.0),
-        fontWeight: FontWeight.w800,
-        color: isDark ? Colors.white : const Color(0xFF0F172A),
-        margin: Margins.only(top: 14, bottom: 10),
-      ),
-      "h2": Style(
-        fontSize: FontSize(17.5),
-        fontWeight: FontWeight.w800,
-        color: headingBlue,
-        margin: Margins.only(top: 16, bottom: 8),
-      ),
-      "h3": Style(
-        fontSize: FontSize(16.5),
-        fontWeight: FontWeight.w700,
-        color: headingBlue,
-        margin: Margins.only(top: 14, bottom: 8),
-      ),
-      "p": Style(
-        margin: Margins.only(bottom: 12),
-        lineHeight: LineHeight(1.6),
-        color: textColor,
-      ),
-      "ul": Style(
-        margin: Margins.only(left: 4, bottom: 12),
-        padding: HtmlPaddings.only(left: 12),
-      ),
-      "ol": Style(
-        margin: Margins.only(left: 4, bottom: 12),
-        padding: HtmlPaddings.only(left: 12),
-      ),
-      "li": Style(
-        margin: Margins.only(bottom: 8),
-        lineHeight: LineHeight(1.55),
-        color: textColor,
-      ),
-      "strong": Style(
-        fontWeight: FontWeight.w800,
-        color: isDark ? Colors.white : const Color(0xFF0F172A),
-      ),
-      "em": Style(
-        fontStyle: FontStyle.italic,
-      ),
-      "hr": Style(
-        margin: Margins.symmetric(vertical: 14),
-        border: const Border(bottom: BorderSide(color: Color(0xFF38BDF8), width: 2.0)),
-        backgroundColor: Colors.transparent,
-      ),
-      "table": Style(
-        backgroundColor: Colors.transparent,
-        border: Border.all(color: tableBorderColor, width: 1.5),
-        margin: Margins.symmetric(vertical: 14),
-      ),
-      "th": Style(
-        backgroundColor: Colors.transparent,
-        padding: HtmlPaddings.symmetric(horizontal: 10, vertical: 8),
-        fontWeight: FontWeight.w800,
-        color: headingBlue,
-        border: Border.all(color: tableBorderColor, width: 1.0),
-      ),
-      "td": Style(
-        backgroundColor: Colors.transparent,
-        padding: HtmlPaddings.symmetric(horizontal: 10, vertical: 8),
-        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFF0F172A), width: 1.0),
-        color: textColor,
-      ),
-      "code": Style(
-        backgroundColor: Colors.transparent,
-        color: const Color(0xFF0284C7),
-        fontFamily: 'monospace',
-        fontSize: FontSize(14.5),
-        fontWeight: FontWeight.w600,
-        padding: HtmlPaddings.symmetric(horizontal: 4, vertical: 2),
-      ),
-      ".callout": Style(
-        backgroundColor: Colors.transparent,
-        border: const Border(left: BorderSide(color: Color(0xFF0EA5E9), width: 4.0)),
-        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
-        margin: Margins.symmetric(vertical: 14),
-        fontStyle: FontStyle.italic,
-      ),
-      ".keynote": Style(
-        backgroundColor: Colors.transparent,
-        border: const Border(left: BorderSide(color: Color(0xFF0EA5E9), width: 4.0)),
-        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
-        margin: Margins.symmetric(vertical: 14),
-      ),
-      ".definition": Style(
-        backgroundColor: Colors.transparent,
-        border: const Border(left: BorderSide(color: Color(0xFFF59E0B), width: 4.0)),
-        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
-        margin: Margins.symmetric(vertical: 14),
-      ),
-      ".example": Style(
-        backgroundColor: Colors.transparent,
-        border: const Border(left: BorderSide(color: Color(0xFF8B5CF6), width: 4.0)),
-        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
-        margin: Margins.symmetric(vertical: 14),
-      ),
-      "blockquote": Style(
-        backgroundColor: Colors.transparent,
-        border: const Border(left: BorderSide(color: Color(0xFF0EA5E9), width: 4.0)),
-        padding: HtmlPaddings.only(left: 14, top: 6, bottom: 6),
-        margin: Margins.symmetric(vertical: 14),
-      ),
-      ".formula": Style(
-        backgroundColor: isDark ? const Color(0xFF2A1515).withValues(alpha: 0.3) : const Color(0xFFFFF1F2),
-        border: Border.all(color: const Color(0xFFFCA5A5), width: 1.2),
-        padding: HtmlPaddings.symmetric(horizontal: 16, vertical: 14),
-        margin: Margins.symmetric(vertical: 16),
-        color: const Color(0xFFB91C1C),
-        fontWeight: FontWeight.w700,
-      ),
-      ".formula-box": Style(
-        backgroundColor: isDark ? const Color(0xFF2A1515).withValues(alpha: 0.3) : const Color(0xFFFFF1F2),
-        border: Border.all(color: const Color(0xFFFCA5A5), width: 1.2),
-        padding: HtmlPaddings.symmetric(horizontal: 16, vertical: 14),
-        margin: Margins.symmetric(vertical: 16),
-        color: const Color(0xFFB91C1C),
-        fontWeight: FontWeight.w700,
-      ),
-    };
   }
 
   void _showCompletionDialog() {
@@ -1160,12 +1022,40 @@ class _NotesScreenState extends State<NotesScreen> {
                   const SizedBox(height: 12),
 
                   // Rich HTML Content rendered with custom HTML styles from JSON database
-                  Html(
-                    data: sanitizedHtml,
-                    style: _buildHtmlStyles(isDark),
-                    extensions: const [
-                      TableHtmlExtension(),
-                    ],
+                  HtmlWidget(
+                    sanitizedHtml,
+                    textStyle: TextStyle(
+                      fontSize: 15.5,
+                      height: 1.65,
+                      color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
+                    ),
+                    customStylesBuilder: (element) {
+                      if (element.localName == 'h1') {
+                        return {'font-size': '22px', 'font-weight': '800', 'color': isDark ? '#FFFFFF' : '#0F172A'};
+                      }
+                      if (element.localName == 'h2' || element.localName == 'h3') {
+                        return {'font-size': '17.5px', 'font-weight': '700', 'color': isDark ? '#38BDF8' : '#0284C7'};
+                      }
+                      if (element.localName == 'th') {
+                        return {'font-weight': '800', 'color': isDark ? '#38BDF8' : '#0284C7', 'padding': '8px 10px'};
+                      }
+                      if (element.localName == 'td') {
+                        return {'padding': '8px 10px', 'border': '1px solid ${isDark ? "#334155" : "#CBD5E1"}'};
+                      }
+                      if (element.classes.contains('callout') || element.classes.contains('keynote') || element.localName == 'blockquote') {
+                        return {'border-left': '4px solid #0EA5E9', 'padding-left': '14px', 'margin': '14px 0'};
+                      }
+                      if (element.classes.contains('definition')) {
+                        return {'border-left': '4px solid #F59E0B', 'padding-left': '14px', 'margin': '14px 0'};
+                      }
+                      if (element.classes.contains('example')) {
+                        return {'border-left': '4px solid #8B5CF6', 'padding-left': '14px', 'margin': '14px 0'};
+                      }
+                      if (element.classes.contains('formula') || element.classes.contains('formula-box')) {
+                        return {'border': '1px solid #FCA5A5', 'padding': '14px 16px', 'margin': '16px 0', 'color': '#B91C1C', 'font-weight': '700'};
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 36),
                 ],
