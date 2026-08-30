@@ -1,9 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+    <!-- Theme applied to the Android Window as soon as the process has started.
+         This theme determines the app's initial visual appearance, and is
+         active until the first frame of Flutter itself is rendered. -->
+    <style name="LaunchTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Show a splash screen on the activity. Automatically removed when
+             the Flutter engine draws its first frame -->
         <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:colorBackground">#080E1E</item>
     </style>
-    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+
+    <!-- Theme applied to the Android Window as soon as the Flutter experience
+         begins. This theme inherits the LaunchTheme but overrides the window
+         background to prevent caching of the splash screen. -->
+    <style name="NormalTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">#080E1E</item>
+        <item name="android:colorBackground">#080E1E</item>
     </style>
 </resources>

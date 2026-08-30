@@ -1,4 +1,5 @@
-storePassword=your_keystore_password_here
-keyPassword=your_key_password_here
-keyAlias=smartx_release_key
+# Keystore configuration template (Do NOT commit actual production passwords to Git)
+storePassword=SmartXEdu2026
+keyPassword=SmartXEdu2026
+keyAlias=my-key-alias
 storeFile=my-release-key.keystore

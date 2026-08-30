@@ -1,6 +1,6 @@
 plugins {
     id "com.android.application"
-    id "kotlin-android"
+    id "org.jetbrains.kotlin.android"
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -12,30 +12,33 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
-if (flutterVersionCode == null) {
-    flutterVersionCode = '1'
-}
-
-def flutterVersionName = localProperties.getProperty('flutter.versionName')
-if (flutterVersionName == null) {
-    flutterVersionName = '1.0.0'
-}
-
+// ------------------------------------------------------------------------------
+// Secure Keystore & Signing Configuration Resolution
+// Priority:
+// 1. Local key.properties file (for local developer workstation builds)
+// 2. System Environment Variables (for GitHub Actions CI/CD pipeline builds)
+// ------------------------------------------------------------------------------
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
+if (!keystorePropertiesFile.exists()) {
+    keystorePropertiesFile = file('key.properties')
+}
 if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.withReader('UTF-8') { reader ->
         keystoreProperties.load(reader)
     }
 }
 
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
+def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
+
 android {
     namespace "com.smartx.learning"
-    compileSdk flutter.compileSdkVersion
+    compileSdkVersion 36
     ndkVersion flutter.ndkVersion
 
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -44,39 +47,72 @@ android {
         jvmTarget = '17'
     }
 
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:deprecation"
+    }
+
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    signingConfigs {
+        release {
+            def resolvedKeyAlias = keystoreProperties.getProperty('keyAlias') 
+                ?: System.getenv('KEYSTORE_KEY_ALIAS') 
+                ?: System.getenv('KEY_ALIAS')
+
+            def resolvedKeyPassword = keystoreProperties.getProperty('keyPassword') 
+                ?: System.getenv('KEYSTORE_KEY_PASSWORD') 
+                ?: System.getenv('KEY_PASSWORD')
+
+            def resolvedStorePassword = keystoreProperties.getProperty('storePassword') 
+                ?: System.getenv('KEYSTORE_STORE_PASSWORD') 
+                ?: System.getenv('STORE_PASSWORD')
+
+            def resolvedStoreFile = keystoreProperties.getProperty('storeFile') 
+                ?: System.getenv('KEYSTORE_STORE_FILE') 
+                ?: System.getenv('STORE_FILE') 
+                ?: 'my-release-key.keystore'
+
+            if (resolvedKeyAlias && resolvedKeyPassword && resolvedStorePassword) {
+                keyAlias resolvedKeyAlias
+                keyPassword resolvedKeyPassword
+                storePassword resolvedStorePassword
+
+                def keyFile = file(resolvedStoreFile)
+                if (!keyFile.exists() && rootProject.file(resolvedStoreFile).exists()) {
+                    keyFile = rootProject.file(resolvedStoreFile)
+                }
+                storeFile keyFile
+            }
+        }
     }
 
     defaultConfig {
         applicationId "com.smartx.learning"
         minSdkVersion 21
-        targetSdkVersion flutter.targetSdkVersion
+        targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
     }
 
-    signingConfigs {
-        release {
-            if (keystoreProperties['storeFile'] != null) {
-                keyAlias keystoreProperties['keyAlias']
-                keyPassword keystoreProperties['keyPassword']
-                storeFile file(keystoreProperties['storeFile'])
-                storePassword keystoreProperties['storePassword']
-            }
-        }
-    }
-
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
-            signingConfig signingConfigs.release.keyAlias ? signingConfigs.release : signingConfigs.debug
+            // Apply release signing config if configured; otherwise fallback to debug config
+            if (signingConfigs.release.storeFile != null && signingConfigs.release.storeFile.exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                println "WARNING: Release keystore file not found. Falling back to debug signing configuration."
+                signingConfig signingConfigs.debug
+            }
+
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-        debug {
-            signingConfig signingConfigs.debug
         }
     }
 }
@@ -85,4 +121,8 @@ flutter {
     source '../..'
 }
 
-dependencies {}
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+}
