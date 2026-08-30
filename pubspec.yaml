@@ -41,6 +41,9 @@ dev_dependencies:
   flutter_native_splash: ^2.4.1
   dependency_validator: ^3.2.3
 
+dependency_overrides:
+  csslib: 0.17.2
+
 dependency_validator:
   ignore:
     - connectivity_plus
