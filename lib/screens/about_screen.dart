@@ -52,9 +52,9 @@ class AboutScreen extends StatelessWidget {
                     style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
-                  Text(
+                  const Text(
                     'v${AppConfig.appVersion} • Ethiopian High School Platform',
-                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                    style: TextStyle(color: Colors.white60, fontSize: 12),
                   ),
                   const SizedBox(height: 12),
                   Container(

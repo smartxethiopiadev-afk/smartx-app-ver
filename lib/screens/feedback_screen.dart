@@ -45,7 +45,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     final offline = context.read<OfflineService>();
     final isAm = offline.language == LanguageCode.am;
 
-    final success = await offline.submitFeedback(
+    await offline.submitFeedback(
       rating: _rating,
       category: _category,
       message: _messageController.text.trim(),

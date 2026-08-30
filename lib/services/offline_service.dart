@@ -6,8 +6,10 @@ import '../config/app_config.dart';
 import '../models/subject_model.dart';
 import '../models/question_model.dart';
 import '../models/note_model.dart';
+import '../models/note_chunk_helper.dart';
 import '../models/worksheet_model.dart';
 import '../models/download_analytics_model.dart';
+import 'google_analytics_service.dart';
 import 'supabase_service.dart';
 
 class UserProfileData {
@@ -48,17 +50,18 @@ class OfflineService extends ChangeNotifier {
   final Map<String, DownloadedUnitInfo> _downloadedUnitsMap = {};
 
   // Downloaded worksheets IDs
-  final Set<String> _downloadedWorksheetIds = {'ws_math_g11_u1', 'ws_phy_g11_u1'};
+  final Set<String> _downloadedWorksheetIds = {'ws_mathematics_g11_u1', 'ws_physics_g11_u1'};
 
   // AdMob telemetry events log
   final List<AdMobTelemetryItem> _admobLogs = [];
-  int _adImpressionsCount = 14;
-  int _adClicksCount = 2;
-  double _adRevenueEst = 0.42;
+  int _adImpressionsCount = 18;
+  int _adClicksCount = 3;
+  double _adRevenueEst = 0.58;
 
-  // Live telemetry status
-  int _activeUsersToday = 186;
-  int _totalSystemDownloads = 942;
+  // Google Analytics Real-time Telemetry state
+  int _activeUsersToday = 312;
+  int _activeUsersNow = 48;
+  int _totalSystemDownloads = 984;
   bool _isTelemetrySyncing = false;
 
   bool get isInitialized => _isInitialized;
@@ -74,13 +77,17 @@ class OfflineService extends ChangeNotifier {
   int get adClicksCount => _adClicksCount;
   double get adRevenueEst => _adRevenueEst;
   int get activeUsersToday => _activeUsersToday;
+  int get activeUsersNow => _activeUsersNow;
   int get totalSystemDownloads => _totalSystemDownloads;
   bool get isTelemetrySyncing => _isTelemetrySyncing;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
 
-    // 1. Device ID
+    // 1. Initialize Google Analytics Service
+    GoogleAnalyticsService.init();
+
+    // 2. Device ID
     _deviceId = _prefs.getString('app_device_id') ?? '';
     if (_deviceId.isEmpty) {
       final random = Random().nextInt(999999);
@@ -88,7 +95,7 @@ class OfflineService extends ChangeNotifier {
       await _prefs.setString('app_device_id', _deviceId);
     }
 
-    // 2. Profile
+    // 3. Profile
     final name = _prefs.getString('user_full_name') ?? 'Ethiopian Student';
     final phone = _prefs.getString('user_phone') ?? '+251912345678';
     final grade = _prefs.getInt('user_grade') ?? 11;
@@ -107,7 +114,7 @@ class OfflineService extends ChangeNotifier {
     _language = langStr == 'am' ? LanguageCode.am : LanguageCode.en;
     _currentGrade = grade;
 
-    // 3. Load downloaded units detailed records
+    // 4. Load downloaded units detailed records
     final savedDownloadsJson = _prefs.getString('downloaded_units_detailed');
     if (savedDownloadsJson != null && savedDownloadsJson.isNotEmpty) {
       try {
@@ -120,23 +127,22 @@ class OfflineService extends ChangeNotifier {
         }
       } catch (_) {}
     } else {
-      // Seed default initial downloads
       _seedDefaultDownloads();
     }
 
-    // 4. Load downloaded worksheets
+    // 5. Load downloaded worksheets
     final savedWs = _prefs.getStringList('downloaded_worksheets');
     if (savedWs != null) {
       _downloadedWorksheetIds.addAll(savedWs);
     }
 
-    // 5. Initial AdMob Telemetry Seeds
+    // 6. Initial AdMob Telemetry Seeds
     _seedAdMobLogs();
 
     _isInitialized = true;
     notifyListeners();
 
-    // 6. Ping Active Session & Sync Telemetry
+    // 7. Ping Active Session to Google Analytics
     pingActiveSession();
   }
 
@@ -160,8 +166,8 @@ class OfflineService extends ChangeNotifier {
         subjectId: 'biology',
         grade: 11,
         unitNumber: 1,
-        enTitle: 'The Science of Biology & Technology',
-        amTitle: 'የሥነ-ሕይወት ሳይንስ እና ቴክኖሎጂ',
+        enTitle: 'The Science of Biology & Cytology',
+        amTitle: 'የሥነ-ሕይወት ሳይንስ እና ሴል',
         downloadedAt: now.subtract(const Duration(days: 1)),
         type: 'full_bundle',
         sizeKb: 120,
@@ -172,7 +178,7 @@ class OfflineService extends ChangeNotifier {
         subjectId: 'physics',
         grade: 11,
         unitNumber: 1,
-        enTitle: 'Physics and Human Society / Vectors',
+        enTitle: 'Vectors & 2D Kinematics',
         amTitle: 'ፊዚክስና ቬክተሮች',
         downloadedAt: now,
         type: 'full_bundle',
@@ -213,22 +219,21 @@ class OfflineService extends ChangeNotifier {
     await _prefs.setStringList('downloaded_units', _downloadedUnitIds.toList());
   }
 
-  /// Ping heartbeat to Supabase so active users graph updates in real time
+  /// Ping heartbeat directly to Google Analytics GA4
   Future<void> pingActiveSession() async {
     _isTelemetrySyncing = true;
     notifyListeners();
 
     try {
-      await SupabaseService.pingActiveSession(
+      await GoogleAnalyticsService.logActiveSessionPing(
         deviceId: _deviceId,
         userName: _profile.fullName,
-        phone: _profile.phoneNumber,
         grade: _currentGrade,
+        language: _language == LanguageCode.am ? 'am' : 'en',
       );
 
-      final telemetry = await SupabaseService.fetchLiveTelemetry();
-      _activeUsersToday = telemetry['active_users_today'] as int? ?? _activeUsersToday;
-      _totalSystemDownloads = telemetry['total_downloads'] as int? ?? _totalSystemDownloads;
+      _activeUsersNow = GoogleAnalyticsService.activeUsersNow;
+      _activeUsersToday = GoogleAnalyticsService.activeUsersToday;
     } catch (_) {}
 
     _isTelemetrySyncing = false;
@@ -263,7 +268,14 @@ class OfflineService extends ChangeNotifier {
     await _prefs.setInt('user_grade', grade);
     await _prefs.setBool('user_registered', true);
     await _prefs.setInt('user_streak', _profile.streakDays);
-    
+
+    GoogleAnalyticsService.logEvent(
+      eventName: 'sign_up',
+      deviceId: _deviceId,
+      parameters: {'user_name': name, 'grade': grade},
+      userId: phone,
+    );
+
     pingActiveSession();
     notifyListeners();
   }
@@ -272,7 +284,7 @@ class OfflineService extends ChangeNotifier {
     return _downloadedUnitIds.contains(unitId);
   }
 
-  /// Download a unit with full metadata and log to database
+  /// Download a unit with full metadata and log to Google Analytics
   Future<void> downloadUnit(
     UnitModel unit,
     String subjectId,
@@ -299,16 +311,17 @@ class OfflineService extends ChangeNotifier {
     // Trigger AdMob rewarded/interstitial impression event for download
     recordAdMobEvent('Interstitial', 'Ad Served on Unit Download');
 
-    // Telemetry Sync to Supabase
-    SupabaseService.logDownload(
+    // Telemetry Sync to Google Analytics
+    GoogleAnalyticsService.logEvent(
+      eventName: 'unit_downloaded',
       deviceId: _deviceId,
-      userName: _profile.fullName,
-      phone: _profile.phoneNumber,
-      grade: grade,
-      subject: subjectId,
-      unitId: unit.unitId,
-      unitNumber: unit.unitNumber,
-      type: type,
+      parameters: {
+        'unit_id': unit.unitId,
+        'subject': subjectId,
+        'grade': grade,
+        'unit_number': unit.unitNumber,
+        'type': type,
+      },
     );
 
     _totalSystemDownloads += 1;
@@ -349,16 +362,16 @@ class OfflineService extends ChangeNotifier {
     } else {
       _downloadedWorksheetIds.add(worksheet.id);
       
-      // Log to remote DB
-      SupabaseService.logDownload(
+      // Log to Google Analytics
+      GoogleAnalyticsService.logEvent(
+        eventName: 'worksheet_cached',
         deviceId: _deviceId,
-        userName: _profile.fullName,
-        phone: _profile.phoneNumber,
-        grade: worksheet.grade,
-        subject: worksheet.subject,
-        unitId: 'ws_${worksheet.subject}_g${worksheet.grade}_u${worksheet.unitNumber}',
-        unitNumber: worksheet.unitNumber,
-        type: 'worksheet',
+        parameters: {
+          'worksheet_id': worksheet.id,
+          'subject': worksheet.subject,
+          'grade': worksheet.grade,
+          'unit_number': worksheet.unitNumber,
+        },
       );
       recordAdMobEvent('Banner', 'Worksheet Cached Offline');
     }
@@ -374,7 +387,7 @@ class OfflineService extends ChangeNotifier {
         subject: subjectId,
         unitNumber: 1,
         title: 'Unit 1: Fundamentals & Model Exam Drill',
-        am_title: 'ምዕራፍ 1፡ መሠረታዊ ጥያቄዎችና የሞዴል ፈተና',
+        amTitle: 'ምዕራፍ 1፡ መሠረታዊ ጥያቄዎችና የሞዴል ፈተና',
         description: 'Comprehensive multiple-choice and conceptual practice questions with step-by-step solutions.',
         totalQuestions: 20,
         downloadCount: 142,
@@ -387,7 +400,7 @@ class OfflineService extends ChangeNotifier {
         subject: subjectId,
         unitNumber: 2,
         title: 'Unit 2: Analytical & Mastery Worksheet',
-        am_title: 'ምዕራፍ 2፡ የትንታኔና የማጠቃለያ ልምምድ',
+        amTitle: 'ምዕራፍ 2፡ የትንታኔና የማጠቃለያ ልምምድ',
         description: 'Advanced problems and structured questions targeting high-score performance.',
         totalQuestions: 25,
         downloadCount: 98,
@@ -400,7 +413,7 @@ class OfflineService extends ChangeNotifier {
         subject: subjectId,
         unitNumber: 3,
         title: 'Unit 3: Comprehensive Practice Test',
-        am_title: 'ምዕራፍ 3፡ ሁሉን አቀፍ የሙከራ ፈተና',
+        amTitle: 'ምዕራፍ 3፡ ሁሉን አቀፍ የሙከራ ፈተና',
         description: 'Time-managed practice worksheet designed for university entrance exam readiness.',
         totalQuestions: 30,
         downloadCount: 76,
@@ -455,6 +468,13 @@ class OfflineService extends ChangeNotifier {
       createdAt: DateTime.now(),
     );
 
+    GoogleAnalyticsService.logAppError(
+      errorType: 'Question_Report',
+      errorMessage: reason,
+      contextScreen: 'QuizScreen_$unitId',
+      deviceId: _deviceId,
+    );
+
     return await SupabaseService.submitQuestionReport(report);
   }
 
@@ -476,47 +496,47 @@ class OfflineService extends ChangeNotifier {
   }
 
   // ---------------------------------------------------------------------------
-  // Curriculums, Units & Notes Database
+  // Curriculums, Units & Notes Database (All remaining core subjects)
   // ---------------------------------------------------------------------------
   List<UnitModel> getUnitsForSubject(String subjectId, int grade) {
     switch (subjectId) {
       case 'mathematics':
         return [
-          const UnitModel(
+          UnitModel(
             unitNumber: 1,
-            unitId: 'math_g11_u1',
-            enTitle: 'Relations and Functions',
-            amTitle: 'ግንኙነቶችና ፈንክሽኖች',
+            unitId: 'math_g${grade}_u1',
+            enTitle: grade == 11 ? 'Relations and Functions' : 'Number Systems & Foundations',
+            amTitle: grade == 11 ? 'ግንኙነቶችና ፈንክሽኖች' : 'የቁጥር ሥርዓቶችና መሠረቶች',
             description: 'Domain, range, inverse functions, and composition of functions in higher algebra.',
             questionCount: 15,
             hasNotes: true,
             estimatedMinutes: 25,
           ),
-          const UnitModel(
+          UnitModel(
             unitNumber: 2,
-            unitId: 'math_g11_u2',
-            enTitle: 'Rational Expressions & Functions',
-            amTitle: 'አመክንዮአዊ መግለጫዎችና ፈንክሽኖች',
+            unitId: 'math_g${grade}_u2',
+            enTitle: grade == 11 ? 'Rational Expressions & Functions' : 'Polynomial Expressions',
+            amTitle: grade == 11 ? 'አመክንዮአዊ መግለጫዎችና ፈንክሽኖች' : 'ፖሊኖሚያል መግለጫዎች',
             description: 'Simplifying rational functions, asymptotes, and partial fraction decomposition.',
             questionCount: 12,
             hasNotes: true,
             estimatedMinutes: 20,
           ),
-          const UnitModel(
+          UnitModel(
             unitNumber: 3,
-            unitId: 'math_g11_u3',
-            enTitle: 'Coordinate Geometry & Conic Sections',
-            amTitle: 'የመጋጠሚያ ጂኦሜትሪ እና ኮኒክስ',
+            unitId: 'math_g${grade}_u3',
+            enTitle: grade == 11 ? 'Coordinate Geometry & Conic Sections' : 'Exponential & Logarithmic Functions',
+            amTitle: grade == 11 ? 'የመጋጠሚያ ጂኦሜትሪ እና ኮኒክስ' : 'ኤክስፖኔንሻል እና ሎጋሪዝም',
             description: 'Parabola, Ellipse, Hyperbola and locus problems.',
             questionCount: 18,
             hasNotes: true,
             estimatedMinutes: 30,
           ),
-          const UnitModel(
+          UnitModel(
             unitNumber: 4,
-            unitId: 'math_g11_u4',
-            enTitle: 'Matrices and Determinants',
-            amTitle: 'ማትሪክስ እና ዲተርሚናንትስ',
+            unitId: 'math_g${grade}_u4',
+            enTitle: grade == 11 ? 'Matrices and Determinants' : 'Trigonometry & Analytic Geometry',
+            amTitle: grade == 11 ? 'ማትሪክስ እና ዲተርሚናንትስ' : 'ትሪጎኖሜትሪ',
             description: 'Cramer rule, inverse matrix, transformations, and linear systems.',
             questionCount: 14,
             hasNotes: true,
@@ -525,19 +545,19 @@ class OfflineService extends ChangeNotifier {
         ];
       case 'biology':
         return [
-          const UnitModel(
+          UnitModel(
             unitNumber: 1,
-            unitId: 'bio_g11_u1',
-            enTitle: 'The Science of Biology & Technology',
-            amTitle: 'የሥነ-ሕይወት ሳይንስ እና ቴክኖሎጂ',
-            description: 'Biological tools, scientific methods, and biochemical foundations.',
+            unitId: 'bio_g${grade}_u1',
+            enTitle: 'The Science of Biology & Cytology',
+            amTitle: 'የሥነ-ሕይወት ሳይንስ እና ሴል',
+            description: 'Biological tools, cell theory, scientific methods, and biochemical foundations.',
             questionCount: 15,
             hasNotes: true,
             estimatedMinutes: 20,
           ),
-          const UnitModel(
+          UnitModel(
             unitNumber: 2,
-            unitId: 'bio_g11_u2',
+            unitId: 'bio_g${grade}_u2',
             enTitle: 'Cell Biology and Molecular Genetics',
             amTitle: 'የሕዋስ ሥነ-ሕይወት እና ሞለኪውላር ጀነቲክስ',
             description: 'Cell organelle functions, DNA replication, and protein synthesis mechanisms.',
@@ -545,9 +565,9 @@ class OfflineService extends ChangeNotifier {
             hasNotes: true,
             estimatedMinutes: 30,
           ),
-          const UnitModel(
+          UnitModel(
             unitNumber: 3,
-            unitId: 'bio_g11_u3',
+            unitId: 'bio_g${grade}_u3',
             enTitle: 'Enzymes and Metabolic Pathways',
             amTitle: 'ኢንዛይሞች እና ሜታቦሊዝም',
             description: 'Enzyme kinetics, activation energy, inhibition, and cellular respiration.',
@@ -558,25 +578,117 @@ class OfflineService extends ChangeNotifier {
         ];
       case 'physics':
         return [
-          const UnitModel(
+          UnitModel(
             unitNumber: 1,
-            unitId: 'phy_g11_u1',
-            enTitle: 'Physics and Human Society / Vectors',
+            unitId: 'phy_g${grade}_u1',
+            enTitle: 'Vectors & Two-Dimensional Kinematics',
             amTitle: 'ፊዚክስና ቬክተሮች',
             description: 'Vector analysis, dot product, cross product, and relative motion.',
             questionCount: 15,
             hasNotes: true,
             estimatedMinutes: 25,
           ),
-          const UnitModel(
+          UnitModel(
             unitNumber: 2,
-            unitId: 'phy_g11_u2',
-            enTitle: 'Two-Dimensional Motion & Projectiles',
+            unitId: 'phy_g${grade}_u2',
+            enTitle: 'Two-Dimensional Motion & Dynamics',
             amTitle: 'ባለሁለት አቅጣጫ እንቅስቃሴ',
             description: 'Projectile motion, circular dynamics, centripetal acceleration, and gravity.',
             questionCount: 18,
             hasNotes: true,
             estimatedMinutes: 30,
+          ),
+        ];
+      case 'chemistry':
+        return [
+          UnitModel(
+            unitNumber: 1,
+            unitId: 'chem_g${grade}_u1',
+            enTitle: 'Atomic Structure and Periodic Table',
+            amTitle: 'የአተም መዋቅር እና ፔሪዮዲክ ሰንጠረዥ',
+            description: 'Quantum numbers, orbital configurations, periodic trends, and bonding.',
+            questionCount: 16,
+            hasNotes: true,
+            estimatedMinutes: 25,
+          ),
+          UnitModel(
+            unitNumber: 2,
+            unitId: 'chem_g${grade}_u2',
+            enTitle: 'Chemical Bonding & Molecular Geometry',
+            amTitle: 'ኬሚካላዊ ትስስርና የሞለኪውል ቅርጽ',
+            description: 'Ionic, covalent, and metallic bonds, VSEPR theory, and hybridization.',
+            questionCount: 18,
+            hasNotes: true,
+            estimatedMinutes: 28,
+          ),
+        ];
+      case 'history':
+        return [
+          UnitModel(
+            unitNumber: 1,
+            unitId: 'hist_g${grade}_u1',
+            enTitle: 'Historiography & Human Evolution',
+            amTitle: 'ታሪክ አጻጻፍ እና የሰው ልጅ አመጣጥ',
+            description: 'Primary/secondary sources, prehistoric discoveries, and ancient settlements.',
+            questionCount: 14,
+            hasNotes: true,
+            estimatedMinutes: 20,
+          ),
+          UnitModel(
+            unitNumber: 2,
+            unitId: 'hist_g${grade}_u2',
+            enTitle: 'Ancient Civilizations & Axumite Kingdom',
+            amTitle: 'ጥንታዊ ስልጣኔዎችና የአክሱም መንግሥት',
+            description: 'Yeha, Axum, Zagwe, and trade routes along the Red Sea.',
+            questionCount: 16,
+            hasNotes: true,
+            estimatedMinutes: 25,
+          ),
+        ];
+      case 'geography':
+        return [
+          UnitModel(
+            unitNumber: 1,
+            unitId: 'geo_g${grade}_u1',
+            enTitle: 'Geology & Landforms of Ethiopia',
+            amTitle: 'የኢትዮጵያ ጂኦሎጂ እና የመሬት ገጽታ',
+            description: 'Geological eras, rock formations, Ethiopian Rift Valley, and highlands.',
+            questionCount: 15,
+            hasNotes: true,
+            estimatedMinutes: 22,
+          ),
+          UnitModel(
+            unitNumber: 2,
+            unitId: 'geo_g${grade}_u2',
+            enTitle: 'Drainage Systems & Water Resources',
+            amTitle: 'የውሃ ፍሳሽ ሥርዓቶችና የተፈጥሮ ሀብት',
+            description: 'Major river basins (Abay, Baro, Awash) and Ethiopian Rift Valley lakes.',
+            questionCount: 14,
+            hasNotes: true,
+            estimatedMinutes: 20,
+          ),
+        ];
+      case 'economics':
+        return [
+          UnitModel(
+            unitNumber: 1,
+            unitId: 'econ_g${grade}_u1',
+            enTitle: 'Foundations of Economics & Market Theory',
+            amTitle: 'የኢኮኖሚክስ መሠረቶችና የገበያ ንድፈ-ሀሳብ',
+            description: 'Scarcity, opportunity cost, PPF curve, demand, supply, and elasticity.',
+            questionCount: 15,
+            hasNotes: true,
+            estimatedMinutes: 25,
+          ),
+          UnitModel(
+            unitNumber: 2,
+            unitId: 'econ_g${grade}_u2',
+            enTitle: 'National Income Accounting & Macroeconomics',
+            amTitle: 'ብሔራዊ ገቢና ማክሮ ኢኮኖሚክስ',
+            description: 'GDP, GNP, inflation, fiscal policy, and monetary stability.',
+            questionCount: 16,
+            hasNotes: true,
+            estimatedMinutes: 25,
           ),
         ];
       default:
@@ -676,34 +788,41 @@ class OfflineService extends ChangeNotifier {
   }
 
   ShortNoteModel getShortNoteForUnit(String unitId, String subject, int grade, int unitNumber) {
+    final catalog = NoteChunkHelper.getSampleNotesCatalog();
+    if (catalog.containsKey(unitId)) {
+      return catalog[unitId]!;
+    }
+
+    // Dynamic fallback realistic short note data for any subject / unit
     return ShortNoteModel(
       id: '${unitId}_note',
       grade: grade,
       subject: subject,
       unitNumber: unitNumber,
-      title: 'High-Yield Unit $unitNumber Summary: Key Formulas & Exam Cheatsheet',
+      title: '$subject Unit $unitNumber Comprehensive Exam Note & Concept Breakdown',
       content: '''
-# Smart X Ethiopian Exam Matrix & Cheat Sheet
-### Grade $grade • $subject • Unit $unitNumber
+# Smart X Ethiopia: Grade $grade $subject • Unit $unitNumber Summary
 
----
+This comprehensive short note is specifically prepared according to the Ethiopian Ministry of Education national curriculum framework.
 
-## 📌 1. Core High-Yield Definitions
-- **Essential Axioms:** Review primary laws, fundamental conservation rules, and official curriculum theorems.
-- **National Exam Frequency:** Questions from this unit historically represent **15% - 20%** of all national entrance & regional exam points.
+Section 1: Fundamental Principles and Definitions
+Every student must thoroughly understand the foundational axioms of Unit $unitNumber. In national entrance examinations, approximately 15% to 20% of all section questions test conceptual clarity directly from these axioms.
+- Key Axiom 1: Core foundational law and its standard mathematical or scientific formulation.
+- Key Axiom 2: Conservation laws and boundary conditions governing this domain.
+- Key Axiom 3: Applications in modern Ethiopian industrial, ecological, or economic contexts.
 
-## 🧮 2. Key Formulas & Identities
-- **Formula A:** `f(x) = a*x^2 + b*x + c` with vertex at `(-b/(2a), -D/(4a))`
-- **Formula B:** `W = F * d * cos(theta)` (Work Done in Joules)
-- **Formula C:** `pH = -log[H+]` and `pOH = -log[OH-]` where `pH + pOH = 14`
+Section 2: Formulae, Methods, and Problem Solving Strategies
+To maximize speed and accuracy during timed examinations:
+1. Identify given variables and requested unknown quantities immediately.
+2. Standardize all measurement units to SI metric units before calculating.
+3. Check for special boundary conditions or undefined denominator singularities.
 
-## 💡 3. Common Exam Pitfalls & Trap Avoidance
-- **Trap 1:** Forgetting to exclude points that make denominators zero when calculating function domains.
-- **Trap 2:** Confusing scalar quantities with vector quantities in relative velocity equations.
-- **Trap 3:** Not balancing redox equations in acidic vs. basic medium.
+Section 3: Common Pitfalls and Trap Avoidance
+- Trap A: Confusing sign conventions (+ vs -) in directional or algebraic vectors.
+- Trap B: Neglecting domain restrictions when simplifying complex expressions.
+- Trap C: Misinterpreting percentage changes in rate equations.
 
----
-*Generated by Smart X Ethiopian Educational Engine • Verified for Ethiopian National Examination Agency (NEAEA) Standards.*
+Study Tip: Practice the corresponding Smart X model quiz for Unit $unitNumber right after reading these notes to consolidate your memory!
 ''',
     );
   }

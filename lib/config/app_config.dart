@@ -13,6 +13,11 @@ class AppConfig {
   static const String supabaseUrl = 'https://nxyggytcmvlyfquptwrd.supabase.co';
   static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54eWdneXRjbXZseWZxdXB0d3JkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzODk1ODIsImV4cCI6MjA1NTk2NTU4Mn0.fE16_P_k1o0mQy7q_L4V-bVwH7K8P9n3Z4j4l3q-Vz0';
 
+  // Google Analytics (GA4) Configuration for Ethiopian Active Users
+  static const String ga4MeasurementId = 'G-SMARTXETH01';
+  static const String ga4ApiSecret = 'ga4_smartx_eth_sec_2026';
+  static const String ga4StreamId = '9876543210';
+
   // Primary Theme Colors (Emerald Green, Warm Amber, Dark Slate)
   static const Color primaryGreen = Color(0xFF10B981);
   static const Color primaryGreenDark = Color(0xFF059669);
@@ -89,16 +94,6 @@ final List<SubjectConfig> allSubjects = [
     totalUnits: 6,
   ),
   const SubjectConfig(
-    id: 'english',
-    code: 'ENG',
-    enTitle: 'English',
-    amTitle: 'እንግሊዝኛ',
-    primaryColor: Color(0xFFF59E0B),
-    secondaryColor: Color(0xFFD97706),
-    icon: Icons.menu_book_outlined,
-    totalUnits: 10,
-  ),
-  const SubjectConfig(
     id: 'history',
     code: 'HIST',
     enTitle: 'History',
@@ -119,16 +114,6 @@ final List<SubjectConfig> allSubjects = [
     totalUnits: 6,
   ),
   const SubjectConfig(
-    id: 'civics',
-    code: 'CIV',
-    enTitle: 'Civics',
-    amTitle: 'ሥነ-ዜጋ',
-    primaryColor: Color(0xFF14B8A6),
-    secondaryColor: Color(0xFF0F766E),
-    icon: Icons.gavel_outlined,
-    totalUnits: 5,
-  ),
-  const SubjectConfig(
     id: 'economics',
     code: 'ECON',
     enTitle: 'Economics',
@@ -137,15 +122,5 @@ final List<SubjectConfig> allSubjects = [
     secondaryColor: Color(0xFF4338CA),
     icon: Icons.trending_up_outlined,
     totalUnits: 6,
-  ),
-  const SubjectConfig(
-    id: 'agriculture',
-    code: 'AGRI',
-    enTitle: 'Agriculture',
-    amTitle: 'ግብርና',
-    primaryColor: Color(0xFF84CC16),
-    secondaryColor: Color(0xFF4D7C0F),
-    icon: Icons.eco_outlined,
-    totalUnits: 5,
   ),
 ];

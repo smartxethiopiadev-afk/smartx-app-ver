@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../config/app_config.dart';
-import '../models/download_analytics_model.dart';
 import '../models/subject_model.dart';
 import '../services/offline_service.dart';
 import 'quiz_screen.dart';
@@ -144,7 +143,7 @@ class DownloadsScreen extends StatelessWidget {
             else
               ListView.separated(
                 shrinkWrap: true,
-                physics: const NeverScrollableScrollException(),
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: downloads.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {

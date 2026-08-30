@@ -149,6 +149,7 @@ Student: ${offline.profile.fullName} (${offline.profile.phoneNumber})
                 onPressed: isSubmitting
                     ? null
                     : () async {
+                        final messenger = ScaffoldMessenger.of(context);
                         setModalState(() => isSubmitting = true);
                         await offline.reportQuestionError(
                           questionId: question.id,
@@ -156,15 +157,15 @@ Student: ${offline.profile.fullName} (${offline.profile.phoneNumber})
                           questionText: question.questionText,
                           reason: reasonController.text.trim().isEmpty ? 'Flagged by student' : reasonController.text.trim(),
                         );
-                        if (mounted) {
+                        if (ctx.mounted) {
                           Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(isAm ? 'ጥቆማዎ ለገምጋሚዎች ደርሷል!' : 'Question report submitted successfully!'),
-                              backgroundColor: AppConfig.primaryGreen,
-                            ),
-                          );
                         }
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(isAm ? 'ጥቆማዎ ለገምጋሚዎች ደርሷል!' : 'Question report submitted successfully!'),
+                            backgroundColor: AppConfig.primaryGreen,
+                          ),
+                        );
                       },
                 child: Text(isAm ? 'ላክ' : 'Submit'),
               ),
