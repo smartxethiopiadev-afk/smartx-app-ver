@@ -395,7 +395,7 @@ class HomeScreen extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  '${subject.totalUnits} Units',
+                                  '${offline.getUnitsForSubject(subject.id, currentGrade).length} Units',
                                   style: const TextStyle(color: Colors.white60, fontSize: 10),
                                 ),
                               ),
