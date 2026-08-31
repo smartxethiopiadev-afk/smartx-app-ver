@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_function_declarations_over_variables, use_build_context_synchronously, unnecessary_brace_in_string_interps
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';

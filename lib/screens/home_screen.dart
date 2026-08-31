@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, overridden_fields, prefer_const_declarations, use_build_context_synchronously
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:ui';

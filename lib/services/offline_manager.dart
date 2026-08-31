@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_conditional_assignment
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';

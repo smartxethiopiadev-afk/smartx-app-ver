@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_final_fields, prefer_const_constructors, prefer_const_literals_to_create_immutables, use_build_context_synchronously
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' show ImageFilter;

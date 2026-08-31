@@ -1,3 +1,4 @@
+// ignore_for_file: overridden_fields
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
