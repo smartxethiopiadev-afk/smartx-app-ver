@@ -20,7 +20,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
   int _currentSlideIndex = 0;
   final CarouselSliderController _carouselController = CarouselSliderController();
 
-  // 3 Education Oriented high quality slides with translated titles and descriptions
+  // Education Oriented high quality slides with translated titles and descriptions
   final List<Map<String, dynamic>> _slidesData = [
     {
       'assetPath': 'assets/images/student_phone.png',
@@ -29,6 +29,8 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
       'descEn': 'Connect and share summaries and matric preparation strategies with students nationwide.',
       'descAm': 'አጠቃላይ ማጠቃለያዎችን እና የማትሪክ ዝግጅቶችን በሀገር አቀፍ ደረጃ ካሉ ተማሪዎች ጋር ይጋሩ።',
       'accentColor': Color(0xFF0084FF),
+      'tagEn': 'SMART X LEARNING',
+      'tagAm': 'ስማርት ኤክስ ትምህርት',
     },
     {
       'assetPath': 'assets/images/student_tablet.png',
@@ -37,6 +39,8 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
       'descEn': 'Unlock high-quality practice tests, interactive flashcards, and verified solutions.',
       'descAm': 'ከፍተኛ ጥራት ያላቸው የልምምድ ፈተናዎች፣ አጫጭር ካርዶች እና የተረጋገጡ ማብራሪያዎችን ያግኙ።',
       'accentColor': Color(0xFF10B981),
+      'tagEn': 'MATRIC READY',
+      'tagAm': 'ለፈተና ዝግጁ',
     },
     {
       'assetPath': 'assets/images/student_laptop.png',
@@ -45,6 +49,28 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
       'descEn': 'Monitor study hours, completed chapters, and detailed mock success statistics.',
       'descAm': 'የጥናት ሰዓታትን፣ ያለቁ ምዕራፎችን እና ዝርዝር የፈተና ውጤቶችን ይቆጣጠሩ።',
       'accentColor': Color(0xFFF59E0B),
+      'tagEn': 'STUDY ANALYTICS',
+      'tagAm': 'የውጤት ትንታኔ',
+    },
+    {
+      'assetPath': 'assets/images/student_phone.png',
+      'titleEn': 'Offline Study Anywhere',
+      'titleAm': 'ያለ ኢንተርኔት በየትኛውም ቦታ ያጥኑ',
+      'descEn': 'Download any textbook unit, chapter notes, and mock tests to study offline smoothly.',
+      'descAm': 'የትምህርት ክፍሎችን፣ አጫጭር ማስታወሻዎችን እና የልምምድ ፈተናዎችን አውርደው ያለ ኢንተርኔት ይጠቀሙ።',
+      'accentColor': Color(0xFF8B5CF6),
+      'tagEn': 'OFFLINE READY',
+      'tagAm': 'ከመስመር ውጭ ዝግጁ',
+    },
+    {
+      'assetPath': 'assets/images/student_tablet.png',
+      'titleEn': 'Short Notes & Cheat Cards',
+      'titleAm': 'ፈጣን ማጠቃለያዎች እና አጫጭር ኖቶች',
+      'descEn': 'Master complex formulas and key concepts in minutes with curated high-yield notes.',
+      'descAm': 'አስቸጋሪ ፎርሙላዎችን እና ቁልፍ ፅንሰ ሀሳቦችን በቀላሉ በሚረዱ ማጠቃለያዎች በፍጥነት ይያዙ።',
+      'accentColor': Color(0xFFEC4899),
+      'tagEn': 'HIGH-YIELD NOTES',
+      'tagAm': 'ምርጥ ማጠቃለያ',
     },
   ];
 
@@ -137,7 +163,9 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                               border: Border.all(color: accentColor, width: 1),
                             ),
                             child: Text(
-                              widget.languageCode == 'en' ? 'SMART X LEARNING' : 'ስማርት ኤክስ ትምህርት',
+                              widget.languageCode == 'en' 
+                                  ? (slide['tagEn'] ?? 'SMART X LEARNING') 
+                                  : (slide['tagAm'] ?? 'ስማርት ኤክስ ትምህርት'),
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 8.0,

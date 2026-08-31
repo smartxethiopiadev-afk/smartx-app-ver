@@ -133,20 +133,6 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
         'illustration': const ChemistryFlaskWidget(),
       },
       {
-        'id': 'Geography',
-        'amTitle': 'ጂኦግራፊ',
-        'enTitle': 'Geography',
-        'color': const Color(0xFF8E24AA),
-        'illustration': const WorldMapGeographyWidget(),
-      },
-      {
-        'id': 'History',
-        'amTitle': 'ታሪክ',
-        'enTitle': 'History',
-        'color': const Color(0xFFF5B041),
-        'illustration': const AksumObeliskWidget(),
-      },
-      {
         'id': 'English',
         'amTitle': 'እንግሊዝኛ',
         'enTitle': 'English',
@@ -161,25 +147,41 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
         'illustration': const CivicsGavelWidget(),
       },
       {
-        'id': 'Economics',
-        'amTitle': 'ኢኮኖሚክስ',
-        'enTitle': 'Economics',
-        'color': const Color(0xFF0F766E),
-        'illustration': const EconomicsChartWidget(),
-      },
-      {
         'id': 'Agriculture',
         'amTitle': 'ግብርና',
         'enTitle': 'Agriculture',
         'color': const Color(0xFF8D6E63),
         'illustration': const AgricultureSproutWidget(),
       },
+      {
+        'id': 'Geography',
+        'amTitle': 'ጂኦግራፊ',
+        'enTitle': 'Geography',
+        'color': const Color(0xFF8E24AA),
+        'illustration': const WorldMapGeographyWidget(),
+      },
+      {
+        'id': 'History',
+        'amTitle': 'ታሪክ',
+        'enTitle': 'History',
+        'color': const Color(0xFFF5B041),
+        'illustration': const AksumObeliskWidget(),
+      },
+      {
+        'id': 'Economics',
+        'amTitle': 'ኢኮኖሚክስ',
+        'enTitle': 'Economics',
+        'color': const Color(0xFF0F766E),
+        'illustration': const EconomicsChartWidget(),
+      },
     ];
 
-    if (_selectedGrade == 11 || _selectedGrade == 12) {
-      return allSubjects.where((s) => s['id'] != 'Civics').toList();
-    } else {
+    if (_selectedGrade == 9 || _selectedGrade == 10) {
+      // Grade 9 & 10 include Civics, English, and general subjects; Agriculture is for Grade 11 & 12
       return allSubjects.where((s) => s['id'] != 'Agriculture').toList();
+    } else {
+      // Grade 11 & 12 include Agriculture and stream-oriented subjects; Civics is excluded from Grade 11/12
+      return allSubjects.where((s) => s['id'] != 'Civics').toList();
     }
   }
 
