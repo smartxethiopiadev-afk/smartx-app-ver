@@ -472,81 +472,60 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 }
 
-/// A modern, high-definition brand logo image component with glowing aura and sleek rounded frame.
+/// A modern, high-definition brand logo image component with luminous glow and clean transparent background.
 class _ModernBrandLogoImage extends StatelessWidget {
   const _ModernBrandLogoImage();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 108,
-      height: 108,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [
-            const Color(0xFF00D2FF).withValues(alpha: 0.30),
-            const Color(0xFF0072FF).withValues(alpha: 0.12),
-            Colors.transparent,
-          ],
-          radius: 0.85,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF00D2FF).withValues(alpha: 0.35),
-            blurRadius: 32,
-            spreadRadius: 3,
+    return SizedBox(
+      width: 120,
+      height: 120,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Soft ambient glow directly behind the logo without hard circular boundaries
+          Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF00D2FF).withValues(alpha: 0.35),
+                  blurRadius: 36,
+                  spreadRadius: 8,
+                ),
+                BoxShadow(
+                  color: const Color(0xFF0284C7).withValues(alpha: 0.20),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
           ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+          Image.asset(
+            'assets/images/smart_x_logo.png',
+            width: 100,
+            height: 100,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return Image.asset(
+                'assets/images/app_icon.png',
+                width: 100,
+                height: 100,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error2, stackTrace2) {
+                  return const Icon(
+                    Icons.auto_stories_rounded,
+                    color: Color(0xFF00D2FF),
+                    size: 56,
+                  );
+                },
+              );
+            },
           ),
         ],
-      ),
-      child: Center(
-        child: Container(
-          width: 88,
-          height: 88,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFF0B1426),
-            border: Border.all(
-              color: const Color(0xFF00E5FF).withValues(alpha: 0.6),
-              width: 2.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF00D2FF).withValues(alpha: 0.25),
-                blurRadius: 16,
-              ),
-            ],
-          ),
-          child: ClipOval(
-            child: Image.asset(
-              'assets/images/smart_x_logo.png',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Image.asset(
-                  'assets/images/app_icon.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error2, stackTrace2) {
-                    return Container(
-                      color: const Color(0xFF0F172A),
-                      child: const Center(
-                        child: Icon(
-                          Icons.auto_stories_rounded,
-                          color: Color(0xFF00D2FF),
-                          size: 40,
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ),
       ),
     );
   }
