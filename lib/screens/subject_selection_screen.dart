@@ -101,7 +101,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
     return localized[languageCode]?[key] ?? key;
   }
 
-  // Define subjects with Amharic & English representation plus custom coloring/drawing style
+  // Define subjects with Amharic & English representation plus custom vector graphics
   List<Map<String, dynamic>> _getSubjects() {
     final allSubjects = [
       {
@@ -133,27 +133,6 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
         'illustration': const ChemistryFlaskWidget(),
       },
       {
-        'id': 'English',
-        'amTitle': 'እንግሊዝኛ',
-        'enTitle': 'English',
-        'color': const Color(0xFF6D28D9),
-        'illustration': const EnglishBookWidget(),
-      },
-      {
-        'id': 'Civics',
-        'amTitle': 'ዜግነት',
-        'enTitle': 'Civics',
-        'color': const Color(0xFF1E88E5),
-        'illustration': const CivicsGavelWidget(),
-      },
-      {
-        'id': 'Agriculture',
-        'amTitle': 'ግብርና',
-        'enTitle': 'Agriculture',
-        'color': const Color(0xFF8D6E63),
-        'illustration': const AgricultureSproutWidget(),
-      },
-      {
         'id': 'Geography',
         'amTitle': 'ጂኦግራፊ',
         'enTitle': 'Geography',
@@ -176,13 +155,8 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
       },
     ];
 
-    if (_selectedGrade == 9 || _selectedGrade == 10) {
-      // Grade 9 & 10 include Civics, English, and general subjects; Agriculture is for Grade 11 & 12
-      return allSubjects.where((s) => s['id'] != 'Agriculture').toList();
-    } else {
-      // Grade 11 & 12 include Agriculture and stream-oriented subjects; Civics is excluded from Grade 11/12
-      return allSubjects.where((s) => s['id'] != 'Civics').toList();
-    }
+    // Civics, English, and Agriculture are excluded for all Grade 9-12 views
+    return allSubjects;
   }
 
   void _navigateToUnitSelectionScreen(Map<String, dynamic> subject, AppStateProvider appState) {
