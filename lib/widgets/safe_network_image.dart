@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_vector_logo.dart';
 
 /// A robust image widget that loads a network image with timeout & error handling,
 /// seamlessly falling back to a local asset image if offline or if loading fails.
@@ -107,21 +108,9 @@ class SafeNetworkImage extends StatelessWidget {
       height: height,
       color: const Color(0xFF1E293B),
       child: Center(
-        child: Image.asset(
-          fallbackAssetPath,
-          width: width != null ? width! * 0.5 : 48,
-          height: height != null ? height! * 0.5 : 48,
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              padding: const EdgeInsets.all(12),
-              child: const Icon(
-                Icons.school_rounded,
-                size: 36,
-                color: Color(0xFF00BFFF),
-              ),
-            );
-          },
+        child: AppVectorLogo(
+          size: width != null ? (width! * 0.45).clamp(24.0, 64.0) : 40.0,
+          showGlow: false,
         ),
       ),
     );

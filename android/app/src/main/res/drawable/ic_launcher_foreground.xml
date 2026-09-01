@@ -1,82 +1,69 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <!-- Shield Glow & Body -->
+    
+    <!-- Outer Shield Container (Hexagonal Dark Midnight Navy) -->
     <path
-        android:pathData="M32,24 L76,24 C80,50 70,74 54,84 C38,74 28,50 32,24 Z"
-        android:fillColor="#0D213F"/>
-
-    <!-- Shield Border (Cyan to Blue) -->
-    <path
-        android:pathData="M32,24 L76,24 C80,50 70,74 54,84 C38,74 28,50 32,24 Z"
+        android:fillColor="#0D1B2A"
+        android:strokeColor="#00F0FF"
         android:strokeWidth="2.5"
-        android:strokeColor="#00D2FF"
+        android:strokeLineJoin="round"
+        android:pathData="M54,14 L88,34 L88,74 L54,94 L20,74 L20,34 Z" />
+    
+    <!-- Academic Mortarboard Graduation Crest (Top) -->
+    <path
+        android:fillColor="#0284C7"
+        android:strokeColor="#E0F2FE"
+        android:strokeWidth="1.5"
+        android:strokeLineJoin="round"
+        android:pathData="M54,22 L76,32 L54,42 L32,32 Z" />
+    
+    <!-- Golden Graduation Tassel -->
+    <path
+        android:strokeColor="#FFD200"
+        android:strokeWidth="1.8"
         android:strokeLineCap="round"
-        android:strokeLineJoin="round"/>
-
-    <!-- Inner Shield Accent Line -->
+        android:pathData="M54,32 Q78,34 79,46" />
     <path
-        android:pathData="M36,28 L72,28 C75,48 67,68 54,77 C41,68 33,48 36,28 Z"
-        android:strokeWidth="1.0"
-        android:strokeColor="#0284C7"/>
-
-    <!-- Open Book Pages (Bottom base) -->
+        android:fillColor="#FFD200"
+        android:pathData="M79,48m-2.2,0a2.2,2.2 0,1 1,4.4 0a2.2,2.2 0,1 1,-4.4 0" />
+    
+    <!-- Open Book of Knowledge Leaves (Bottom) -->
     <path
-        android:pathData="M54,67 C47,64 39,66 34,70 L34,75 C40,71 47,70 54,73 Z"
-        android:fillColor="#0284C7"/>
-    <path
-        android:pathData="M54,67 C61,64 69,66 74,70 L74,75 C68,71 61,70 54,73 Z"
-        android:fillColor="#38BDF8"/>
-    <path
-        android:pathData="M54,67 C47,64 39,66 34,70 L34,75 C40,71 47,70 54,73 C61,70 68,71 74,75 L74,70 C69,66 61,64 54,67 Z"
-        android:strokeWidth="1"
-        android:strokeColor="#E0F2FE"/>
-
-    <!-- Sprout / Leaves (Green Growth) -->
-    <path
-        android:pathData="M52,62 C43,59 42,52 47,48 C52,53 50,59 52,62 Z"
-        android:fillColor="#4ADE80"/>
-    <path
-        android:pathData="M56,62 C65,59 66,52 61,48 C56,53 58,59 56,62 Z"
-        android:fillColor="#22C55E"/>
-
-    <!-- Golden Light Bulb of Knowledge (Central Core) -->
-    <path
-        android:pathData="M54,43 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0"
-        android:fillColor="#F59E0B"/>
-    <path
-        android:pathData="M54,43 m-13,0 a13,13 0 1,0 26,0 a13,13 0 1,0 -26,0"
-        android:strokeWidth="1.5"
-        android:strokeColor="#FEF08A"/>
-
-    <!-- Inner Core Glow -->
-    <path
-        android:pathData="M54,43 m-8,0 a8,8 0 1,0 16,0 a8,8 0 1,0 -16,0"
-        android:fillColor="#FBBF24"/>
-
-    <!-- Central 'X' of Smart X -->
-    <path
-        android:pathData="M48,37 L60,49 M60,37 L48,49"
-        android:strokeWidth="3.2"
-        android:strokeColor="#0F172A"
-        android:strokeLineCap="round"/>
-
-    <!-- Inner Highlight on X -->
-    <path
-        android:pathData="M49,38 L59,48 M59,38 L49,48"
-        android:strokeWidth="1.2"
+        android:fillColor="#00E5FF"
         android:strokeColor="#FFFFFF"
-        android:strokeLineCap="round"/>
-
-    <!-- Top Spark of Wisdom -->
+        android:strokeWidth="1.2"
+        android:strokeLineJoin="round"
+        android:pathData="M54,76 C42,74 34,77 28,84 C36,77 46,80 54,84 Z" />
     <path
-        android:pathData="M54,26 L54,29 M54,57 L54,60 M38,43 L41,43 M67,43 L70,43"
-        android:strokeWidth="1.5"
-        android:strokeColor="#FEF08A"
-        android:strokeLineCap="round"/>
-
+        android:fillColor="#0284C7"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.2"
+        android:strokeLineJoin="round"
+        android:pathData="M54,76 C66,74 74,77 80,84 C72,77 62,80 54,84 Z" />
+    
+    <!-- Intelligent 'X' Core Ribbons (Intersecting Knowledge Rays) -->
+    <path
+        android:fillColor="#00F0FF"
+        android:pathData="M37,44 L47,41 L69,69 L59,72 Z" />
+    <path
+        android:fillColor="#818CF8"
+        android:pathData="M69,44 L59,41 L37,69 L47,72 Z" />
+    
+    <!-- Central Luminous Prism Spark -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#00F0FF"
+        android:strokeWidth="1.2"
+        android:pathData="M54,48 L62,56 L54,64 L46,56 Z" />
+    
+    <!-- Corner Light Nodes -->
+    <path
+        android:fillColor="#00F0FF"
+        android:pathData="M54,18m-1.8,0a1.8,1.8 0,1 1,3.6 0a1.8,1.8 0,1 1,-3.6 0" />
+    <path
+        android:fillColor="#6366F1"
+        android:pathData="M54,90m-1.8,0a1.8,1.8 0,1 1,3.6 0a1.8,1.8 0,1 1,-3.6 0" />
 </vector>

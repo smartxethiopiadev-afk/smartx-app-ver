@@ -73,7 +73,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late AnimationController _pulseController;
   late AnimationController _entranceController;
   
-  late Animation<double> _emblemScaleAnimation;
   late Animation<double> _titleFadeAnimation;
   late Animation<Offset> _titleSlideAnimation;
   late Animation<double> _spinnerFadeAnimation;
@@ -91,23 +90,16 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       duration: const Duration(seconds: 20),
     )..repeat();
 
-    // Gentle breathing pulse for the vector emblem
+    // Gentle breathing pulse
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2400),
     )..repeat(reverse: true);
 
-    // Entrance animation for emblem, typography, and spinner
+    // Entrance animation for typography and spinner
     _entranceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
-    );
-
-    _emblemScaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
-      ),
     );
 
     _titleFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -309,7 +301,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               ),
             ),
 
-            // Layer 3: Central Brand Identity & Modern Vector Emblem
+            // Layer 3: Central Brand Identity & Pure Vector Logo
             SafeArea(
               child: Center(
                 child: Column(
@@ -318,27 +310,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   children: [
                     const Spacer(flex: 12),
 
-                    // Modern Vector Emblem for Smart X
-                    AnimatedBuilder(
-                      animation: Listenable.merge([_entranceController, _pulseController]),
-                      builder: (context, child) {
-                        final double scale = _emblemScaleAnimation.value;
-                        final double pulse = 1.0 + (_pulseController.value * 0.035);
-                        final double opacity = _titleFadeAnimation.value;
-
-                        return Opacity(
-                          opacity: opacity,
-                          child: Transform.scale(
-                            scale: scale * pulse,
-                            child: const _SmartXVectorEmblem(),
-                          ),
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 28),
-
-                    // Central App Name: "Smart X Ethiopian"
+                    // Central App Name Message: "Smart X Ethiopian"
                     SlideTransition(
                       position: _titleSlideAnimation,
                       child: FadeTransition(
@@ -346,7 +318,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Main Title with sleek modern typography
+                            // Main Title typography
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -355,7 +327,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                 Text(
                                   'Smart ',
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 32,
+                                    fontSize: 36,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: -0.4,
                                     color: Colors.white,
@@ -377,7 +349,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                   child: Text(
                                     'X',
                                     style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 34,
+                                      fontSize: 38,
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: 0.5,
                                       color: Colors.white,
@@ -394,7 +366,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                 Text(
                                   ' Ethiopian',
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 32,
+                                    fontSize: 36,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 0.4,
                                     color: Colors.white,
@@ -410,15 +382,15 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                               ],
                             ),
 
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 12),
 
-                            // Academic / Intelligent Learning Platform Tagline
+                            // Platform Subtitle Message
                             Text(
                               'INTELLIGENT LEARNING PLATFORM',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 10.5,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                letterSpacing: 3.2,
+                                letterSpacing: 3.5,
                                 color: const Color(0xFF94A3B8).withValues(alpha: 0.85),
                               ),
                             ),
@@ -445,21 +417,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                     ),
 
                     const Spacer(flex: 14),
-
-                    // Minimal Footer Note
-                    FadeTransition(
-                      opacity: _spinnerFadeAnimation,
-                      child: Text(
-                        'ETHIOPIAN CURRICULUM EXCELLENCE',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 2.4,
-                          color: const Color(0xFF64748B).withValues(alpha: 0.65),
-                        ),
-                      ),
-                    ),
-
                     const SizedBox(height: 22),
                   ],
                 ),
@@ -470,234 +427,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       ),
     );
   }
-}
-
-/// A clean, modern vector emblem for Smart X with glowing illumination, shield of wisdom, and book/light rays.
-class _SmartXVectorEmblem extends StatelessWidget {
-  const _SmartXVectorEmblem();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 124,
-      height: 124,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Soft ambient radial glow
-          Container(
-            width: 110,
-            height: 110,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF00D2FF).withValues(alpha: 0.35),
-                  blurRadius: 40,
-                  spreadRadius: 8,
-                ),
-                BoxShadow(
-                  color: const Color(0xFF0284C7).withValues(alpha: 0.25),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-          ),
-          // Pure Vector Illustration for Smart X Logo
-          CustomPaint(
-            size: const Size(116, 116),
-            painter: _SmartXEmblemPainter(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Custom painter rendering a clean, sharp vector emblem featuring:
-/// - A modern academic shield with cyan/sapphire border
-/// - Open pages of wisdom
-/// - Golden lightbulb with the central 'X' letter
-/// - Growth leaves and luminous highlights
-class _SmartXEmblemPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-
-    // 1. Shield Path
-    final Path shieldPath = Path();
-    shieldPath.moveTo(w * 0.20, h * 0.16);
-    shieldPath.lineTo(w * 0.80, h * 0.16);
-    shieldPath.cubicTo(
-      w * 0.84, h * 0.46,
-      w * 0.72, h * 0.76,
-      w * 0.50, h * 0.90,
-    );
-    shieldPath.cubicTo(
-      w * 0.28, h * 0.76,
-      w * 0.16, h * 0.46,
-      w * 0.20, h * 0.16,
-    );
-    shieldPath.close();
-
-    // Shield Background Fill
-    final Paint shieldBg = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFF0E2246),
-          Color(0xFF07142A),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(shieldPath, shieldBg);
-
-    // Shield Border Stroke
-    final Paint shieldBorder = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Color(0xFF00F0FF),
-          Color(0xFF0072FF),
-          Color(0xFF00E5FF),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, w, h))
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.2
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(shieldPath, shieldBorder);
-
-    // 2. Open Book at the bottom of shield
-    final Path leftPage = Path()
-      ..moveTo(w * 0.50, h * 0.73)
-      ..cubicTo(w * 0.42, h * 0.70, w * 0.32, h * 0.72, w * 0.26, h * 0.77)
-      ..lineTo(w * 0.26, h * 0.83)
-      ..cubicTo(w * 0.33, h * 0.78, w * 0.42, h * 0.77, w * 0.50, h * 0.80)
-      ..close();
-
-    final Path rightPage = Path()
-      ..moveTo(w * 0.50, h * 0.73)
-      ..cubicTo(w * 0.58, h * 0.70, w * 0.68, h * 0.72, w * 0.74, h * 0.77)
-      ..lineTo(w * 0.74, h * 0.83)
-      ..cubicTo(w * 0.67, h * 0.78, w * 0.58, h * 0.77, w * 0.50, h * 0.80)
-      ..close();
-
-    final Paint bookPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFF38BDF8),
-          Color(0xFF0284C7),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(leftPage, bookPaint);
-    canvas.drawPath(rightPage, bookPaint);
-
-    final Paint bookBorder = Paint()
-      ..color = const Color(0xFFE0F2FE)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4;
-    canvas.drawPath(leftPage, bookBorder);
-    canvas.drawPath(rightPage, bookBorder);
-
-    // 3. Green Growth Sprout Leaves
-    final Paint leafPaint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFF4ADE80), Color(0xFF16A34A)],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-
-    final Path leftLeaf = Path()
-      ..moveTo(w * 0.48, h * 0.66)
-      ..cubicTo(w * 0.38, h * 0.62, w * 0.36, h * 0.53, w * 0.42, h * 0.48)
-      ..cubicTo(w * 0.48, h * 0.54, w * 0.46, h * 0.62, w * 0.48, h * 0.66)
-      ..close();
-
-    final Path rightLeaf = Path()
-      ..moveTo(w * 0.52, h * 0.66)
-      ..cubicTo(w * 0.62, h * 0.62, w * 0.64, h * 0.53, w * 0.58, h * 0.48)
-      ..cubicTo(w * 0.52, h * 0.54, w * 0.54, h * 0.62, w * 0.52, h * 0.66)
-      ..close();
-
-    canvas.drawPath(leftLeaf, leafPaint);
-    canvas.drawPath(rightLeaf, leafPaint);
-
-    // 4. Glowing Golden Lightbulb / Idea Core
-    final Offset bulbCenter = Offset(w * 0.50, h * 0.42);
-    final double bulbRadius = w * 0.17;
-
-    // Outer warm aura
-    final Paint auraPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          const Color(0xFFFBBF24).withValues(alpha: 0.45),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(center: bulbCenter, radius: bulbRadius * 1.5));
-    canvas.drawCircle(bulbCenter, bulbRadius * 1.5, auraPaint);
-
-    // Lightbulb Body
-    final Paint bulbPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Color(0xFFFEF08A),
-          Color(0xFFF59E0B),
-          Color(0xFFD97706),
-        ],
-      ).createShader(Rect.fromCircle(center: bulbCenter, radius: bulbRadius));
-    canvas.drawCircle(bulbCenter, bulbRadius, bulbPaint);
-
-    final Paint bulbOutline = Paint()
-      ..color = const Color(0xFFFFFBEB)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-    canvas.drawCircle(bulbCenter, bulbRadius, bulbOutline);
-
-    // 5. Central 'X' glyph inside the glowing bulb
-    final Paint xPaint = Paint()
-      ..color = const Color(0xFF1E293B)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.6
-      ..strokeCap = StrokeCap.round;
-
-    final double xOffset = bulbRadius * 0.45;
-    canvas.drawLine(
-      Offset(bulbCenter.dx - xOffset, bulbCenter.dy - xOffset),
-      Offset(bulbCenter.dx + xOffset, bulbCenter.dy + xOffset),
-      xPaint,
-    );
-    canvas.drawLine(
-      Offset(bulbCenter.dx + xOffset, bulbCenter.dy - xOffset),
-      Offset(bulbCenter.dx - xOffset, bulbCenter.dy + xOffset),
-      xPaint,
-    );
-
-    // Inner bright spark on the X
-    final Paint sparkPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(
-      Offset(bulbCenter.dx - xOffset * 0.7, bulbCenter.dy - xOffset * 0.7),
-      Offset(bulbCenter.dx + xOffset * 0.7, bulbCenter.dy + xOffset * 0.7),
-      sparkPaint,
-    );
-    canvas.drawLine(
-      Offset(bulbCenter.dx + xOffset * 0.7, bulbCenter.dy - xOffset * 0.7),
-      Offset(bulbCenter.dx - xOffset * 0.7, bulbCenter.dy + xOffset * 0.7),
-      sparkPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Custom painter that renders clean, sophisticated geometric patterns,
