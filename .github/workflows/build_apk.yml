@@ -137,12 +137,8 @@ jobs:
 
           # 3. Generate android/key.properties directly from secrets
           echo "Generating android/key.properties and android/app/key.properties directly from secrets..."
-          cat <<EOF > android/key.properties
-storePassword=$KEYSTORE_STORE_PASSWORD
-keyPassword=$KEYSTORE_KEY_PASSWORD
-keyAlias=$KEYSTORE_ALIAS
-storeFile=upload-keystore.jks
-EOF
+          printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n" \
+            "$KEYSTORE_STORE_PASSWORD" "$KEYSTORE_KEY_PASSWORD" "$KEYSTORE_ALIAS" > android/key.properties
           cp android/key.properties android/app/key.properties
           echo "✅ key.properties generated successfully."
 
