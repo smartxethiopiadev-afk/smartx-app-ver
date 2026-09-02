@@ -2,11 +2,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// A modern, sophisticated education technology vector logo for Smart X Ethiopian:
-/// - Hexagonal futuristic wisdom emblem with royal indigo & cyan neon gradients
-/// - Graduation Cap / Academic Diamond Crest at top
-/// - Intersecting luminous 'X' intelligence ribbons
-/// - Open wings / book leaves at base representing growth and scholarship
+/// A clean, modern education technology vector logo for Smart X Ethiopian:
+/// - Hexagonal futuristic wisdom emblem with royal midnight navy & cyan neon gradients
+/// - Ethiopian flag tricolor crest (Green, Yellow, Red) at top
+/// - Central geometric 'X' mark with radiant knowledge diamond
+/// - Crisp typography: Smart X Ethiopian
 class AppVectorLogo extends StatelessWidget {
   final double size;
   final bool showGlow;
@@ -66,43 +66,52 @@ class AppVectorLogo extends StatelessWidget {
       children: [
         emblem,
         SizedBox(height: size * 0.16),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 6,
           children: [
             Text(
-              'Smart ',
+              'Smart',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: size * 0.28,
-                fontWeight: FontWeight.w700,
+                fontSize: size * 0.26,
+                fontWeight: FontWeight.w800,
                 letterSpacing: -0.2,
                 color: Colors.white,
               ),
             ),
             ShaderMask(
               shaderCallback: (bounds) => const LinearGradient(
-                colors: [Color(0xFF00F0FF), Color(0xFF6366F1)],
+                colors: [Color(0xFF00F0FF), Color(0xFF38BDF8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ).createShader(bounds),
               child: Text(
                 'X',
                 style: GoogleFonts.plusJakartaSans(
-                  fontSize: size * 0.32,
+                  fontSize: size * 0.30,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.5,
                   color: Colors.white,
                 ),
               ),
             ),
-            Text(
-              ' Ethiopian',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: size * 0.28,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.2,
-                color: Colors.white,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF009A44), Color(0xFFD97706), Color(0xFFEF3340)],
+                ),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'Ethiopian',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: size * 0.18,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],
@@ -172,72 +181,43 @@ class _EduSmartXPainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, w, h))
       ..style = PaintingStyle.stroke
       ..strokeWidth = w * 0.032
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+      ..strokeCap = StrokeCap.round;
     canvas.drawPath(hexPath, hexStroke);
 
-    // 2. Academic Graduation Cap Crest at Top
-    final Path mortarBoard = Path()
-      ..moveTo(center.dx, h * 0.20)
-      ..lineTo(w * 0.72, h * 0.30)
-      ..lineTo(center.dx, h * 0.40)
-      ..lineTo(w * 0.28, h * 0.30)
+    // 2. Ethiopian Flag Top Accent Pill (Green, Yellow, Red)
+    final double flagW = w * 0.44;
+    final double flagH = h * 0.045;
+    final double flagY = h * 0.18;
+    final double flagLeft = center.dx - flagW / 2;
+
+    final RRect greenPill = RRect.fromRectAndCorners(
+      Rect.fromLTWH(flagLeft, flagY, flagW / 3, flagH),
+      topLeft: const Radius.circular(4),
+      bottomLeft: const Radius.circular(4),
+    );
+    final RRect yellowPill = RRect.fromRectAndCorners(
+      Rect.fromLTWH(flagLeft + flagW / 3, flagY, flagW / 3, flagH),
+    );
+    final RRect redPill = RRect.fromRectAndCorners(
+      Rect.fromLTWH(flagLeft + 2 * flagW / 3, flagY, flagW / 3, flagH),
+      topRight: const Radius.circular(4),
+      bottomRight: const Radius.circular(4),
+    );
+
+    canvas.drawRRect(greenPill, Paint()..color = const Color(0xFF009A44));
+    canvas.drawRRect(yellowPill, Paint()..color = const Color(0xFFFFD100));
+    canvas.drawRRect(redPill, Paint()..color = const Color(0xFFEF3340));
+
+    // Academic Gold Diamond Sparkle
+    final Path diamond = Path()
+      ..moveTo(center.dx, h * 0.28)
+      ..lineTo(center.dx + w * 0.05, h * 0.33)
+      ..lineTo(center.dx, h * 0.38)
+      ..lineTo(center.dx - w * 0.05, h * 0.33)
       ..close();
+    canvas.drawPath(diamond, Paint()..color = const Color(0xFFFFD100));
 
-    final Paint capPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFF38BDF8),
-          Color(0xFF0284C7),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(mortarBoard, capPaint);
-
-    final Paint capOutline = Paint()
-      ..color = const Color(0xFFE0F2FE)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.016
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(mortarBoard, capOutline);
-
-    // Cap Tassel cord and bead
-    final Path tassel = Path()
-      ..moveTo(center.dx, h * 0.30)
-      ..quadraticBezierTo(w * 0.74, h * 0.32, w * 0.75, h * 0.44);
-
-    final Paint tasselPaint = Paint()
-      ..color = const Color(0xFFFFD200)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.018
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(tassel, tasselPaint);
-
-    canvas.drawCircle(Offset(w * 0.75, h * 0.45), w * 0.024, Paint()..color = const Color(0xFFFFD200));
-
-    // 3. Open Book of Knowledge Leaves at Bottom
-    final Path leftLeaf = Path()
-      ..moveTo(center.dx, h * 0.72)
-      ..cubicTo(w * 0.40, h * 0.70, w * 0.30, h * 0.74, w * 0.24, h * 0.81)
-      ..cubicTo(w * 0.32, h * 0.73, w * 0.42, h * 0.77, center.dx, h * 0.81)
-      ..close();
-
-    final Path rightLeaf = Path()
-      ..moveTo(center.dx, h * 0.72)
-      ..cubicTo(w * 0.60, h * 0.70, w * 0.70, h * 0.74, w * 0.76, h * 0.81)
-      ..cubicTo(w * 0.68, h * 0.73, w * 0.58, h * 0.77, center.dx, h * 0.81)
-      ..close();
-
-    final Paint bookFill = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFF00E5FF), Color(0xFF0284C7)],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(leftLeaf, bookFill);
-    canvas.drawPath(rightLeaf, bookFill);
-
-    // 4. Central Geometric 'X' Intelligence Core Ribbons
-    // Blade 1: Top-Left to Bottom-Right
+    // 3. Central Geometric 'X' Ribbons
     final Path blade1 = Path()
       ..moveTo(w * 0.34, h * 0.42)
       ..lineTo(w * 0.44, h * 0.39)
@@ -253,7 +233,6 @@ class _EduSmartXPainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, w, h));
     canvas.drawPath(blade1, blade1Paint);
 
-    // Blade 2: Top-Right to Bottom-Left
     final Path blade2 = Path()
       ..moveTo(w * 0.66, h * 0.42)
       ..lineTo(w * 0.56, h * 0.39)
@@ -269,30 +248,28 @@ class _EduSmartXPainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(0, 0, w, h));
     canvas.drawPath(blade2, blade2Paint);
 
-    // 5. Central Radiant Knowledge Spark / Diamond Core
+    // 4. Central Radiant Knowledge Spark
     final Path coreDiamond = Path()
-      ..moveTo(center.dx, center.dy - h * 0.08)
-      ..lineTo(center.dx + w * 0.08, center.dy)
-      ..lineTo(center.dx, center.dy + h * 0.08)
-      ..lineTo(center.dx - w * 0.08, center.dy)
+      ..moveTo(center.dx, center.dy - h * 0.07)
+      ..lineTo(center.dx + w * 0.07, center.dy)
+      ..lineTo(center.dx, center.dy + h * 0.07)
+      ..lineTo(center.dx - w * 0.07, center.dy)
       ..close();
 
-    final Paint corePaint = Paint()
-      ..shader = const RadialGradient(
-        colors: [
-          Color(0xFFFFFFFF),
-          Color(0xFF00F0FF),
-          Color(0xFF4F46E5),
-        ],
-        stops: [0.0, 0.5, 1.0],
-      ).createShader(Rect.fromCircle(center: center, radius: w * 0.09));
-    canvas.drawPath(coreDiamond, corePaint);
+    canvas.drawPath(coreDiamond, Paint()..color = Colors.white);
 
-    final Paint coreStroke = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.014;
-    canvas.drawPath(coreDiamond, coreStroke);
+    // 5. Bottom Ethiopian Accent Underline
+    final Path underline = Path()
+      ..moveTo(w * 0.30, h * 0.78)
+      ..lineTo(w * 0.70, h * 0.78);
+    canvas.drawPath(
+      underline,
+      Paint()
+        ..color = const Color(0xFFFFD100)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.02
+        ..strokeCap = StrokeCap.round,
+    );
   }
 
   @override

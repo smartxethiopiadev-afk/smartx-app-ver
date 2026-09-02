@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// A pure vector education emblem widget for Smart X Ethiopian.
-/// Renders an academic shield of wisdom, open book of knowledge,
-/// growth sprout, and a golden glowing light bulb featuring the central 'X'.
+/// A pure vector emblem widget for Smart X Ethiopian.
+/// Features a dark midnight squircle badge, Ethiopian tricolor accent (Green, Yellow, Red),
+/// geometric 'X' mark, and gold diamond sparkle.
 class SmartXVectorLogo extends StatelessWidget {
   final double size;
   final bool showGlow;
@@ -53,7 +53,7 @@ class SmartXVectorLogo extends StatelessWidget {
   }
 }
 
-/// Custom painter for the Smart X education vector emblem
+/// Custom painter for the Smart X Ethiopian vector emblem
 class SmartXVectorPainter extends CustomPainter {
   final bool showBorder;
 
@@ -63,174 +63,94 @@ class SmartXVectorPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final double w = size.width;
     final double h = size.height;
+    final Offset center = Offset(w / 2, h / 2);
 
-    // 1. Shield Path
-    final Path shieldPath = Path();
-    shieldPath.moveTo(w * 0.20, h * 0.16);
-    shieldPath.lineTo(w * 0.80, h * 0.16);
-    shieldPath.cubicTo(
-      w * 0.84, h * 0.46,
-      w * 0.72, h * 0.76,
-      w * 0.50, h * 0.90,
+    // 1. Squircle Shield
+    final RRect squircle = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.05, h * 0.05, w * 0.90, h * 0.90),
+      Radius.circular(w * 0.22),
     );
-    shieldPath.cubicTo(
-      w * 0.28, h * 0.76,
-      w * 0.16, h * 0.46,
-      w * 0.20, h * 0.16,
-    );
-    shieldPath.close();
 
-    // Shield Background Fill
-    final Paint shieldBg = Paint()
+    final Paint squircleBg = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFF0E2246),
-          Color(0xFF07142A),
-        ],
+        colors: [Color(0xFF0E2246), Color(0xFF07142A)],
       ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(shieldPath, shieldBg);
+    canvas.drawRRect(squircle, squircleBg);
 
-    // Shield Border Stroke
     if (showBorder) {
-      final Paint shieldBorder = Paint()
+      final Paint squircleBorder = Paint()
         ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF00F0FF),
-            Color(0xFF0072FF),
-            Color(0xFF00E5FF),
-          ],
+          colors: [Color(0xFF00F0FF), Color(0xFF0072FF)],
         ).createShader(Rect.fromLTWH(0, 0, w, h))
         ..style = PaintingStyle.stroke
-        ..strokeWidth = w * 0.028
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round;
-      canvas.drawPath(shieldPath, shieldBorder);
+        ..strokeWidth = w * 0.03;
+      canvas.drawRRect(squircle, squircleBorder);
     }
 
-    // 2. Open Book at base
-    final Path leftPage = Path()
-      ..moveTo(w * 0.50, h * 0.73)
-      ..cubicTo(w * 0.42, h * 0.70, w * 0.32, h * 0.72, w * 0.26, h * 0.77)
-      ..lineTo(w * 0.26, h * 0.83)
-      ..cubicTo(w * 0.33, h * 0.78, w * 0.42, h * 0.77, w * 0.50, h * 0.80)
-      ..close();
+    // 2. Ethiopian Flag Top Accent Bar (Green, Yellow, Red)
+    final double flagW = w * 0.50;
+    final double flagH = h * 0.05;
+    final double flagY = h * 0.18;
+    final double flagLeft = center.dx - flagW / 2;
 
-    final Path rightPage = Path()
-      ..moveTo(w * 0.50, h * 0.73)
-      ..cubicTo(w * 0.58, h * 0.70, w * 0.68, h * 0.72, w * 0.74, h * 0.77)
-      ..lineTo(w * 0.74, h * 0.83)
-      ..cubicTo(w * 0.67, h * 0.78, w * 0.58, h * 0.77, w * 0.50, h * 0.80)
-      ..close();
+    canvas.drawRRect(
+      RRect.fromRectAndCorners(
+        Rect.fromLTWH(flagLeft, flagY, flagW / 3, flagH),
+        topLeft: const Radius.circular(3),
+        bottomLeft: const Radius.circular(3),
+      ),
+      Paint()..color = const Color(0xFF009A44),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndCorners(
+        Rect.fromLTWH(flagLeft + flagW / 3, flagY, flagW / 3, flagH),
+      ),
+      Paint()..color = const Color(0xFFFFD100),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndCorners(
+        Rect.fromLTWH(flagLeft + 2 * flagW / 3, flagY, flagW / 3, flagH),
+        topRight: const Radius.circular(3),
+        bottomRight: const Radius.circular(3),
+      ),
+      Paint()..color = const Color(0xFFEF3340),
+    );
 
-    final Paint bookPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFF38BDF8),
-          Color(0xFF0284C7),
-        ],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(leftPage, bookPaint);
-    canvas.drawPath(rightPage, bookPaint);
-
-    final Paint bookBorder = Paint()
-      ..color = const Color(0xFFE0F2FE)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.012;
-    canvas.drawPath(leftPage, bookBorder);
-    canvas.drawPath(rightPage, bookBorder);
-
-    // 3. Green Growth Sprout Leaves
-    final Paint leafPaint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFF4ADE80), Color(0xFF16A34A)],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-
-    final Path leftLeaf = Path()
-      ..moveTo(w * 0.48, h * 0.66)
-      ..cubicTo(w * 0.38, h * 0.62, w * 0.36, h * 0.53, w * 0.42, h * 0.48)
-      ..cubicTo(w * 0.48, h * 0.54, w * 0.46, h * 0.62, w * 0.48, h * 0.66)
-      ..close();
-
-    final Path rightLeaf = Path()
-      ..moveTo(w * 0.52, h * 0.66)
-      ..cubicTo(w * 0.62, h * 0.62, w * 0.64, h * 0.53, w * 0.58, h * 0.48)
-      ..cubicTo(w * 0.52, h * 0.54, w * 0.54, h * 0.62, w * 0.52, h * 0.66)
-      ..close();
-
-    canvas.drawPath(leftLeaf, leafPaint);
-    canvas.drawPath(rightLeaf, leafPaint);
-
-    // 4. Glowing Golden Lightbulb / Idea Core
-    final Offset bulbCenter = Offset(w * 0.50, h * 0.42);
-    final double bulbRadius = w * 0.17;
-
-    final Paint auraPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          const Color(0xFFFBBF24).withValues(alpha: 0.45),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(center: bulbCenter, radius: bulbRadius * 1.5));
-    canvas.drawCircle(bulbCenter, bulbRadius * 1.5, auraPaint);
-
-    final Paint bulbPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Color(0xFFFEF08A),
-          Color(0xFFF59E0B),
-          Color(0xFFD97706),
-        ],
-      ).createShader(Rect.fromCircle(center: bulbCenter, radius: bulbRadius));
-    canvas.drawCircle(bulbCenter, bulbRadius, bulbPaint);
-
-    final Paint bulbOutline = Paint()
-      ..color = const Color(0xFFFFFBEB)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.016;
-    canvas.drawCircle(bulbCenter, bulbRadius, bulbOutline);
-
-    // 5. Central 'X' glyph inside the glowing bulb
+    // 3. Central Geometric 'X'
     final Paint xPaint = Paint()
-      ..color = const Color(0xFF1E293B)
+      ..shader = const LinearGradient(
+        colors: [Color(0xFF00F0FF), Color(0xFF38BDF8)],
+      ).createShader(Rect.fromLTWH(0, 0, w, h))
       ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.032
+      ..strokeWidth = w * 0.09
       ..strokeCap = StrokeCap.round;
 
-    final double xOffset = bulbRadius * 0.45;
+    final double xSize = w * 0.20;
     canvas.drawLine(
-      Offset(bulbCenter.dx - xOffset, bulbCenter.dy - xOffset),
-      Offset(bulbCenter.dx + xOffset, bulbCenter.dy + xOffset),
+      Offset(center.dx - xSize, center.dy - xSize * 0.8),
+      Offset(center.dx + xSize, center.dy + xSize * 0.8),
       xPaint,
     );
     canvas.drawLine(
-      Offset(bulbCenter.dx + xOffset, bulbCenter.dy - xOffset),
-      Offset(bulbCenter.dx - xOffset, bulbCenter.dy + xOffset),
+      Offset(center.dx + xSize, center.dy - xSize * 0.8),
+      Offset(center.dx - xSize, center.dy + xSize * 0.8),
       xPaint,
     );
 
-    // Inner bright spark on the X
-    final Paint sparkPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.012
-      ..strokeCap = StrokeCap.round;
+    // Center Sparkle
+    canvas.drawCircle(center, w * 0.04, Paint()..color = Colors.white);
+
+    // Bottom Underline Accent
     canvas.drawLine(
-      Offset(bulbCenter.dx - xOffset * 0.7, bulbCenter.dy - xOffset * 0.7),
-      Offset(bulbCenter.dx + xOffset * 0.7, bulbCenter.dy + xOffset * 0.7),
-      sparkPaint,
-    );
-    canvas.drawLine(
-      Offset(bulbCenter.dx + xOffset * 0.7, bulbCenter.dy - xOffset * 0.7),
-      Offset(bulbCenter.dx - xOffset * 0.7, bulbCenter.dy + xOffset * 0.7),
-      sparkPaint,
+      Offset(w * 0.30, h * 0.78),
+      Offset(w * 0.70, h * 0.78),
+      Paint()
+        ..color = const Color(0xFFFFD100)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.02
+        ..strokeCap = StrokeCap.round,
     );
   }
 

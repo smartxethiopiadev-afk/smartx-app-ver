@@ -1,10 +1,12 @@
-name: Build Release APK & App Bundle (AAB)
+name: Build & Release Android App (APK & AAB)
 
 on:
   push:
     branches:
       - main
       - master
+    tags:
+      - 'v*'
   pull_request:
     branches:
       - main
@@ -13,14 +15,14 @@ on:
 
 jobs:
   build:
-    name: Build Flutter Android APK & AAB
+    name: Build & Release Flutter App
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Java Development Kit (JDK 17)
+      - name: Set up Java JDK (JDK 17)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -36,46 +38,73 @@ jobs:
       - name: Install Flutter Dependencies
         run: flutter pub get
 
-      - name: Run Flutter Code Generation
+      - name: Setup Google Services JSON from Secrets
         run: |
-          if grep -q "build_runner" pubspec.yaml; then
-            echo "Running build_runner build..."
-            flutter pub run build_runner build --delete-conflicting-outputs
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            echo "Writing google-services.json from GOOGLE_SERVICES_JSON..."
+            echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > android/app/google-services.json
+          elif [ -n "${{ secrets.GOOGLE_SERVICES_BASE64 }}" ]; then
+            echo "Decoding google-services.json from GOOGLE_SERVICES_BASE64..."
+            echo "${{ secrets.GOOGLE_SERVICES_BASE64 }}" | base64 --decode > android/app/google-services.json
           else
-            echo "No build_runner specified in pubspec.yaml, skipping."
+            echo "No google-services.json secret provided; using existing project setup if present."
+          fi
+
+      - name: Setup Signing Keystore & Key Properties from Secrets
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "Decoding release keystore from KEYSTORE_BASE64..."
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/upload-keystore.jks
+          elif [ -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ]; then
+            echo "Decoding release keystore from RELEASE_KEYSTORE_BASE64..."
+            echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > android/upload-keystore.jks
+          elif [ -n "${{ secrets.KEYSTORE_FILE }}" ]; then
+            echo "Writing keystore from KEYSTORE_FILE..."
+            echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > android/upload-keystore.jks
+          fi
+
+          if [ -n "${{ secrets.KEY_PROPERTIES }}" ]; then
+            echo "Writing key.properties from KEY_PROPERTIES..."
+            echo "${{ secrets.KEY_PROPERTIES }}" > android/key.properties
+          elif [ -n "${{ secrets.KEY_PROPERTIES_BASE64 }}" ]; then
+            echo "Decoding key.properties from KEY_PROPERTIES_BASE64..."
+            echo "${{ secrets.KEY_PROPERTIES_BASE64 }}" | base64 --decode > android/key.properties
           fi
 
       - name: Verify Code Quality & Analyze
         run: flutter analyze --no-fatal-infos
 
-      - name: Build Release APKs (Universal & Split-ABI)
-        run: |
-          flutter build apk --release
-          flutter build apk --release --split-per-abi
-
-      - name: Build Android App Bundle (AAB for Play Store)
+      - name: Build Android App Bundle (AAB for Google Play Store)
+        env:
+          KEYSTORE_KEY_ALIAS: ${{ secrets.KEY_ALIAS || secrets.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_STORE_FILE: 'upload-keystore.jks'
         run: flutter build appbundle --release
 
-      - name: Upload Universal Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-universal-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: warn
-          retention-days: 14
+      - name: Build Release Universal APK
+        env:
+          KEYSTORE_KEY_ALIAS: ${{ secrets.KEY_ALIAS || secrets.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_STORE_FILE: 'upload-keystore.jks'
+        run: flutter build apk --release
 
-      - name: Upload Split-ABI Release APKs
-        uses: actions/upload-artifact@v4
+      - name: Create GitHub Release & Upload AAB + APK Assets
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
         with:
-          name: app-release-split-abi-apks
-          path: build/app/outputs/flutter-apk/app-*-release.apk
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Upload Release Android App Bundle (AAB)
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-aab-bundle
-          path: build/app/outputs/bundle/release/app-release.aab
-          if-no-files-found: warn
-          retention-days: 14
+          tag_name: release-v1.0.${{ github.run_number }}
+          name: Smart X Ethiopian Release v1.0.${{ github.run_number }}
+          body: |
+            Production Build Release for Smart X Ethiopian.
+            
+            - **App Bundle (.aab)**: Production release for Google Play Store console upload.
+            - **Universal APK (.apk)**: Standalone installer for direct testing and installation.
+          files: |
+            build/app/outputs/bundle/release/app-release.aab
+            build/app/outputs/flutter-apk/app-release.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

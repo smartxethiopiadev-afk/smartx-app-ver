@@ -126,3 +126,9 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
 }
+
+// Dynamically apply Google Services plugin if google-services.json is present
+if (file("google-services.json").exists() || rootProject.file("google-services.json").exists() || file("src/google-services.json").exists() || file("src/main/google-services.json").exists()) {
+    println "INFO: google-services.json detected. Applying com.google.gms.google-services plugin."
+    apply plugin: 'com.google.gms.google-services'
+}

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -10,6 +9,7 @@ import 'config/app_config.dart';
 import 'screens/splash_screen.dart';
 import 'services/offline_manager.dart';
 import 'services/analytics_service.dart';
+import 'services/ad_helper.dart';
 
 void main() {
   runZonedGuarded<Future<void>>(() async {
@@ -283,7 +283,7 @@ Future<void> _initServicesBackground() async {
   
   // Initialize Mobile Ads SDK silently in background
   try {
-    await MobileAds.instance.initialize().timeout(const Duration(seconds: 4));
+    await AdHelper.initialize();
   } catch (e) {
     debugPrint('[MobileAds] Background init notice: $e');
   }
