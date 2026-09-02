@@ -77,64 +77,87 @@ jobs:
       - name: Setup Google Services JSON from Secrets
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-          GOOGLE_SERVICES_BASE64: ${{ secrets.GOOGLE_SERVICES_BASE64 }}
         run: |
           mkdir -p android/app
-          if [ -n "$GOOGLE_SERVICES_BASE64" ]; then
-            echo "Decoding google-services.json from GOOGLE_SERVICES_BASE64..."
-            echo "$GOOGLE_SERVICES_BASE64" | base64 --decode > android/app/google-services.json
-          elif [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            echo "Writing google-services.json from GOOGLE_SERVICES_JSON..."
-            printf "%s\n" "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
-          else
-            echo "No google-services.json secret provided; checking existing files..."
-          fi
-
-          # Validate JSON syntax to prevent processReleaseGoogleServices MalformedJsonException
-          if [ -f android/app/google-services.json ]; then
-            if ! python3 -c "import json, sys; json.load(open('android/app/google-services.json'))" 2>/dev/null; then
-              echo "WARNING: android/app/google-services.json is invalid or malformed JSON! Removing file to prevent build failure."
-              rm -f android/app/google-services.json
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "Processing google-services.json from GOOGLE_SERVICES_JSON secret..."
+            # Check if value is base64 encoded or raw JSON
+            if echo "$GOOGLE_SERVICES_JSON" | grep -q '^{' ; then
+              printf "%s\n" "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
             else
-              echo "SUCCESS: android/app/google-services.json is valid JSON!"
+              echo "$GOOGLE_SERVICES_JSON" | base64 --decode > android/app/google-services.json 2>/dev/null || printf "%s\n" "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
             fi
+            
+            # Validate JSON format
+            if python3 -c "import json, sys; json.load(open('android/app/google-services.json'))" 2>/dev/null; then
+              echo "✅ SUCCESS: android/app/google-services.json is valid JSON!"
+            else
+              echo "WARNING: android/app/google-services.json is invalid JSON! Removing to prevent build failure."
+              rm -f android/app/google-services.json
+            fi
+          else
+            echo "ℹ️ GOOGLE_SERVICES_JSON secret not provided; skipping."
           fi
 
-      - name: Setup Signing Keystore & Key Properties from Secrets
+      - name: Setup Signing Keystore & Credentials Strictly from Secrets
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
-          KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
-          KEY_PROPERTIES: ${{ secrets.KEY_PROPERTIES }}
-          KEY_PROPERTIES_BASE64: ${{ secrets.KEY_PROPERTIES_BASE64 }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
         run: |
+          echo "================================================================"
+          echo "🔐 ENFORCING RELEASE SIGNING KEYSTORE FROM GITHUB SECRETS"
+          echo "================================================================"
           mkdir -p android/app
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "Decoding release keystore from KEYSTORE_BASE64..."
-            echo "$KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
-          elif [ -n "$RELEASE_KEYSTORE_BASE64" ]; then
-            echo "Decoding release keystore from RELEASE_KEYSTORE_BASE64..."
-            echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
-          elif [ -n "$KEYSTORE_FILE" ]; then
-            echo "Writing keystore from KEYSTORE_FILE..."
-            echo "$KEYSTORE_FILE" | base64 --decode > android/upload-keystore.jks
+
+          # 1. Validate and decode KEYSTORE_BASE64
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::CRITICAL: 'KEYSTORE_BASE64' secret is missing from GitHub Repository Secrets!"
+            echo "Please add your base64-encoded keystore to Repository Settings > Secrets > KEYSTORE_BASE64"
+            exit 1
           fi
 
-          if [ -f android/upload-keystore.jks ]; then
-            cp android/upload-keystore.jks android/app/upload-keystore.jks
-            cp android/upload-keystore.jks android/my-release-key.keystore
-            cp android/upload-keystore.jks android/app/my-release-key.keystore
+          echo "Decoding release keystore into android/app/upload-keystore.jks..."
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          cp android/app/upload-keystore.jks android/upload-keystore.jks
+
+          if [ ! -s android/app/upload-keystore.jks ]; then
+            echo "::error::CRITICAL: Decoded keystore file is empty or corrupted base64 string!"
+            exit 1
+          fi
+          echo "✅ Keystore file written successfully: android/app/upload-keystore.jks ($(wc -c < android/app/upload-keystore.jks) bytes)"
+
+          # 2. Validate credentials
+          if [ -z "$KEYSTORE_ALIAS" ] || [ -z "$KEYSTORE_KEY_PASSWORD" ] || [ -z "$KEYSTORE_STORE_PASSWORD" ]; then
+            echo "::error::CRITICAL: Missing signing credentials in GitHub Secrets!"
+            echo "Required secrets: KEYSTORE_ALIAS, KEYSTORE_KEY_PASSWORD, KEYSTORE_STORE_PASSWORD"
+            exit 1
           fi
 
-          if [ -n "$KEY_PROPERTIES" ]; then
-            echo "Writing key.properties from KEY_PROPERTIES..."
-            printf "%s\n" "$KEY_PROPERTIES" > android/key.properties
-            printf "%s\n" "$KEY_PROPERTIES" > android/app/key.properties
-          elif [ -n "$KEY_PROPERTIES_BASE64" ]; then
-            echo "Decoding key.properties from KEY_PROPERTIES_BASE64..."
-            echo "$KEY_PROPERTIES_BASE64" | base64 --decode > android/key.properties
-            echo "$KEY_PROPERTIES_BASE64" | base64 --decode > android/app/key.properties
+          # 3. Generate android/key.properties directly from secrets
+          echo "Generating android/key.properties and android/app/key.properties directly from secrets..."
+          cat <<EOF > android/key.properties
+storePassword=$KEYSTORE_STORE_PASSWORD
+keyPassword=$KEYSTORE_KEY_PASSWORD
+keyAlias=$KEYSTORE_ALIAS
+storeFile=upload-keystore.jks
+EOF
+          cp android/key.properties android/app/key.properties
+          echo "✅ key.properties generated successfully."
+
+          # 4. Cryptographic Keystore Verification with keytool
+          echo "=== Verifying Keystore Integrity & Certificate Fingerprints ==="
+          if ! keytool -list -v -keystore android/app/upload-keystore.jks -alias "$KEYSTORE_ALIAS" -storepass "$KEYSTORE_STORE_PASSWORD" -keypass "$KEYSTORE_KEY_PASSWORD" > /tmp/keystore_cert_info.txt 2>&1; then
+            echo "::error::KEYSTORE CREDENTIAL MISMATCH: The provided alias '$KEYSTORE_ALIAS' or passwords do NOT match the keystore!"
+            cat /tmp/keystore_cert_info.txt
+            exit 1
           fi
+
+          echo "✅ Keystore credentials successfully verified!"
+          echo "Certificate Details & Digital Fingerprints:"
+          grep -E "Owner:|Issuer:|Valid from:|Certificate fingerprints:|SHA256:|SHA1:" /tmp/keystore_cert_info.txt || true
+          echo "================================================================"
 
       # ------------------------------------------------------------------------
       # Android V2 Embedding Enforcement & Auto-Healing
@@ -180,9 +203,9 @@ jobs:
 
       - name: Build Android App Bundle (AAB for Google Play Store)
         env:
-          KEYSTORE_KEY_ALIAS: ${{ secrets.KEY_ALIAS || secrets.KEYSTORE_KEY_ALIAS }}
-          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || secrets.KEYSTORE_KEY_PASSWORD }}
-          KEYSTORE_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
           KEYSTORE_STORE_FILE: 'upload-keystore.jks'
         run: |
           flutter build appbundle --release
@@ -191,9 +214,9 @@ jobs:
 
       - name: Build Split-per-ABI APKs & Universal APK
         env:
-          KEYSTORE_KEY_ALIAS: ${{ secrets.KEY_ALIAS || secrets.KEYSTORE_KEY_ALIAS }}
-          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || secrets.KEYSTORE_KEY_PASSWORD }}
-          KEYSTORE_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || secrets.KEYSTORE_STORE_PASSWORD }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
           KEYSTORE_STORE_FILE: 'upload-keystore.jks'
         run: |
           # 1. Build Split APKs for modern 64-bit and 32-bit devices

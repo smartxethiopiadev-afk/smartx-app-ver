@@ -301,10 +301,10 @@ class _NotesScreenState extends State<NotesScreen> {
     return pages.isNotEmpty ? pages : [content];
   }
 
-  /// Automatically paginates database notes by word count (~280 words per page).
+  /// Automatically paginates database notes by word count (~85 words per mobile screen).
   List<Map<String, dynamic>> _paginateNotesByWords(
     List<Map<String, dynamic>> rawNotes, {
-    int targetWordsPerPage = 280,
+    int targetWordsPerPage = 85,
   }) {
     final List<Map<String, dynamic>> paginatedList = [];
     final bool isEn = widget.languageCode == 'en';
@@ -319,13 +319,13 @@ class _NotesScreenState extends State<NotesScreen> {
 
       final int totalWords = _countWords(rawHtml);
 
-      // If already within comfortable single-page threshold, keep as a single page
-      if (totalWords <= targetWordsPerPage + 50) {
+      // If already within comfortable single-screen threshold, keep as a single page
+      if (totalWords <= targetWordsPerPage + 15) {
         paginatedList.add(Map<String, dynamic>.from(note));
         continue;
       }
 
-      // Automatically split into multiple word-based pages
+      // Automatically split into multiple word-based pages (~85 words each)
       final List<String> pageContents = _splitContentIntoWordPages(
         rawHtml,
         targetWordsPerPage: targetWordsPerPage,
