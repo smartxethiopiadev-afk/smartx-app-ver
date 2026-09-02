@@ -304,11 +304,35 @@ class _NotesScreenState extends State<NotesScreen> {
   /// Automatically paginates database notes by word count (~85 words per mobile screen).
   List<Map<String, dynamic>> _paginateNotesByWords(
     List<Map<String, dynamic>> rawNotes, {
-    int targetWordsPerPage = 85,
+    int targetWordsPerPage = 280,
   }) {
     final List<Map<String, dynamic>> paginatedList = [];
     final bool isEn = widget.languageCode == 'en';
 
+    // 1. Direct Database Pages Support:
+    // If multiple rows are returned from the database, or any row has an explicit page number,
+    // directly map each row to 1 page in the reader (no arbitrary chopping).
+    final bool hasExplicitPages = rawNotes.length > 1 ||
+        (rawNotes.isNotEmpty &&
+            (rawNotes.first['page_number'] != null ||
+                rawNotes.first['page'] != null ||
+                rawNotes.first['order_index'] != null));
+
+    if (hasExplicitPages) {
+      for (int i = 0; i < rawNotes.length; i++) {
+        final Map<String, dynamic> pageNote = Map<String, dynamic>.from(rawNotes[i]);
+        final String rawTitle = pageNote['title']?.toString().trim() ?? widget.unitTitle;
+        final int pageNum = ((pageNote['page_number'] ?? pageNote['page'] ?? pageNote['order_index'] ?? (i + 1)) as num).toInt();
+
+        pageNote['virtual_page'] = pageNum;
+        pageNote['total_virtual_pages'] = rawNotes.length;
+        pageNote['title'] = rawTitle;
+        paginatedList.add(pageNote);
+      }
+      return paginatedList;
+    }
+
+    // 2. Fallback for single legacy row without page_number
     for (final note in rawNotes) {
       final String rawTitle = note['title']?.toString().trim() ?? widget.unitTitle;
       final String rawHtml = note['html_content']?.toString() ??
@@ -325,7 +349,7 @@ class _NotesScreenState extends State<NotesScreen> {
         continue;
       }
 
-      // Automatically split into multiple word-based pages (~85 words each)
+      // Automatically split large single-blob into multiple pages
       final List<String> pageContents = _splitContentIntoWordPages(
         rawHtml,
         targetWordsPerPage: targetWordsPerPage,
@@ -388,18 +412,31 @@ class _NotesScreenState extends State<NotesScreen> {
         } else {
           final String normalizedSubject = _getNormalizedSubjectName();
 
-          // 1. Primary Query: Supabase short_notes table strictly
+          // 1. Primary Query: Supabase short_notes table with full column selection and sorting
           try {
             final shortNotesResponse = await Supabase.instance.client
                 .from('short_notes')
-                .select('id, grade, subject, unit_number, title, html_content, created_at')
+                .select('*')
                 .eq('grade', widget.grade)
                 .eq('unit_number', widget.unitNumber)
-                .ilike('subject', '%$normalizedSubject%')
-                .order('created_at', ascending: true);
+                .ilike('subject', '%$normalizedSubject%');
 
             if (shortNotesResponse.isNotEmpty) {
               fetchedNotes = List<Map<String, dynamic>>.from(shortNotesResponse);
+              
+              // Sort notes by page_number ASC, order_index ASC, or created_at ASC
+              fetchedNotes.sort((a, b) {
+                final num? pageA = a['page_number'] ?? a['page'] ?? a['order_index'];
+                final num? pageB = b['page_number'] ?? b['page'] ?? b['order_index'];
+                if (pageA != null && pageB != null) {
+                  return pageA.compareTo(pageB);
+                }
+                if (pageA != null) return -1;
+                if (pageB != null) return 1;
+                final String dateA = (a['created_at'] ?? '').toString();
+                final String dateB = (b['created_at'] ?? '').toString();
+                return dateA.compareTo(dateB);
+              });
             }
           } catch (e) {
             debugPrint('[Short Notes] Supabase query notice: $e');
@@ -1185,28 +1222,125 @@ class _NotesScreenState extends State<NotesScreen> {
                     ),
                     customStylesBuilder: (element) {
                       if (element.localName == 'h1') {
-                        return {'font-size': '22px', 'font-weight': '800', 'color': isDark ? '#FFFFFF' : '#0F172A'};
+                        return {'font-size': '22px', 'font-weight': '800', 'color': isDark ? '#FFFFFF' : '#0F172A', 'margin': '12px 0 8px 0'};
                       }
                       if (element.localName == 'h2' || element.localName == 'h3') {
-                        return {'font-size': '17.5px', 'font-weight': '700', 'color': isDark ? '#38BDF8' : '#0284C7'};
+                        return {'font-size': '18px', 'font-weight': '700', 'color': isDark ? '#38BDF8' : '#0284C7', 'margin': '14px 0 6px 0'};
+                      }
+                      if (element.localName == 'table') {
+                        return {'width': '100%', 'border-collapse': 'collapse', 'margin': '14px 0'};
                       }
                       if (element.localName == 'th') {
-                        return {'font-weight': '800', 'color': isDark ? '#38BDF8' : '#0284C7', 'padding': '8px 10px'};
+                        return {
+                          'font-weight': '800',
+                          'color': isDark ? '#38BDF8' : '#0284C7',
+                          'background-color': isDark ? '#1E293B' : '#F1F5F9',
+                          'padding': '10px 12px',
+                          'border': '1px solid ${isDark ? "#334155" : "#CBD5E1"}',
+                        };
                       }
                       if (element.localName == 'td') {
-                        return {'padding': '8px 10px', 'border': '1px solid ${isDark ? "#334155" : "#CBD5E1"}'};
+                        return {
+                          'padding': '8px 12px',
+                          'border': '1px solid ${isDark ? "#334155" : "#CBD5E1"}',
+                        };
                       }
-                      if (element.classes.contains('callout') || element.classes.contains('keynote') || element.localName == 'blockquote') {
-                        return {'border-left': '4px solid #0EA5E9', 'padding-left': '14px', 'margin': '14px 0'};
+                      // Math / Physics / Chemistry Formula Boxes
+                      if (element.classes.contains('formula') ||
+                          element.classes.contains('formula-box') ||
+                          element.classes.contains('math-box') ||
+                          element.classes.contains('equation') ||
+                          element.classes.contains('law-box')) {
+                        return {
+                          'background-color': isDark ? '#1E293B' : '#FEF2F2',
+                          'border': '1.5px solid ${isDark ? "#EF4444" : "#F87171"}',
+                          'border-radius': '10px',
+                          'padding': '12px 16px',
+                          'margin': '16px 0',
+                          'color': isDark ? '#FCA5A5' : '#B91C1C',
+                          'font-weight': '700',
+                          'font-size': '16px',
+                          'text-align': 'center',
+                        };
                       }
+                      // Chemistry Reaction Box
+                      if (element.classes.contains('chem-box') ||
+                          element.classes.contains('reaction') ||
+                          element.classes.contains('chem-eq')) {
+                        return {
+                          'background-color': isDark ? '#064E3B' : '#ECFDF5',
+                          'border': '1.5px solid ${isDark ? "#10B981" : "#34D399"}',
+                          'border-radius': '10px',
+                          'padding': '12px 16px',
+                          'margin': '16px 0',
+                          'color': isDark ? '#A7F3D0' : '#065F46',
+                          'font-weight': '700',
+                          'font-size': '16px',
+                          'text-align': 'center',
+                        };
+                      }
+                      // Fractions
+                      if (element.classes.contains('fraction') || element.classes.contains('frac')) {
+                        return {
+                          'font-weight': '700',
+                          'display': 'inline-block',
+                          'text-align': 'center',
+                          'padding': '0 4px',
+                        };
+                      }
+                      // Callout / Info / Note / Tip Boxes
+                      if (element.classes.contains('callout') ||
+                          element.classes.contains('keynote') ||
+                          element.classes.contains('note') ||
+                          element.classes.contains('tip') ||
+                          element.localName == 'blockquote') {
+                        return {
+                          'background-color': isDark ? '#0C4A6E25' : '#E0F2FE',
+                          'border-left': '4px solid #0EA5E9',
+                          'border-radius': '0 8px 8px 0',
+                          'padding': '12px 16px',
+                          'margin': '14px 0',
+                        };
+                      }
+                      // Definition Box
                       if (element.classes.contains('definition')) {
-                        return {'border-left': '4px solid #F59E0B', 'padding-left': '14px', 'margin': '14px 0'};
+                        return {
+                          'background-color': isDark ? '#78350F25' : '#FEF3C7',
+                          'border-left': '4px solid #F59E0B',
+                          'border-radius': '0 8px 8px 0',
+                          'padding': '12px 16px',
+                          'margin': '14px 0',
+                        };
                       }
-                      if (element.classes.contains('example')) {
-                        return {'border-left': '4px solid #8B5CF6', 'padding-left': '14px', 'margin': '14px 0'};
+                      // Example / Worked Solution Box
+                      if (element.classes.contains('example') || element.classes.contains('solution')) {
+                        return {
+                          'background-color': isDark ? '#4C1D9525' : '#EDE9FE',
+                          'border-left': '4px solid #8B5CF6',
+                          'border-radius': '0 8px 8px 0',
+                          'padding': '12px 16px',
+                          'margin': '14px 0',
+                        };
                       }
-                      if (element.classes.contains('formula') || element.classes.contains('formula-box')) {
-                        return {'border': '1px solid #FCA5A5', 'padding': '14px 16px', 'margin': '16px 0', 'color': '#B91C1C', 'font-weight': '700'};
+                      // Summary / Review Box
+                      if (element.classes.contains('summary-box') || element.classes.contains('summary-card')) {
+                        return {
+                          'background-color': isDark ? '#1E293B' : '#F8FAFC',
+                          'border': '1px solid ${isDark ? "#334155" : "#E2E8F0"}',
+                          'border-radius': '12px',
+                          'padding': '14px 18px',
+                          'margin': '16px 0',
+                        };
+                      }
+                      // Inline Code
+                      if (element.localName == 'code') {
+                        return {
+                          'background-color': isDark ? '#334155' : '#E2E8F0',
+                          'color': isDark ? '#38BDF8' : '#0284C7',
+                          'padding': '2px 6px',
+                          'border-radius': '4px',
+                          'font-family': 'monospace',
+                        };
                       }
                       return null;
                     },

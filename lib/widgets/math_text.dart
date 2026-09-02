@@ -206,6 +206,15 @@ class MathText extends StatelessWidget {
     s = s.replaceAll(r'\leftrightarrow', '↔');
     s = s.replaceAll(r'\Rightarrow', '⇒');
     s = s.replaceAll(r'\Leftrightarrow', '⇔');
+    s = s.replaceAll(r'\rightleftharpoons', '⇌');
+    s = s.replaceAll(r'\equilibrium', '⇌');
+    s = s.replaceAll(r'<=>', '⇌');
+    s = s.replaceAll(r'<==>', '⇌');
+    s = s.replaceAll(r'\uparrow', '↑');
+    s = s.replaceAll(r'\downarrow', '↓');
+    s = s.replaceAll(r'\angstrom', 'Å').replaceAll(r'\AA', 'Å');
+    s = s.replaceAll(r'\hbar', 'ħ');
+    s = s.replaceAll(r'\oint', '∮');
     s = s.replaceAll(r'\infty', '∞');
     s = s.replaceAll(r'\int', '∫');
     s = s.replaceAll(r'\sum', '∑');
