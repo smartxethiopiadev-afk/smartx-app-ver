@@ -1003,22 +1003,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'illustration': const AksumObeliskWidget(),
       },
       {
-        'id': 'English',
-        'amTitle': 'እንግሊዝኛ',
-        'enTitle': 'English',
-        'color': const Color(0xFF6D28D9),
-        'lightBg': const Color(0xFFF5F3FF),
-        'illustration': const EnglishBookWidget(),
-      },
-      {
-        'id': 'Civics',
-        'amTitle': 'ዜግነት',
-        'enTitle': 'Civics',
-        'color': const Color(0xFF1E88E5), // Blue civics
-        'lightBg': const Color(0xFFEFF6FF),
-        'illustration': const CivicsGavelWidget(),
-      },
-      {
         'id': 'Economics',
         'amTitle': 'ኢኮኖሚክስ',
         'enTitle': 'Economics',
@@ -1026,22 +1010,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'lightBg': const Color(0xFFF0FDFA),
         'illustration': const EconomicsChartWidget(),
       },
-      {
-        'id': 'Agriculture',
-        'amTitle': 'ግብርና',
-        'enTitle': 'Agriculture',
-        'color': const Color(0xFF8D6E63), // Brown
-        'lightBg': const Color(0xFFEFEBE9),
-        'illustration': const AgricultureSproutWidget(),
-      },
     ];
 
-    final List<Map<String, dynamic>> subjects;
-    if (_selectedGradeForNotesTab == 11 || _selectedGradeForNotesTab == 12) {
-      subjects = allSubjects.where((s) => s['id'] != 'Civics').toList();
-    } else {
-      subjects = allSubjects.where((s) => s['id'] != 'Agriculture').toList();
-    }
+    final List<Map<String, dynamic>> subjects = allSubjects;
 
     return Container(
       width: double.infinity,
@@ -2375,22 +2346,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'illustration': const AksumObeliskWidget(),
       },
       {
-        'id': 'English',
-        'amTitle': 'እንግሊዝኛ',
-        'enTitle': 'English',
-        'color': const Color(0xFF6D28D9),
-        'lightBg': const Color(0xFFF5F3FF),
-        'illustration': const EnglishBookWidget(),
-      },
-      {
-        'id': 'Civics',
-        'amTitle': 'ዜግነት',
-        'enTitle': 'Civics',
-        'color': const Color(0xFF1E88E5), // Blue civics
-        'lightBg': const Color(0xFFEFF6FF),
-        'illustration': const CivicsGavelWidget(),
-      },
-      {
         'id': 'Economics',
         'amTitle': 'ኢኮኖሚክስ',
         'enTitle': 'Economics',
@@ -2398,22 +2353,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'lightBg': const Color(0xFFF0FDFA),
         'illustration': const EconomicsChartWidget(),
       },
-      {
-        'id': 'Agriculture',
-        'amTitle': 'ግብርና',
-        'enTitle': 'Agriculture',
-        'color': const Color(0xFF8D6E63), // Brown
-        'lightBg': const Color(0xFFEFEBE9),
-        'illustration': const AgricultureSproutWidget(),
-      },
     ];
 
-    final List<Map<String, dynamic>> subjects;
-    if (_selectedGradeForQuizTab == 11 || _selectedGradeForQuizTab == 12) {
-      subjects = allSubjects.where((s) => s['id'] != 'Civics').toList();
-    } else {
-      subjects = allSubjects.where((s) => s['id'] != 'Agriculture').toList();
-    }
+    final List<Map<String, dynamic>> subjects = allSubjects;
 
     return Container(
       width: double.infinity,

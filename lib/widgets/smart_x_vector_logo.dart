@@ -25,8 +25,8 @@ class SmartXVectorLogo extends StatelessWidget {
         children: [
           if (showGlow)
             Container(
-              width: size * 0.85,
-              height: size * 0.85,
+              width: size * 0.90,
+              height: size * 0.90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
@@ -43,9 +43,17 @@ class SmartXVectorLogo extends StatelessWidget {
                 ],
               ),
             ),
-          CustomPaint(
-            size: Size(size * 0.95, size * 0.95),
-            painter: SmartXVectorPainter(showBorder: showBorder),
+          ClipOval(
+            child: Image.asset(
+              'assets/images/smart_x_logo.png',
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => CustomPaint(
+                size: Size(size * 0.95, size * 0.95),
+                painter: SmartXVectorPainter(showBorder: showBorder),
+              ),
+            ),
           ),
         ],
       ),

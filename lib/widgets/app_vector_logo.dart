@@ -31,13 +31,13 @@ class AppVectorLogo extends StatelessWidget {
         children: [
           if (showGlow)
             Container(
-              width: size * 0.88,
-              height: size * 0.88,
+              width: size * 0.92,
+              height: size * 0.92,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF00E5FF).withValues(alpha: 0.28),
+                    color: const Color(0xFF00E5FF).withValues(alpha: 0.32),
                     blurRadius: size * 0.36,
                     spreadRadius: size * 0.04,
                   ),
@@ -48,9 +48,17 @@ class AppVectorLogo extends StatelessWidget {
                 ],
               ),
             ),
-          CustomPaint(
-            size: Size(size, size),
-            painter: _EduSmartXPainter(),
+          ClipOval(
+            child: Image.asset(
+              'assets/images/smart_x_logo.png',
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => CustomPaint(
+                size: Size(size, size),
+                painter: _EduSmartXPainter(),
+              ),
+            ),
           ),
         ],
       ),
