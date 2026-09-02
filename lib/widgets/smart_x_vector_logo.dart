@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 /// A pure vector emblem widget for Smart X Ethiopian.
-/// Features a dark midnight squircle badge, Ethiopian tricolor accent (Green, Yellow, Red),
-/// geometric 'X' mark, and gold diamond sparkle.
+/// Features a dark midnight blue squircle badge, a bright white center circle,
+/// a prominent big 'X' mark in electric cyan/blue, and Ethiopian tricolor accent (Green, Yellow, Red).
 class SmartXVectorLogo extends StatelessWidget {
   final double size;
   final bool showGlow;
@@ -65,7 +65,7 @@ class SmartXVectorPainter extends CustomPainter {
     final double h = size.height;
     final Offset center = Offset(w / 2, h / 2);
 
-    // 1. Squircle Shield
+    // 1. Dark Blue Squircle Outer Shield
     final RRect squircle = RRect.fromRectAndRadius(
       Rect.fromLTWH(w * 0.05, h * 0.05, w * 0.90, h * 0.90),
       Radius.circular(w * 0.22),
@@ -92,7 +92,7 @@ class SmartXVectorPainter extends CustomPainter {
     // 2. Ethiopian Flag Top Accent Bar (Green, Yellow, Red)
     final double flagW = w * 0.50;
     final double flagH = h * 0.05;
-    final double flagY = h * 0.18;
+    final double flagY = h * 0.14;
     final double flagLeft = center.dx - flagW / 2;
 
     canvas.drawRRect(
@@ -118,38 +118,63 @@ class SmartXVectorPainter extends CustomPainter {
       Paint()..color = const Color(0xFFEF3340),
     );
 
-    // 3. Central Geometric 'X'
+    // 3. Bright White Center Circle Badge
+    final Offset circleCenter = Offset(center.dx, center.dy - h * 0.02);
+    final double circleRadius = w * 0.27;
+
+    // Outer Cyan Glow Ring around White Circle
+    canvas.drawCircle(
+      circleCenter,
+      circleRadius + w * 0.02,
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFF00F0FF), Color(0xFF38BDF8)],
+        ).createShader(Rect.fromLTWH(0, 0, w, h))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.02,
+    );
+
+    // White Fill
+    canvas.drawCircle(
+      circleCenter,
+      circleRadius,
+      Paint()..color = Colors.white,
+    );
+
+    // 4. PROMINENT BIG 'X' MARK INSIDE THE WHITE CIRCLE
     final Paint xPaint = Paint()
       ..shader = const LinearGradient(
-        colors: [Color(0xFF00F0FF), Color(0xFF38BDF8)],
+        colors: [Color(0xFF00B4FF), Color(0xFF3B82F6), Color(0xFF6366F1)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ).createShader(Rect.fromLTWH(0, 0, w, h))
       ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.09
+      ..strokeWidth = w * 0.11 // Bold & Big!
       ..strokeCap = StrokeCap.round;
 
-    final double xSize = w * 0.20;
+    final double xSize = circleRadius * 0.68;
     canvas.drawLine(
-      Offset(center.dx - xSize, center.dy - xSize * 0.8),
-      Offset(center.dx + xSize, center.dy + xSize * 0.8),
+      Offset(circleCenter.dx - xSize, circleCenter.dy - xSize * 0.9),
+      Offset(circleCenter.dx + xSize, circleCenter.dy + xSize * 0.9),
       xPaint,
     );
     canvas.drawLine(
-      Offset(center.dx + xSize, center.dy - xSize * 0.8),
-      Offset(center.dx - xSize, center.dy + xSize * 0.8),
+      Offset(circleCenter.dx + xSize, circleCenter.dy - xSize * 0.9),
+      Offset(circleCenter.dx - xSize, circleCenter.dy + xSize * 0.9),
       xPaint,
     );
 
-    // Center Sparkle
-    canvas.drawCircle(center, w * 0.04, Paint()..color = Colors.white);
+    // Center Gold Sparkle Point
+    canvas.drawCircle(circleCenter, w * 0.035, Paint()..color = const Color(0xFFFFD100));
 
     // Bottom Underline Accent
     canvas.drawLine(
-      Offset(w * 0.30, h * 0.78),
-      Offset(w * 0.70, h * 0.78),
+      Offset(w * 0.30, h * 0.82),
+      Offset(w * 0.70, h * 0.82),
       Paint()
         ..color = const Color(0xFFFFD100)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = w * 0.02
+        ..strokeWidth = w * 0.022
         ..strokeCap = StrokeCap.round,
     );
   }

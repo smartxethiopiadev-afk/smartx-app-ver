@@ -1,12 +1,12 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// A clean, modern education technology vector logo for Smart X Ethiopian:
-/// - Hexagonal futuristic wisdom emblem with royal midnight navy & cyan neon gradients
-/// - Ethiopian flag tricolor crest (Green, Yellow, Red) at top
-/// - Central geometric 'X' mark with radiant knowledge diamond
-/// - Crisp typography: Smart X Ethiopian
+/// - Hexagonal/squircle midnight navy shield
+/// - Bright clean white center circle badge
+/// - Prominent big electric cyan 'X' mark
+/// - Ethiopian flag tricolor crest (Green, Yellow, Red)
+/// - Crisp branding typography: Smart X Ethiopian
 class AppVectorLogo extends StatelessWidget {
   final double size;
   final bool showGlow;
@@ -139,23 +139,13 @@ class _EduSmartXPainter extends CustomPainter {
     final double w = size.width;
     final double h = size.height;
     final Offset center = Offset(w / 2, h / 2);
-    final double radius = w * 0.44;
 
-    // 1. Futuristic Rounded Hexagon Shield Canvas
-    final Path hexPath = Path();
-    for (int i = 0; i < 6; i++) {
-      final double angle = (i * 60 - 30) * math.pi / 180;
-      final double px = center.dx + radius * math.cos(angle);
-      final double py = center.dy + radius * math.sin(angle);
-      if (i == 0) {
-        hexPath.moveTo(px, py);
-      } else {
-        hexPath.lineTo(px, py);
-      }
-    }
-    hexPath.close();
+    // 1. Dark Midnight Blue Shield Canvas
+    final RRect squircle = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.05, h * 0.05, w * 0.90, h * 0.90),
+      Radius.circular(w * 0.22),
+    );
 
-    // Shield Deep Midnight Sapphire Fill
     final Paint hexFill = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
@@ -166,7 +156,7 @@ class _EduSmartXPainter extends CustomPainter {
           Color(0xFF0F172A),
         ],
       ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(hexPath, hexFill);
+    canvas.drawRRect(squircle, hexFill);
 
     // Shield Border Stroke with Neon Cyan to Indigo
     final Paint hexStroke = Paint()
@@ -182,12 +172,12 @@ class _EduSmartXPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = w * 0.032
       ..strokeCap = StrokeCap.round;
-    canvas.drawPath(hexPath, hexStroke);
+    canvas.drawRRect(squircle, hexStroke);
 
     // 2. Ethiopian Flag Top Accent Pill (Green, Yellow, Red)
     final double flagW = w * 0.44;
     final double flagH = h * 0.045;
-    final double flagY = h * 0.18;
+    final double flagY = h * 0.14;
     final double flagLeft = center.dx - flagW / 2;
 
     final RRect greenPill = RRect.fromRectAndCorners(
@@ -208,66 +198,65 @@ class _EduSmartXPainter extends CustomPainter {
     canvas.drawRRect(yellowPill, Paint()..color = const Color(0xFFFFD100));
     canvas.drawRRect(redPill, Paint()..color = const Color(0xFFEF3340));
 
-    // Academic Gold Diamond Sparkle
-    final Path diamond = Path()
-      ..moveTo(center.dx, h * 0.28)
-      ..lineTo(center.dx + w * 0.05, h * 0.33)
-      ..lineTo(center.dx, h * 0.38)
-      ..lineTo(center.dx - w * 0.05, h * 0.33)
-      ..close();
-    canvas.drawPath(diamond, Paint()..color = const Color(0xFFFFD100));
+    // 3. Bright White Center Circle Badge
+    final Offset circleCenter = Offset(center.dx, center.dy - h * 0.02);
+    final double circleRadius = w * 0.27;
 
-    // 3. Central Geometric 'X' Ribbons
-    final Path blade1 = Path()
-      ..moveTo(w * 0.34, h * 0.42)
-      ..lineTo(w * 0.44, h * 0.39)
-      ..lineTo(w * 0.66, h * 0.67)
-      ..lineTo(w * 0.56, h * 0.70)
-      ..close();
+    // Cyan Outer Ring
+    canvas.drawCircle(
+      circleCenter,
+      circleRadius + w * 0.02,
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFF00F0FF), Color(0xFF38BDF8)],
+        ).createShader(Rect.fromLTWH(0, 0, w, h))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.02,
+    );
 
-    final Paint blade1Paint = Paint()
+    // White Circle Fill
+    canvas.drawCircle(
+      circleCenter,
+      circleRadius,
+      Paint()..color = Colors.white,
+    );
+
+    // 4. PROMINENT BIG 'X' MARK INSIDE THE WHITE CIRCLE
+    final Paint xPaint = Paint()
       ..shader = const LinearGradient(
+        colors: [Color(0xFF00B4FF), Color(0xFF3B82F6), Color(0xFF6366F1)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFF00F0FF), Color(0xFF6366F1)],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(blade1, blade1Paint);
+      ).createShader(Rect.fromLTWH(0, 0, w, h))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.11 // Prominent & Big!
+      ..strokeCap = StrokeCap.round;
 
-    final Path blade2 = Path()
-      ..moveTo(w * 0.66, h * 0.42)
-      ..lineTo(w * 0.56, h * 0.39)
-      ..lineTo(w * 0.34, h * 0.67)
-      ..lineTo(w * 0.44, h * 0.70)
-      ..close();
+    final double xSize = circleRadius * 0.68;
+    canvas.drawLine(
+      Offset(circleCenter.dx - xSize, circleCenter.dy - xSize * 0.9),
+      Offset(circleCenter.dx + xSize, circleCenter.dy + xSize * 0.9),
+      xPaint,
+    );
+    canvas.drawLine(
+      Offset(circleCenter.dx + xSize, circleCenter.dy - xSize * 0.9),
+      Offset(circleCenter.dx - xSize, circleCenter.dy + xSize * 0.9),
+      xPaint,
+    );
 
-    final Paint blade2Paint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topRight,
-        end: Alignment.bottomLeft,
-        colors: [Color(0xFF818CF8), Color(0xFF0284C7)],
-      ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawPath(blade2, blade2Paint);
-
-    // 4. Central Radiant Knowledge Spark
-    final Path coreDiamond = Path()
-      ..moveTo(center.dx, center.dy - h * 0.07)
-      ..lineTo(center.dx + w * 0.07, center.dy)
-      ..lineTo(center.dx, center.dy + h * 0.07)
-      ..lineTo(center.dx - w * 0.07, center.dy)
-      ..close();
-
-    canvas.drawPath(coreDiamond, Paint()..color = Colors.white);
+    // Center Gold Sparkle Point
+    canvas.drawCircle(circleCenter, w * 0.035, Paint()..color = const Color(0xFFFFD100));
 
     // 5. Bottom Ethiopian Accent Underline
     final Path underline = Path()
-      ..moveTo(w * 0.30, h * 0.78)
-      ..lineTo(w * 0.70, h * 0.78);
+      ..moveTo(w * 0.30, h * 0.82)
+      ..lineTo(w * 0.70, h * 0.82);
     canvas.drawPath(
       underline,
       Paint()
         ..color = const Color(0xFFFFD100)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = w * 0.02
+        ..strokeWidth = w * 0.022
         ..strokeCap = StrokeCap.round,
     );
   }

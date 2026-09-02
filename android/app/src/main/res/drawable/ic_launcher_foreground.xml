@@ -4,42 +4,52 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     
-    <!-- Outer Dark Rounded Squircle Base -->
+    <!-- Outer Dark Navy Squircle Base with Neon Cyan Accent Border -->
     <path
-        android:fillColor="#0A1128"
+        android:fillColor="#0A1329"
         android:pathData="M24,14 L84,14 A10,10 0 0 1 94,24 L94,84 A10,10 0 0 1 84,94 L24,94 A10,10 0 0 1 14,84 L14,24 A10,10 0 0 1 24,14 Z" />
-    
-    <!-- Ethiopian Flag Top Arc Bar (Green, Yellow, Red) -->
+    <path
+        android:fillColor="#00F0FF"
+        android:pathData="M24,14 L84,14 A10,10 0 0 1 94,24 L94,84 A10,10 0 0 1 84,94 L24,94 A10,10 0 0 1 14,84 L14,24 A10,10 0 0 1 24,14 Z"
+        android:strokeWidth="2"
+        android:strokeColor="#00F0FF" />
+
+    <!-- Ethiopian Flag Top Accent Bar (Green, Yellow, Red) -->
     <path
         android:fillColor="#009A44"
-        android:pathData="M22,22 L42,22 L42,26 L22,26 Z" />
+        android:pathData="M22,18 L42,18 L42,22 L22,22 Z" />
     <path
         android:fillColor="#FFD100"
-        android:pathData="M44,22 L64,22 L64,26 L44,26 Z" />
+        android:pathData="M44,18 L64,18 L64,22 L44,22 Z" />
     <path
         android:fillColor="#EF3340"
-        android:pathData="M66,22 L86,22 L86,26 L66,26 Z" />
+        android:pathData="M66,18 L86,18 L86,22 L66,22 Z" />
 
-    # Graduation Diamond Sparkle
-    <path
-        android:fillColor="#FFD100"
-        android:pathData="M54,30 L59,35 L54,40 L49,35 Z" />
-
-    <!-- Central "X" Bold Geometric Wings -->
-    <path
-        android:fillColor="#38BDF8"
-        android:pathData="M38,42 L48,42 L70,72 L60,72 Z" />
-    <path
-        android:fillColor="#818CF8"
-        android:pathData="M70,42 L60,42 L38,72 L48,72 Z" />
-    
-    <!-- Center White Diamond Spark -->
+    <!-- CENTER WHITE CIRCLE BADGE -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,52 L59,57 L54,62 L49,57 Z" />
+        android:pathData="M54,26 A26,26 0 1,1 53.9,26 Z" />
+    <path
+        android:fillColor="#00F0FF"
+        android:pathData="M54,25 A27,27 0 1,1 53.9,25 Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#00F0FF" />
 
-    <!-- Bottom Ethiopian Accent Underline -->
+    <!-- PROMINENT BIG 'X' MARK INSIDE WHITE CIRCLE -->
+    <path
+        android:fillColor="#00B4FF"
+        android:pathData="M38,36 L46,36 L70,68 L62,68 Z" />
+    <path
+        android:fillColor="#3B82F6"
+        android:pathData="M70,36 L62,36 L38,68 L46,68 Z" />
+
+    <!-- Graduation Academic Diamond Sparkle in Center -->
     <path
         android:fillColor="#FFD100"
-        android:pathData="M34,80 L74,80 L74,82 L34,82 Z" />
+        android:pathData="M54,48 L58,52 L54,56 L50,52 Z" />
+
+    <!-- Bottom Ethiopian Accent Line -->
+    <path
+        android:fillColor="#FFD100"
+        android:pathData="M34,84 L74,84 L74,86 L34,86 Z" />
 </vector>

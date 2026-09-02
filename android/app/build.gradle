@@ -127,8 +127,21 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
 }
 
-// Dynamically apply Google Services plugin if google-services.json is present
-if (file("google-services.json").exists() || rootProject.file("google-services.json").exists() || file("src/google-services.json").exists() || file("src/main/google-services.json").exists()) {
-    println "INFO: google-services.json detected. Applying com.google.gms.google-services plugin."
+// Dynamically apply Google Services plugin if a valid google-services.json is present
+def isJsonValid(File jsonFile) {
+    if (!jsonFile.exists() || jsonFile.length() < 30) return false
+    try {
+        new groovy.json.JsonSlurper().parse(jsonFile)
+        return true
+    } catch (Exception e) {
+        println "WARNING: ${jsonFile.name} found at ${jsonFile.path} but contains invalid JSON (${e.message}). Skipping plugin."
+        return false
+    }
+}
+
+def validGsFile = [file("google-services.json"), rootProject.file("google-services.json"), file("src/google-services.json"), file("src/main/google-services.json")].find { isJsonValid(it) }
+
+if (validGsFile) {
+    println "INFO: Valid google-services.json detected at ${validGsFile.path}. Applying com.google.gms.google-services plugin."
     apply plugin: 'com.google.gms.google-services'
 }
