@@ -66,10 +66,12 @@ build/
 **/android/app/build/
 **/android/.cxx/
 
-# Gradle wrapper binaries (optional if using checked-in wrapper)
-**/android/**/gradle-wrapper.jar
-**/android/gradlew
-**/android/gradlew.bat
+# CRITICAL: Whitelist Android platform sources and Gradle wrapper
+!android/app/src/**
+!android/gradlew
+!android/gradlew.bat
+!android/gradle/wrapper/gradle-wrapper.jar
+!android/gradle/wrapper/gradle-wrapper.properties
 
 # ------------------------------------------------------------------------------
 # 4. IOS / MACOS ARTIFACTS
@@ -122,9 +124,9 @@ migrate_working_dir/
 # ------------------------------------------------------------------------------
 # 7. NON-MOBILE APPLICATION FILES & SERVICE PLATFORMS (Ignored for Mobile App)
 # ------------------------------------------------------------------------------
-web/
-supabase/
-src/
+/web/
+/supabase/
+/src/
 metadata.json
 .metadata
 .dev.env.json

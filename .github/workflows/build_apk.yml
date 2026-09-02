@@ -137,15 +137,27 @@ jobs:
           fi
 
       # ------------------------------------------------------------------------
-      # Android V2 Embedding Enforcement (Fixes "deleted Android v1 embedding" error)
+      # Android V2 Embedding Enforcement & Auto-Healing
       # ------------------------------------------------------------------------
-      - name: Enforce Android v2 Embedding in AndroidManifest
+      - name: Ensure Android Platform and Enforce V2 Embedding
         run: |
           echo "=== Verifying and Enforcing Android V2 Embedding ==="
           MANIFEST="android/app/src/main/AndroidManifest.xml"
+
+          # Self-healing: if Android folder or manifest is missing, reconstruct it
           if [ ! -f "$MANIFEST" ]; then
-            echo "::error::CRITICAL: $MANIFEST not found!"
+            echo "WARNING: $MANIFEST not found. Generating complete Android platform structure..."
+            flutter create --platforms=android --org com.smartx.learning .
+          fi
+
+          if [ ! -f "$MANIFEST" ]; then
+            echo "::error::CRITICAL: Unable to locate or generate $MANIFEST!"
             exit 1
+          fi
+
+          # Ensure Gradle wrapper script is executable
+          if [ -f "android/gradlew" ]; then
+            chmod +x android/gradlew
           fi
 
           # 1. Replace legacy v1 FlutterApplication with modern ${applicationName}
