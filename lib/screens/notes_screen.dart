@@ -201,6 +201,159 @@ class _NotesScreenState extends State<NotesScreen> {
     return cleaned;
   }
 
+  /// Counts words in text, ignoring HTML tags.
+  int _countWords(String text) {
+    final plainText = text.replaceAll(RegExp(r'<[^>]*>'), ' ').trim();
+    if (plainText.isEmpty) return 0;
+    return plainText.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+  }
+
+  /// Automatically chunks long HTML or plain text into reader-friendly pages (~280 words).
+  List<String> _splitContentIntoWordPages(String content, {int targetWordsPerPage = 280}) {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) return [];
+
+    final bool hasHtml = RegExp(r'<(?:p|h[1-6]|div|ul|ol|table|blockquote|li)\b', caseSensitive: false).hasMatch(trimmed);
+
+    List<String> blocks = [];
+    if (hasHtml) {
+      final rawBlocks = trimmed.split(RegExp(r'(</(?:p|h[1-6]|div|ul|ol|blockquote|table)>)', caseSensitive: false));
+      int i = 0;
+      while (i < rawBlocks.length) {
+        String chunk = rawBlocks[i].trim();
+        if (i + 1 < rawBlocks.length && rawBlocks[i + 1].startsWith('</')) {
+          chunk += rawBlocks[i + 1];
+          i += 2;
+        } else {
+          i += 1;
+        }
+        if (chunk.isNotEmpty) {
+          blocks.add(chunk);
+        }
+      }
+    } else {
+      blocks = trimmed
+          .split(RegExp(r'\n\s*\n'))
+          .where((p) => p.trim().isNotEmpty)
+          .map((p) => '<p>${p.trim().replaceAll('\n', '<br/>')}</p>')
+          .toList();
+      if (blocks.isEmpty) {
+        blocks = ['<p>$trimmed</p>'];
+      }
+    }
+
+    final List<String> pages = [];
+    final List<String> currentPageBlocks = [];
+    int currentWords = 0;
+
+    for (final block in blocks) {
+      final int blockWords = _countWords(block);
+      if (blockWords == 0) {
+        currentPageBlocks.add(block);
+        continue;
+      }
+
+      // If a single block is huge (> targetWordsPerPage * 1.4), split by sentences
+      if (blockWords > (targetWordsPerPage * 1.4).toInt()) {
+        final inner = block.replaceAll(RegExp(r'^<p[^>]*>|</p>$', caseSensitive: false), '').trim();
+        final sentences = inner.split(RegExp(r'(?<=[.?!።])\s+'));
+        final List<String> subChunk = [];
+        int subWords = 0;
+
+        for (final s in sentences) {
+          final int sWords = _countWords(s);
+          if (currentWords + subWords + sWords > targetWordsPerPage && (currentPageBlocks.isNotEmpty || subChunk.isNotEmpty)) {
+            if (subChunk.isNotEmpty) {
+              currentPageBlocks.add('<p>${subChunk.join(' ')}</p>');
+            }
+            pages.add(currentPageBlocks.join(''));
+            currentPageBlocks.clear();
+            subChunk.clear();
+            currentWords = 0;
+            subWords = 0;
+          }
+          subChunk.add(s);
+          subWords += sWords;
+        }
+
+        if (subChunk.isNotEmpty) {
+          currentPageBlocks.add('<p>${subChunk.join(' ')}</p>');
+          currentWords += subWords;
+        }
+        continue;
+      }
+
+      if (currentWords + blockWords > targetWordsPerPage && currentPageBlocks.isNotEmpty) {
+        pages.add(currentPageBlocks.join(''));
+        currentPageBlocks.clear();
+        currentPageBlocks.add(block);
+        currentWords = blockWords;
+      } else {
+        currentPageBlocks.add(block);
+        currentWords += blockWords;
+      }
+    }
+
+    if (currentPageBlocks.isNotEmpty) {
+      pages.add(currentPageBlocks.join(''));
+    }
+
+    return pages.isNotEmpty ? pages : [content];
+  }
+
+  /// Automatically paginates database notes by word count (~280 words per page).
+  List<Map<String, dynamic>> _paginateNotesByWords(
+    List<Map<String, dynamic>> rawNotes, {
+    int targetWordsPerPage = 280,
+  }) {
+    final List<Map<String, dynamic>> paginatedList = [];
+    final bool isEn = widget.languageCode == 'en';
+
+    for (final note in rawNotes) {
+      final String rawTitle = note['title']?.toString().trim() ?? widget.unitTitle;
+      final String rawHtml = note['html_content']?.toString() ??
+          note['content']?.toString() ??
+          '';
+
+      if (rawHtml.trim().isEmpty) continue;
+
+      final int totalWords = _countWords(rawHtml);
+
+      // If already within comfortable single-page threshold, keep as a single page
+      if (totalWords <= targetWordsPerPage + 50) {
+        paginatedList.add(Map<String, dynamic>.from(note));
+        continue;
+      }
+
+      // Automatically split into multiple word-based pages
+      final List<String> pageContents = _splitContentIntoWordPages(
+        rawHtml,
+        targetWordsPerPage: targetWordsPerPage,
+      );
+
+      final int pageCount = pageContents.length;
+      for (int i = 0; i < pageCount; i++) {
+        final Map<String, dynamic> pageNote = Map<String, dynamic>.from(note);
+        pageNote['html_content'] = pageContents[i];
+
+        if (pageCount > 1) {
+          final String partLabel = isEn
+              ? "Part ${i + 1} of $pageCount"
+              : "ክፍል ${i + 1} (ከ $pageCount)";
+          pageNote['title'] = "$rawTitle • $partLabel";
+        } else {
+          pageNote['title'] = rawTitle;
+        }
+
+        pageNote['virtual_page'] = i + 1;
+        pageNote['total_virtual_pages'] = pageCount;
+        paginatedList.add(pageNote);
+      }
+    }
+
+    return paginatedList;
+  }
+
   Future<void> _fetchNotes() async {
     try {
       setState(() {
@@ -255,7 +408,7 @@ class _NotesScreenState extends State<NotesScreen> {
       }
 
       if (fetchedNotes.isNotEmpty) {
-        _notesList = fetchedNotes;
+        _notesList = _paginateNotesByWords(fetchedNotes, targetWordsPerPage: 280);
         _currentPageIndex = 0;
       }
 

@@ -75,8 +75,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   
   late Animation<double> _titleFadeAnimation;
   late Animation<Offset> _titleSlideAnimation;
-  late Animation<double> _logoFadeAnimation;
-  late Animation<double> _logoScaleAnimation;
   late Animation<double> _spinnerFadeAnimation;
 
   Timer? _autoNavigateTimer;
@@ -98,40 +96,26 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       duration: const Duration(milliseconds: 2400),
     )..repeat(reverse: true);
 
-    // Entrance animation for typography, logo and spinner
+    // Entrance animation for typography and spinner
     _entranceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     );
 
-    _logoFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.05, 0.6, curve: Curves.easeOutCubic),
-      ),
-    );
-
-    _logoScaleAnimation = Tween<double>(begin: 0.82, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.05, 0.65, curve: Curves.easeOutBack),
-      ),
-    );
-
     _titleFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _entranceController,
-        curve: const Interval(0.2, 0.75, curve: Curves.easeOutCubic),
+        curve: const Interval(0.1, 0.75, curve: Curves.easeOutCubic),
       ),
     );
 
     _titleSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.2),
+      begin: const Offset(0, 0.15),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
         parent: _entranceController,
-        curve: const Interval(0.2, 0.85, curve: Curves.easeOutCubic),
+        curve: const Interval(0.1, 0.85, curve: Curves.easeOutCubic),
       ),
     );
 
@@ -317,7 +301,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               ),
             ),
 
-            // Layer 3: Central Brand Identity & Pure Vector Logo
+            // Layer 3: Central Brand Identity Typography
             SafeArea(
               child: Center(
                 child: Column(
@@ -325,42 +309,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const Spacer(flex: 12),
-
-                    // Central App Emblem & Logo Icon
-                    FadeTransition(
-                      opacity: _logoFadeAnimation,
-                      child: ScaleTransition(
-                        scale: _logoScaleAnimation,
-                        child: Container(
-                          width: 124,
-                          height: 124,
-                          margin: const EdgeInsets.only(bottom: 24),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF00E5FF).withValues(alpha: 0.35),
-                                blurRadius: 36,
-                                spreadRadius: 2,
-                              ),
-                              BoxShadow(
-                                color: const Color(0xFF000000).withValues(alpha: 0.5),
-                                blurRadius: 20,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/smart_x_logo.png',
-                              width: 124,
-                              height: 124,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
 
                     // Central App Name Message: "Smart X Ethiopian"
                     SlideTransition(

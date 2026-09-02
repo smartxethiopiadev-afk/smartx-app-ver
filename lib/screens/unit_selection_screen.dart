@@ -1626,19 +1626,21 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                             _selectedUnitIndex = index;
                                           });
                                           if (widget.isShortNotesMode) {
-                                            Navigator.of(context).push(
-                                              MaterialPageRoute(
-                                                builder: (context) => NotesScreen(
-                                                  grade: widget.grade,
-                                                  subjectId: widget.subjectId,
-                                                  unitNumber: activeUnitNum,
-                                                  unitTitle: title,
-                                                  themeColor: widget.color,
-                                                  isDarkMode: AppStateProvider.of(context).isDarkMode,
-                                                  languageCode: widget.languageCode,
+                                            _executeWithRewardedAd(() {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (context) => NotesScreen(
+                                                    grade: widget.grade,
+                                                    subjectId: widget.subjectId,
+                                                    unitNumber: activeUnitNum,
+                                                    unitTitle: title,
+                                                    themeColor: widget.color,
+                                                    isDarkMode: AppStateProvider.of(context).isDarkMode,
+                                                    languageCode: widget.languageCode,
+                                                  ),
                                                 ),
-                                              ),
-                                            );
+                                              );
+                                            });
                                           } else {
                                             _showUnitOptionsSheet(context, activeUnitNum, unitId, title, isDownloaded);
                                           }
