@@ -136,6 +136,36 @@ jobs:
             echo "$KEY_PROPERTIES_BASE64" | base64 --decode > android/app/key.properties
           fi
 
+      # ------------------------------------------------------------------------
+      # Android V2 Embedding Enforcement (Fixes "deleted Android v1 embedding" error)
+      # ------------------------------------------------------------------------
+      - name: Enforce Android v2 Embedding in AndroidManifest
+        run: |
+          echo "=== Verifying and Enforcing Android V2 Embedding ==="
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if [ ! -f "$MANIFEST" ]; then
+            echo "::error::CRITICAL: $MANIFEST not found!"
+            exit 1
+          fi
+
+          # 1. Replace legacy v1 FlutterApplication with modern ${applicationName}
+          sed -i 's/android:name="io.flutter.app.FlutterApplication"/android:name="${applicationName}"/g' "$MANIFEST"
+
+          # 2. Ensure flutterEmbedding meta-data with value="2" exists
+          if grep -q 'android:name="flutterEmbedding"' "$MANIFEST"; then
+            echo "flutterEmbedding tag found; ensuring value is 2..."
+            sed -i 's/android:name="flutterEmbedding"[^>]*android:value="[0-9]*"/android:name="flutterEmbedding" android:value="2"/g' "$MANIFEST"
+          else
+            echo "Injecting flutterEmbedding v2 meta-data tag into $MANIFEST..."
+            sed -i '/<\/application>/i \        <!-- Flutter V2 Embedding Required by Flutter 3.x+ -->\n        <meta-data\n            android:name="flutterEmbedding"\n            android:value="2" />' "$MANIFEST"
+          fi
+
+          # 3. Remove deprecated splash screen v1 meta-data if present
+          sed -i '/io.flutter.app.android.SplashScreenUntilFirstFrame/d' "$MANIFEST"
+
+          echo "V2 Embedding verification complete. Manifest embedding snippet:"
+          grep -C 2 'flutterEmbedding' "$MANIFEST" || true
+
       - name: Build Android App Bundle (AAB for Google Play Store)
         env:
           KEYSTORE_KEY_ALIAS: ${{ secrets.KEY_ALIAS || secrets.KEYSTORE_KEY_ALIAS }}
