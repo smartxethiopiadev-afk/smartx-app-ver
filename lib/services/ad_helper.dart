@@ -25,12 +25,12 @@ class AdHelper {
     }
   }
 
-  /// AdMob Banner Ad Unit ID (Defaults to Google official test IDs for safe verification)
+  /// AdMob Banner Ad Unit ID
   static String get bannerAdUnitId {
     if (kIsWeb) return '';
     if (Platform.isAndroid) {
-      // Android Sample Banner Ad Unit ID
-      return 'ca-app-pub-3940256099942544/6300978111';
+      // Production Android Banner Ad Unit ID
+      return 'ca-app-pub-3033531181358996/6349966054';
     } else if (Platform.isIOS) {
       // iOS Sample Banner Ad Unit ID
       return 'ca-app-pub-3940256099942544/2934735716';
@@ -43,8 +43,8 @@ class AdHelper {
   static String get interstitialAdUnitId {
     if (kIsWeb) return '';
     if (Platform.isAndroid) {
-      // Android Sample Interstitial Ad Unit ID
-      return 'ca-app-pub-3940256099942544/1033173712';
+      // Production Android Interstitial Ad Unit ID
+      return 'ca-app-pub-3033531181358996/7735094719';
     } else if (Platform.isIOS) {
       // iOS Sample Interstitial Ad Unit ID
       return 'ca-app-pub-3940256099942544/4411468910';
@@ -57,11 +57,11 @@ class AdHelper {
   static String get rewardedAdUnitId {
     if (kIsWeb) return '';
     if (Platform.isAndroid) {
-      // Android Sample Rewarded Ad Unit ID
-      return 'ca-app-pub-3940256099942544/5224354917';
+      // Production Android Rewarded Ad Unit ID
+      return 'ca-app-pub-3033531181358996/6801286996';
     } else if (Platform.isIOS) {
       // iOS Sample Rewarded Ad Unit ID
-      return 'ca-app-pub-3940256099942544/1712485313';
+      return 'ca-app-pub-3940256099942544/5224354917';
     } else {
       return '';
     }
