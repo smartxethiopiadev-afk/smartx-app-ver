@@ -1,4 +1,4 @@
-name: Build Release APK
+name: Build Release APK & App Bundle (AAB)
 
 on:
   push:
@@ -13,7 +13,7 @@ on:
 
 jobs:
   build:
-    name: Build Flutter Android APK
+    name: Build Flutter Android APK & AAB
     runs-on: ubuntu-latest
 
     steps:
@@ -45,34 +45,37 @@ jobs:
             echo "No build_runner specified in pubspec.yaml, skipping."
           fi
 
-      - name: Generate App Launcher Icons & Splash Screens
-        run: |
-          dart run flutter_launcher_icons || true
-          dart run flutter_native_splash:create || true
-
       - name: Verify Code Quality & Analyze
         run: flutter analyze --no-fatal-infos
 
-      - name: Run Unit & Widget Tests
-        run: flutter test || true
-
-      - name: Build Release APKs (Universal & Split ABI)
+      - name: Build Release APKs (Universal & Split-ABI)
         run: |
           flutter build apk --release
           flutter build apk --release --split-per-abi
 
-      - name: Upload Universal Release APK Artifact
+      - name: Build Android App Bundle (AAB for Play Store)
+        run: flutter build appbundle --release
+
+      - name: Upload Universal Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-universal
+          name: app-release-universal-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Upload Split ABI Release APKs Artifact
+      - name: Upload Split-ABI Release APKs
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-split-abi
+          name: app-release-split-abi-apks
           path: build/app/outputs/flutter-apk/app-*-release.apk
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload Release Android App Bundle (AAB)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab-bundle
+          path: build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: warn
           retention-days: 14

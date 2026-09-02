@@ -61,7 +61,7 @@ class _NotesScreenState extends State<NotesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  static const String _telegramChannelUrl = 'https://t.me/smart_x_academy';
+  static const String _telegramChannelUrl = 'https://t.me/SmartX_Discussion';
 
   @override
   void initState() {
