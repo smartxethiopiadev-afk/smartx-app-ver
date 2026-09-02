@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   build:
-    name: Build & Release Flutter App
+    name: Build, Verify & Release Flutter App
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -40,8 +40,39 @@ jobs:
           channel: 'stable'
           cache: true
 
+      # ------------------------------------------------------------------------
+      # Feature 1: Repository Secret & Credential Leak Security Scanner
+      # ------------------------------------------------------------------------
+      - name: Security Check - Scan for Accidentally Committed Secrets
+        run: |
+          echo "=== Scanning repository for leaked signing keys or sensitive credentials ==="
+          LEAKED_FILES=$(git ls-files | grep -E '\.(jks|keystore|p12|bks|pfx)$|^key\.properties$|android/key\.properties$' || true)
+          if [ -n "$LEAKED_FILES" ]; then
+            echo "::error::SECURITY CRITICAL: Sensitive credentials or keystore files are committed in Git!"
+            echo "Leaked file(s):"
+            echo "$LEAKED_FILES"
+            exit 1
+          fi
+          echo "Security scan clean: No sensitive private keys or local properties in Git index."
+
       - name: Install Flutter Dependencies
         run: flutter pub get
+
+      # ------------------------------------------------------------------------
+      # Feature 2: Code Quality, Dead Code, Unused Imports & Syntax Analyzer
+      # ------------------------------------------------------------------------
+      - name: Code Quality - Analyze Lint, Dead Code & Potential Bugs
+        run: |
+          echo "=== Running Flutter static analysis for code defects & dead code ==="
+          flutter analyze --no-fatal-infos
+
+      # ------------------------------------------------------------------------
+      # Feature 3: Automated Unit & Widget Test Runner (Crash Prevention)
+      # ------------------------------------------------------------------------
+      - name: Crash Prevention - Run Automated Tests
+        run: |
+          echo "=== Running automated tests to catch runtime logic issues ==="
+          flutter test --no-pub
 
       - name: Setup Google Services JSON from Secrets
         env:
@@ -77,7 +108,7 @@ jobs:
           KEY_PROPERTIES: ${{ secrets.KEY_PROPERTIES }}
           KEY_PROPERTIES_BASE64: ${{ secrets.KEY_PROPERTIES_BASE64 }}
         run: |
-          mkdir -p android
+          mkdir -p android/app
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "Decoding release keystore from KEYSTORE_BASE64..."
             echo "$KEYSTORE_BASE64" | base64 --decode > android/upload-keystore.jks
@@ -89,16 +120,21 @@ jobs:
             echo "$KEYSTORE_FILE" | base64 --decode > android/upload-keystore.jks
           fi
 
+          if [ -f android/upload-keystore.jks ]; then
+            cp android/upload-keystore.jks android/app/upload-keystore.jks
+            cp android/upload-keystore.jks android/my-release-key.keystore
+            cp android/upload-keystore.jks android/app/my-release-key.keystore
+          fi
+
           if [ -n "$KEY_PROPERTIES" ]; then
             echo "Writing key.properties from KEY_PROPERTIES..."
             printf "%s\n" "$KEY_PROPERTIES" > android/key.properties
+            printf "%s\n" "$KEY_PROPERTIES" > android/app/key.properties
           elif [ -n "$KEY_PROPERTIES_BASE64" ]; then
             echo "Decoding key.properties from KEY_PROPERTIES_BASE64..."
             echo "$KEY_PROPERTIES_BASE64" | base64 --decode > android/key.properties
+            echo "$KEY_PROPERTIES_BASE64" | base64 --decode > android/app/key.properties
           fi
-
-      - name: Verify Code Quality & Analyze
-        run: flutter analyze --no-fatal-infos
 
       - name: Build Android App Bundle (AAB for Google Play Store)
         env:
@@ -111,7 +147,7 @@ jobs:
           mkdir -p release_dist
           cp build/app/outputs/bundle/release/app-release.aab release_dist/SmartX-Ethiopian-PlayStore-release.aab
 
-      - name: Build Split-per-ABI APKs (arm64-v8a, armeabi-v7a) & Universal APK
+      - name: Build Split-per-ABI APKs & Universal APK
         env:
           KEYSTORE_KEY_ALIAS: ${{ secrets.KEY_ALIAS || secrets.KEYSTORE_KEY_ALIAS }}
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || secrets.KEYSTORE_KEY_PASSWORD }}
@@ -148,6 +184,125 @@ jobs:
           echo "=== Generated Release Files ==="
           ls -lh release_dist/
 
+      # ------------------------------------------------------------------------
+      # MANDATORY REQUIREMENT: Verify Digital Signature on 3 APKs and AAB Bundle
+      # If un-signed, fail the build immediately!
+      # ------------------------------------------------------------------------
+      - name: Strict Verification - Validate Digital Signatures (APK & AAB)
+        run: |
+          echo "================================================================"
+          echo "🔍 DIGITAL SIGNATURE INTEGRITY & VERIFICATION GATEWAY"
+          echo "================================================================"
+
+          # 1. Find apksigner executable from Android SDK build-tools
+          APKSIGNER_BIN=$(find "${ANDROID_SDK_ROOT:-$ANDROID_HOME}/build-tools" -name apksigner -type f 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$APKSIGNER_BIN" ]; then
+            APKSIGNER_BIN="apksigner"
+          fi
+          echo "Using APK Signer binary: $APKSIGNER_BIN"
+
+          FAILED=0
+
+          # Verify each APK file
+          REQUIRED_APKS=(
+            "release_dist/SmartX-Ethiopian-Universal.apk"
+            "release_dist/SmartX-Ethiopian-arm64-v8a.apk"
+            "release_dist/SmartX-Ethiopian-armeabi-v7a.apk"
+          )
+
+          for apk in "${REQUIRED_APKS[@]}"; do
+            echo "--------------------------------------------------------"
+            echo "Checking Signature for: $apk"
+            if [ ! -f "$apk" ]; then
+              echo "::error::CRITICAL FAILURE: Expected APK file not found: $apk"
+              FAILED=1
+              continue
+            fi
+
+            # Run apksigner verify with verbose certificate output
+            VERIFY_OUT=$("$APKSIGNER_BIN" verify --verbose --print-certs "$apk" 2>&1)
+            VERIFY_STATUS=$?
+
+            if [ $VERIFY_STATUS -ne 0 ]; then
+              echo "::error::SIGNATURE FAILURE: $apk is NOT signed or signature is corrupted!"
+              echo "$VERIFY_OUT"
+              FAILED=1
+            else
+              echo "✅ SUCCESS: $apk signature verified!"
+              echo "$VERIFY_OUT" | grep -E "Verified using|Signer #|CN=" || true
+            fi
+          done
+
+          # 2. Verify Google Play App Bundle (AAB) signature via jarsigner
+          AAB_FILE="release_dist/SmartX-Ethiopian-PlayStore-release.aab"
+          echo "--------------------------------------------------------"
+          echo "Checking Signature for Play Store Bundle: $AAB_FILE"
+          if [ ! -f "$AAB_FILE" ]; then
+            echo "::error::CRITICAL FAILURE: Play Store AAB file not found: $AAB_FILE"
+            FAILED=1
+          else
+            AAB_VERIFY_OUT=$(jarsigner -verify -verbose -certs "$AAB_FILE" 2>&1)
+            if echo "$AAB_VERIFY_OUT" | grep -q "jar verified"; then
+              echo "✅ SUCCESS: Play Store AAB signature verified successfully!"
+            else
+              echo "::error::SIGNATURE FAILURE: $AAB_FILE is NOT signed or invalid!"
+              echo "$AAB_VERIFY_OUT" | tail -n 20
+              FAILED=1
+            fi
+          fi
+
+          echo "================================================================"
+          if [ $FAILED -ne 0 ]; then
+            echo "::error::BUILD ABORTED: One or more release artifacts failed signature validation!"
+            exit 1
+          fi
+          echo "🎉 ALL 3 APKS AND AAB BUNDLE ARE GENUINELY SIGNED AND VALIDATED!"
+
+      # ------------------------------------------------------------------------
+      # Feature 4: Cryptographic Checksum Generation (SHA-256)
+      # ------------------------------------------------------------------------
+      - name: Checksum Generation - Compute SHA-256 Hashes
+        run: |
+          echo "=== Generating SHA-256 Checksums for Release Assets ==="
+          cd release_dist
+          sha256sum SmartX-Ethiopian-*.apk SmartX-Ethiopian-*.aab > SHA256SUMS.txt
+          echo "Checksums generated in release_dist/SHA256SUMS.txt:"
+          cat SHA256SUMS.txt
+
+      # ------------------------------------------------------------------------
+      # Feature 5: Artifact Size & Optimization Reporter + GitHub Step Summary
+      # ------------------------------------------------------------------------
+      - name: Build Report - Publish Markdown Summary to GitHub Actions
+        run: |
+          echo "### 🚀 Smart X Ethiopian Android Build & Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Artifact Name | Target Architecture | File Size | Signature Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- | :--- | :---: |" >> $GITHUB_STEP_SUMMARY
+
+          for f in release_dist/SmartX-Ethiopian-*.apk release_dist/SmartX-Ethiopian-*.aab; do
+            if [ -f "$f" ]; then
+              FNAME=$(basename "$f")
+              FSIZE=$(ls -lh "$f" | awk '{print $5}')
+              case "$FNAME" in
+                *Universal*) ARCH="All Devices (Universal 32/64-bit)" ;;
+                *arm64-v8a*) ARCH="ARM 64-bit (Modern Phones)" ;;
+                *armeabi-v7a*) ARCH="ARM 32-bit (Older Phones)" ;;
+                *x86_64*) ARCH="x86_64 (Emulators / ChromeOS)" ;;
+                *PlayStore*) ARCH="Google Play Store Bundle (AAB)" ;;
+                *) ARCH="Android" ;;
+              esac
+              echo "| \`$FNAME\` | $ARCH | **$FSIZE** | ✅ Signed & Verified |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### 🔐 Cryptographic Checksums (SHA-256)" >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          cat release_dist/SHA256SUMS.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✨ *Build processed with strict signature verification, dead code inspection, and zero leaks.*" >> $GITHUB_STEP_SUMMARY
+
       # Separate Artifact Uploads for each file
       - name: Upload Play Store AAB Bundle (Artifact)
         uses: actions/upload-artifact@v4
@@ -177,6 +332,13 @@ jobs:
           path: release_dist/SmartX-Ethiopian-armeabi-v7a.apk
           if-no-files-found: warn
 
+      - name: Upload SHA-256 Checksums (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmartX-Checksums-v1.0.${{ github.run_number }}
+          path: release_dist/SHA256SUMS.txt
+          if-no-files-found: warn
+
       - name: Create GitHub Release & Upload All Separate APK & AAB Packages
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
@@ -186,7 +348,7 @@ jobs:
           body: |
             ### 📱 Smart X Ethiopian (Grade 9-12) Official Build Release v1.0.${{ github.run_number }}
             
-            ይህ ይፋዊ የ Smart X Ethiopian መተግበሪያ የሪሊዝ ፋይሎች ዝርዝር ነው፦
+            ይህ ይፋዊ የ Smart X Ethiopian መተግበሪያ የተፈረመበትና የተረጋገጠበት የሪሊዝ ፋይሎች ዝርዝር ነው፦
             
             ---
             
@@ -194,24 +356,33 @@ jobs:
             
             1. **`SmartX-Ethiopian-PlayStore-release.aab`**
                * **አይነት:** Google Play Store App Bundle (.aab)
+               * **ምስክር ወረቀት:** የተፈረመ (Signed via Release Keystore)
                * **ጥቅም:** በቀጥታ ወደ Google Play Console ለማስገባት (Publish ለማድረግ)።
             
             2. **`SmartX-Ethiopian-Universal.apk`**
                * **አይነት:** Universal Full APK
+               * **ምስክር ወረቀት:** የተፈረመ (Signed & Verified)
                * **ጥቅም:** በሁሉም አንድሮይድ ስልኮች፣ ታብሌቶችና ኢሙሌተሮች ላይ ያለምንም ልዩነት በቀጥታ የሚሰራ።
             
             3. **`SmartX-Ethiopian-arm64-v8a.apk`**
                * **አይነት:** 64-bit Optimized APK (ፈጣን እና መጠኑ አነስተኛ)
+               * **ምስክር ወረቀት:** የተፈረመ (Signed & Verified)
                * **ጥቅም:** ለአብዛኞቹ ዘመናዊ ስልኮች (Samsung Galaxy, Xiaomi/Redmi, Tecno, Infinix, Oppo, ወዘተ)።
             
             4. **`SmartX-Ethiopian-armeabi-v7a.apk`**
                * **አይነት:** 32-bit Legacy APK
+               * **ምስክር ወረቀት:** የተፈረመ (Signed & Verified)
                * **ጥቅም:** ለቀደሙ ወይም ዝቅተኛ አንድሮይድ ስሪት ላላቸው 32-bit ስልኮች።
+            
+            5. **`SHA256SUMS.txt`**
+               * **አይነት:** Cryptographic Checksums
+               * **ጥቅም:** የወረዱት ፋይሎች ትክክለኛ መሆናቸውን እና እንዳልተበላሹ ለማረጋገጥ።
           files: |
             release_dist/SmartX-Ethiopian-PlayStore-release.aab
             release_dist/SmartX-Ethiopian-Universal.apk
             release_dist/SmartX-Ethiopian-arm64-v8a.apk
             release_dist/SmartX-Ethiopian-armeabi-v7a.apk
+            release_dist/SHA256SUMS.txt
           draft: false
           prerelease: false
         env:

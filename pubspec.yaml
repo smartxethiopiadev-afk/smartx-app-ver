@@ -2,7 +2,7 @@ name: smart_x_academy
 description: "A gorgeous, responsive mobile application for Smart X Ethiopian. Replicates the Grade-level courses hub, multilingual support, light/dark modes, and video tutorials."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

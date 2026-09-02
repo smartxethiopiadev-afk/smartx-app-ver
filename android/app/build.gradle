@@ -72,17 +72,22 @@ android {
             def resolvedStoreFile = keystoreProperties.getProperty('storeFile') 
                 ?: System.getenv('KEYSTORE_STORE_FILE') 
                 ?: System.getenv('STORE_FILE') 
-                ?: 'my-release-key.keystore'
+                ?: 'upload-keystore.jks'
 
             if (resolvedKeyAlias && resolvedKeyPassword && resolvedStorePassword) {
                 keyAlias resolvedKeyAlias
                 keyPassword resolvedKeyPassword
                 storePassword resolvedStorePassword
 
-                def keyFile = file(resolvedStoreFile)
-                if (!keyFile.exists() && rootProject.file(resolvedStoreFile).exists()) {
-                    keyFile = rootProject.file(resolvedStoreFile)
-                }
+                def candidateFiles = [
+                    file(resolvedStoreFile),
+                    rootProject.file(resolvedStoreFile),
+                    file('upload-keystore.jks'),
+                    rootProject.file('upload-keystore.jks'),
+                    file('my-release-key.keystore'),
+                    rootProject.file('my-release-key.keystore')
+                ]
+                def keyFile = candidateFiles.find { it != null && it.exists() } ?: file(resolvedStoreFile)
                 storeFile keyFile
             }
         }
