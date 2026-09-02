@@ -106,38 +106,112 @@ jobs:
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || secrets.KEYSTORE_KEY_PASSWORD }}
           KEYSTORE_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || secrets.KEYSTORE_STORE_PASSWORD }}
           KEYSTORE_STORE_FILE: 'upload-keystore.jks'
-        run: flutter build appbundle --release
+        run: |
+          flutter build appbundle --release
+          mkdir -p release_dist
+          cp build/app/outputs/bundle/release/app-release.aab release_dist/SmartX-Ethiopian-PlayStore-release.aab
 
-      - name: Build Release Universal APK
+      - name: Build Split-per-ABI APKs (arm64-v8a, armeabi-v7a) & Universal APK
         env:
           KEYSTORE_KEY_ALIAS: ${{ secrets.KEY_ALIAS || secrets.KEYSTORE_KEY_ALIAS }}
           KEYSTORE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || secrets.KEYSTORE_KEY_PASSWORD }}
           KEYSTORE_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || secrets.KEYSTORE_STORE_PASSWORD }}
           KEYSTORE_STORE_FILE: 'upload-keystore.jks'
-        run: flutter build apk --release
+        run: |
+          # 1. Build Split APKs for modern 64-bit and 32-bit devices
+          flutter build apk --release --split-per-abi
+          
+          # 2. Build Universal APK (works on all devices / architecture)
+          flutter build apk --release
+          
+          mkdir -p release_dist
+          # Copy Universal APK
+          if [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-release.apk release_dist/SmartX-Ethiopian-Universal.apk
+          fi
+          
+          # Copy ARM64-v8a APK (Modern phones: Samsung, Xiaomi, Tecno, etc.)
+          if [ -f build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk release_dist/SmartX-Ethiopian-arm64-v8a.apk
+          fi
+          
+          # Copy armeabi-v7a APK (Older 32-bit phones)
+          if [ -f build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk release_dist/SmartX-Ethiopian-armeabi-v7a.apk
+          fi
+          
+          # Copy x86_64 APK (Emulators / ChromeOS)
+          if [ -f build/app/outputs/flutter-apk/app-x86_64-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-x86_64-release.apk release_dist/SmartX-Ethiopian-x86_64.apk
+          fi
 
-      - name: Upload APK & AAB Artifacts
+          echo "=== Generated Release Files ==="
+          ls -lh release_dist/
+
+      # Separate Artifact Uploads for each file
+      - name: Upload Play Store AAB Bundle (Artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: smartx-android-builds-v1.0.${{ github.run_number }}
-          path: |
-            build/app/outputs/bundle/release/app-release.aab
-            build/app/outputs/flutter-apk/app-release.apk
+          name: SmartX-PlayStore-AAB-v1.0.${{ github.run_number }}
+          path: release_dist/SmartX-Ethiopian-PlayStore-release.aab
+          if-no-files-found: warn
 
-      - name: Create GitHub Release & Upload AAB + APK Assets
+      - name: Upload Universal APK (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmartX-Universal-APK-v1.0.${{ github.run_number }}
+          path: release_dist/SmartX-Ethiopian-Universal.apk
+          if-no-files-found: warn
+
+      - name: Upload ARM64 64-bit APK (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmartX-ARM64-v8a-APK-v1.0.${{ github.run_number }}
+          path: release_dist/SmartX-Ethiopian-arm64-v8a.apk
+          if-no-files-found: warn
+
+      - name: Upload ARMv7 32-bit APK (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmartX-ARMv7a-32bit-APK-v1.0.${{ github.run_number }}
+          path: release_dist/SmartX-Ethiopian-armeabi-v7a.apk
+          if-no-files-found: warn
+
+      - name: Create GitHub Release & Upload All Separate APK & AAB Packages
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: release-v1.0.${{ github.run_number }}
-          name: Smart X Ethiopian Release v1.0.${{ github.run_number }}
+          name: Smart X Ethiopian Official Release v1.0.${{ github.run_number }}
           body: |
-            Production Build Release for Smart X Ethiopian.
+            ### 📱 Smart X Ethiopian (Grade 9-12) Official Build Release v1.0.${{ github.run_number }}
             
-            - **App Bundle (.aab)**: Production release for Google Play Store console upload.
-            - **Universal APK (.apk)**: Standalone installer for direct testing and installation.
+            ይህ ይፋዊ የ Smart X Ethiopian መተግበሪያ የሪሊዝ ፋይሎች ዝርዝር ነው፦
+            
+            ---
+            
+            ### 📦 **የተዘጋጁ ፋይሎች (Download Files):**
+            
+            1. **`SmartX-Ethiopian-PlayStore-release.aab`**
+               * **አይነት:** Google Play Store App Bundle (.aab)
+               * **ጥቅም:** በቀጥታ ወደ Google Play Console ለማስገባት (Publish ለማድረግ)።
+            
+            2. **`SmartX-Ethiopian-Universal.apk`**
+               * **አይነት:** Universal Full APK
+               * **ጥቅም:** በሁሉም አንድሮይድ ስልኮች፣ ታብሌቶችና ኢሙሌተሮች ላይ ያለምንም ልዩነት በቀጥታ የሚሰራ።
+            
+            3. **`SmartX-Ethiopian-arm64-v8a.apk`**
+               * **አይነት:** 64-bit Optimized APK (ፈጣን እና መጠኑ አነስተኛ)
+               * **ጥቅም:** ለአብዛኞቹ ዘመናዊ ስልኮች (Samsung Galaxy, Xiaomi/Redmi, Tecno, Infinix, Oppo, ወዘተ)።
+            
+            4. **`SmartX-Ethiopian-armeabi-v7a.apk`**
+               * **አይነት:** 32-bit Legacy APK
+               * **ጥቅም:** ለቀደሙ ወይም ዝቅተኛ አንድሮይድ ስሪት ላላቸው 32-bit ስልኮች።
           files: |
-            build/app/outputs/bundle/release/app-release.aab
-            build/app/outputs/flutter-apk/app-release.apk
+            release_dist/SmartX-Ethiopian-PlayStore-release.aab
+            release_dist/SmartX-Ethiopian-Universal.apk
+            release_dist/SmartX-Ethiopian-arm64-v8a.apk
+            release_dist/SmartX-Ethiopian-armeabi-v7a.apk
           draft: false
           prerelease: false
         env:
