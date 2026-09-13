@@ -1,6 +1,6 @@
 -- =====================================================================
 -- SMART X ETHIOPIAN LEARNING APP - SUPABASE DATABASE MIGRATION
--- Anti-Piracy, Dynamic Packages, Worksheets & Strict Single-Device Binding
+-- Anti-Piracy, Dynamic Packages, Worksheets, Videos & Activation Codes
 -- =====================================================================
 
 -- 1. PACKAGES TABLE (Flexible Package Tiers: Single Subject, Stream, All-Inclusive Matric)
@@ -42,10 +42,37 @@ CREATE TABLE IF NOT EXISTS public.user_subscriptions (
     CONSTRAINT unique_phone_package UNIQUE(phone_number, package_id)
 );
 
--- 4. ROW LEVEL SECURITY (RLS) POLICIES
+-- 4. ACTIVATION CODES TABLE (Package-Specific Single-Device Bound Codes)
+CREATE TABLE IF NOT EXISTS public.activation_codes (
+    code TEXT PRIMARY KEY,
+    package_id TEXT NOT NULL, -- e.g., 'pkg_g12_mathematics', 'pkg_g12_physics', 'pkg_grade_12', 'pkg_all_inclusive_g12'
+    grade INT NOT NULL,
+    subject TEXT, -- NULL if full grade package
+    is_used BOOLEAN DEFAULT false,
+    used_by_phone TEXT,
+    used_by_device TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 5. VIDEOS TABLE (Unlisted YouTube Masterclasses & Curriculum Lessons)
+CREATE TABLE IF NOT EXISTS public.videos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    grade INT NOT NULL,
+    subject TEXT NOT NULL,
+    unit_number INT NOT NULL,
+    title TEXT NOT NULL,
+    youtube_video_id TEXT NOT NULL,
+    duration_text TEXT,
+    order_index INT DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 6. ROW LEVEL SECURITY (RLS) POLICIES
 ALTER TABLE public.packages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.worksheets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.activation_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.videos ENABLE ROW LEVEL SECURITY;
 
 -- Allow public read of packages
 DROP POLICY IF EXISTS "Allow public read packages" ON public.packages;
@@ -65,10 +92,19 @@ CREATE POLICY "Allow subscribers read subscriptions" ON public.user_subscription
 -- Allow initial binding and updates
 DROP POLICY IF EXISTS "Allow update subscription device binding" ON public.user_subscriptions;
 CREATE POLICY "Allow update subscription device binding" ON public.user_subscriptions
-    FOR UPDATE USING (true)
-    WITH CHECK (true);
+    FOR ALL USING (true);
 
--- 5. SAMPLE SEED DATA FOR PACKAGES (Single Subject, Grade All-In, Matric Prep)
+-- Allow code verification and single-device activation
+DROP POLICY IF EXISTS "Allow code verification" ON public.activation_codes;
+CREATE POLICY "Allow code verification" ON public.activation_codes
+    FOR ALL USING (true);
+
+-- Allow public read of videos
+DROP POLICY IF EXISTS "Allow public read access to videos" ON public.videos;
+CREATE POLICY "Allow public read access to videos" ON public.videos
+    FOR SELECT USING (true);
+
+-- 7. SEED DATA FOR PACKAGES (Single Subject, Grade All-In, Matric Prep)
 INSERT INTO public.packages (id, title, grade, price_etb, description, badge_text, tier, subject, features)
 VALUES
     -- Single Subject Packs (150 ETB)
@@ -91,3 +127,25 @@ ON CONFLICT (id) DO UPDATE SET
     tier = EXCLUDED.tier,
     subject = EXCLUDED.subject,
     features = EXCLUDED.features;
+
+-- 8. SAMPLE ACTIVATION CODES FOR TESTING
+INSERT INTO public.activation_codes (code, package_id, grade, subject, is_used)
+VALUES
+    ('SMARTX-G12-MATH-2026', 'pkg_g12_mathematics', 12, 'Mathematics', false),
+    ('SMARTX-G12-PHYS-2026', 'pkg_g12_physics', 12, 'Physics', false),
+    ('SMARTX-G12-ALL-2026', 'pkg_grade_12', 12, NULL, false),
+    ('SMARTX-G11-ALL-2026', 'pkg_grade_11', 11, NULL, false),
+    ('SMARTX-G10-ALL-2026', 'pkg_grade_10', 10, NULL, false),
+    ('SMARTX-G9-ALL-2026', 'pkg_grade_9', 9, NULL, false),
+    ('SMARTX-MATRIC-PREP-2026', 'pkg_all_inclusive_g12', 12, NULL, false)
+ON CONFLICT (code) DO NOTHING;
+
+-- 9. SEED VIDEOS FOR UNLISTED YOUTUBE MASTERCLASSES
+INSERT INTO public.videos (grade, subject, unit_number, title, youtube_video_id, duration_text, order_index)
+VALUES
+    (9, 'Mathematics', 1, 'Number Systems & Rational Operations', 'dQw4w9WgXcQ', '24:15', 1),
+    (9, 'Physics', 1, 'Physics and Human Society Overview', 'dQw4w9WgXcQ', '18:30', 2),
+    (10, 'Mathematics', 1, 'Polynomial & Rational Functions Deep-Dive', 'dQw4w9WgXcQ', '32:10', 1),
+    (11, 'Chemistry', 1, 'Atomic Structure and Chemical Bonding', 'dQw4w9WgXcQ', '28:40', 1),
+    (12, 'Mathematics', 1, 'Sequences and Series - Matric Prep Special', 'dQw4w9WgXcQ', '45:00', 1)
+ON CONFLICT (id) DO NOTHING;

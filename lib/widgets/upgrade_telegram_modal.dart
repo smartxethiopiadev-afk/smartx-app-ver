@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/package_model.dart';
 import '../services/subscription_service.dart';
 import '../services/device_service.dart';
+import '../services/activation_service.dart';
 
 class UpgradeTelegramModal extends StatefulWidget {
   final int grade;
@@ -70,7 +71,10 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
 
   final TextEditingController _phoneVerifyController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _activationCodeController = TextEditingController();
   bool _showPhoneVerifySheet = false;
+  bool _showActivationCodeSheet = false;
+  bool _isActivatingCode = false;
 
   late List<PackageModel> _packages;
 
@@ -85,6 +89,7 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
   void dispose() {
     _phoneVerifyController.dispose();
     _nameController.dispose();
+    _activationCodeController.dispose();
     super.dispose();
   }
 
@@ -244,6 +249,91 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
           backgroundColor: Colors.orangeAccent,
           action: SnackBarAction(
             label: widget.languageCode == 'am' ? 'ቴሌግራም' : 'Telegram',
+            textColor: Colors.white,
+            onPressed: _launchTelegram,
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleActivateCode() async {
+    final String codeInput = _activationCodeController.text.trim();
+    final String phoneInput = _phoneVerifyController.text.replaceAll(RegExp(r'\s+'), '').trim();
+    final String nameInput = _nameController.text.trim().isNotEmpty
+        ? _nameController.text.trim()
+        : _studentName;
+
+    final bool isAm = widget.languageCode == 'am';
+
+    if (codeInput.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isAm ? 'እባክዎ የማግበሪያ ኮዱን ያስገቡ' : 'Please enter your activation code',
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    if (phoneInput.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isAm ? 'እባክዎ ስልክ ቁጥርዎን ያስገቡ' : 'Please enter your phone number',
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isActivatingCode = true;
+    });
+
+    final result = await ActivationService.activateCode(
+      code: codeInput,
+      name: nameInput.isNotEmpty ? nameInput : 'Smart X Student',
+      phone: phoneInput,
+      languageCode: widget.languageCode,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _isActivatingCode = false;
+    });
+
+    if (result.isSuccess) {
+      Navigator.of(context).pop();
+      widget.onPackageUnlocked?.call();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.verified_rounded, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(result.message),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: isAm ? 'ቴሌግራም' : 'Telegram',
             textColor: Colors.white,
             onPressed: _launchTelegram,
           ),
@@ -655,6 +745,176 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Activation Code Card / Expandable
+                  Container(
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _showActivationCodeSheet
+                            ? const Color(0xFF0084FF)
+                            : borderColor,
+                        width: _showActivationCodeSheet ? 1.5 : 1.0,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0084FF).withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.vpn_key_rounded, color: Color(0xFF0084FF), size: 18),
+                          ),
+                          title: Text(
+                            isAm ? 'የማግበሪያ ኮድ አለዎት?' : 'Have an Activation Code?',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: textPrimary,
+                            ),
+                          ),
+                          subtitle: Text(
+                            isAm ? 'ስም፣ ስልክ እና ኮድ በማስገባት አግብር' : 'Enter Name, Phone & Code to unlock',
+                            style: TextStyle(fontSize: 11, color: textSecondary),
+                          ),
+                          trailing: Icon(
+                            _showActivationCodeSheet ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                            color: textSecondary,
+                          ),
+                          onTap: () {
+                            setState(() {
+                              _showActivationCodeSheet = !_showActivationCodeSheet;
+                            });
+                          },
+                        ),
+                        if (_showActivationCodeSheet) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(left: 14, right: 14, bottom: 14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Divider(height: 1),
+                                const SizedBox(height: 12),
+                                // Activation Code
+                                Text(
+                                  isAm ? 'የማግበሪያ ኮድ (Activation Code)' : 'Activation Code',
+                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: textPrimary),
+                                ),
+                                const SizedBox(height: 4),
+                                TextField(
+                                  controller: _activationCodeController,
+                                  textCapitalization: TextCapitalization.characters,
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14,
+                                    letterSpacing: 1.2,
+                                    color: Color(0xFF0084FF),
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'e.g. SMARTX-G12-MATH-2026',
+                                    hintStyle: TextStyle(
+                                      fontFamily: 'sans-serif',
+                                      fontSize: 12,
+                                      letterSpacing: 0,
+                                      color: textSecondary.withValues(alpha: 0.6),
+                                    ),
+                                    isDense: true,
+                                    filled: true,
+                                    fillColor: isLight ? Colors.white : const Color(0xFF0F172A),
+                                    prefixIcon: const Icon(Icons.key_rounded, size: 16, color: Color(0xFF0084FF)),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide(color: borderColor),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+
+                                // Full Name
+                                Text(
+                                  isAm ? 'የተማሪው ሙሉ ስም' : 'Student Full Name',
+                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: textPrimary),
+                                ),
+                                const SizedBox(height: 4),
+                                TextField(
+                                  controller: _nameController,
+                                  decoration: InputDecoration(
+                                    hintText: isAm ? 'ስም እና የአባት ስም' : 'Full Name',
+                                    isDense: true,
+                                    filled: true,
+                                    fillColor: isLight ? Colors.white : const Color(0xFF0F172A),
+                                    prefixIcon: const Icon(Icons.person_rounded, size: 16),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide(color: borderColor),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+
+                                // Phone Number
+                                Text(
+                                  isAm ? 'ስልክ ቁጥር' : 'Phone Number',
+                                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: textPrimary),
+                                ),
+                                const SizedBox(height: 4),
+                                TextField(
+                                  controller: _phoneVerifyController,
+                                  keyboardType: TextInputType.phone,
+                                  decoration: InputDecoration(
+                                    hintText: '09xxxxxxxx',
+                                    isDense: true,
+                                    filled: true,
+                                    fillColor: isLight ? Colors.white : const Color(0xFF0F172A),
+                                    prefixIcon: const Icon(Icons.phone_rounded, size: 16),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide(color: borderColor),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+
+                                // Activate Button
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 44,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _isActivatingCode ? null : _handleActivateCode,
+                                    icon: _isActivatingCode
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                          )
+                                        : const Icon(Icons.lock_open_rounded, size: 18),
+                                    label: Text(
+                                      isAm ? 'ኮዱን አረጋግጥ እና ክፈት' : 'Verify & Unlock Package',
+                                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF10B981),
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
 
