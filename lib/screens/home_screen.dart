@@ -517,6 +517,56 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         ],
       ),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0088CC).withValues(alpha: 0.35),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: () async {
+            final Uri telegramUri = Uri.parse('https://t.me/smartxsupport');
+            if (await canLaunchUrl(telegramUri)) {
+              await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
+            } else {
+              _showTelegramContactDialog();
+            }
+          },
+          backgroundColor: const Color(0xFF0088CC),
+          elevation: 0,
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF10B981),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.add, size: 9, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          label: Text(
+            widget.languageCode == 'am' ? 'ቴሌግራም አግኙን' : 'Telegram Admin',
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isLight ? Colors.white.withValues(alpha: 0.8) : const Color(0xFF0F172A).withValues(alpha: 0.8),
@@ -794,14 +844,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
                   const SizedBox(height: 16),
 
-                  // Subject Horizontal Filter Chips
+                  // Subject Horizontal Filter Chips (Closer Spacing)
                   SizedBox(
-                    height: 40,
+                    height: 36,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
                       itemCount: subjects.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      separatorBuilder: (_, __) => const SizedBox(width: 5),
                       itemBuilder: (context, index) {
                         final item = subjects[index];
                         final bool isSelected =
@@ -813,16 +863,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             });
                           },
                           child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
+                            duration: const Duration(milliseconds: 180),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
+                                horizontal: 11, vertical: 6),
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? const Color(0xFFEF4444)
                                   : (isLight
                                       ? Colors.white
                                       : const Color(0xFF1E293B)),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: isSelected
                                     ? const Color(0xFFEF4444)
@@ -834,9 +884,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                   ? [
                                       BoxShadow(
                                         color: const Color(0xFFEF4444)
-                                            .withValues(alpha: 0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 3),
+                                            .withValues(alpha: 0.28),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
                                       ),
                                     ]
                                   : null,
@@ -845,7 +895,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               child: Text(
                                 item['title']!,
                                 style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 12.5,
                                   fontWeight: isSelected
                                       ? FontWeight.w800
                                       : FontWeight.w600,
@@ -3099,6 +3149,121 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         );
       },
+    );
+  }
+
+  void _showTelegramContactDialog() {
+    final bool isLight = !widget.isDarkMode;
+    final bool isAm = widget.languageCode == 'am';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isLight ? Colors.white : const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFF0088CC),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                isAm ? 'የቴሌግራም አስተዳዳሪ አግኙን' : 'Telegram Admin Support',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isAm
+                  ? 'ለማንኛውም ጥያቄ፣ የክፍያ ማረጋገጫ ወይም መለያ ለማስከፈት የቴሌግራም አስተዳዳሪውን ያነጋግሩ።'
+                  : 'For any questions, payment verification, or account activation, contact admin directly.',
+              style: TextStyle(
+                fontSize: 13,
+                color: isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0088CC).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF0088CC).withValues(alpha: 0.3)),
+              ),
+              child: const Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.alternate_email_rounded, color: Color(0xFF0088CC), size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        '@smartxsupport',
+                        style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFF0088CC)),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.phone_rounded, color: Color(0xFF10B981), size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        '0978254242',
+                        style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFF10B981)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              isAm ? 'ዝጋ' : 'Close',
+              style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.grey),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final Uri telegramUri = Uri.parse('https://t.me/smartxsupport');
+              if (await canLaunchUrl(telegramUri)) {
+                await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0088CC),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: Text(
+              isAm ? 'ቴሌግራም ክፈት' : 'Open Telegram',
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
