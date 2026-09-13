@@ -9,9 +9,11 @@ import '../services/offline_manager.dart';
 import '../services/quiz_service.dart';
 import '../main.dart';
 import 'quiz_screen.dart';
-import 'registration_overlay.dart';
 import 'notes_screen.dart';
+import 'worksheet_screen.dart';
 import '../services/analytics_service.dart';
+import '../services/subscription_service.dart';
+import '../widgets/upgrade_telegram_modal.dart';
 import '../data/curriculum_units.dart';
 
 class UnitSelectionScreen extends StatefulWidget {
@@ -52,7 +54,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
   final Set<String> _expiredUnits = {};
   final Map<String, double> _downloadProgress = {}; // unitId -> 0.0 to 1.0
 
-  bool _isRegistered = false;
+  bool _isPackageUnlocked = false;
   final Map<int, int> _unitBestScores = {};
 
   bool _showOfflineTipBanner = true;
@@ -60,11 +62,22 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
   @override
   void initState() {
     super.initState();
+    SubscriptionService.addListener(_onSubscriptionChanged);
     logScreen(widget.isShortNotesMode ? 'ShortNotesUnitScreen' : 'UnitSelectionScreen');
     _loadOfflineDownloads();
     _loadBestScores();
     _checkRegistrationStatus();
     _checkOfflineTipBanner();
+  }
+
+  @override
+  void dispose() {
+    SubscriptionService.removeListener(_onSubscriptionChanged);
+    super.dispose();
+  }
+
+  void _onSubscriptionChanged() {
+    _checkRegistrationStatus();
   }
 
   void _checkOfflineTipBanner() async {
@@ -88,57 +101,40 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
   }
 
   void _checkRegistrationStatus() async {
-    final prefs = await SharedPreferences.getInstance();
+    final bool isUnlocked = await SubscriptionService.isGradeUnlocked(widget.grade);
     if (mounted) {
        setState(() {
-         _isRegistered = (prefs.getBool('has_registered') ?? false) ||
-                         (prefs.getBool('is_authenticated') ?? false);
+         _isPackageUnlocked = isUnlocked;
        });
     }
   }
 
   Future<void> _checkRegistrationAndProceed(int index, int activeUnitNum, {required VoidCallback onSuccess}) async {
-    // Unit 1 is always unlocked and free to use without registration
+    // Unit 1 is always unlocked and 100% FREE for all subjects and grades
     if (activeUnitNum <= 1) {
       onSuccess();
       return;
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    final bool hasRegistered = (prefs.getBool('has_registered') ?? false) ||
-                               (prefs.getBool('is_authenticated') ?? false);
-
-    if (!hasRegistered) {
-      if (!mounted) return;
-      await Navigator.of(context).push<String>(
-        MaterialPageRoute(
-          fullscreenDialog: true,
-          builder: (context) => RegistrationOverlay(
-            isDarkMode: AppStateProvider.of(context).isDarkMode,
-            languageCode: widget.languageCode,
-            primaryColor: widget.color,
-          ),
-        ),
-      );
-
-      // Reload SharedPreferences state after overlay closes
-      final updatedPrefs = await SharedPreferences.getInstance();
-      final bool nowRegistered = (updatedPrefs.getBool('has_registered') ?? false) ||
-                                 (updatedPrefs.getBool('is_authenticated') ?? false);
-      if (mounted) {
-        setState(() {
-          _isRegistered = nowRegistered;
-        });
-      }
-
-      if (nowRegistered) {
-        onSuccess();
-      } else {
-        debugPrint("Registration is required to access Unit $activeUnitNum. Access locked.");
-      }
-    } else {
+    // If package is already unlocked for this grade, proceed
+    if (_isPackageUnlocked) {
       onSuccess();
+      return;
     }
+
+    // If not unlocked, show the Upgrade via Telegram bottom sheet
+    UpgradeTelegramModal.show(
+      context,
+      grade: widget.grade,
+      packageName: 'Grade ${widget.grade} ${widget.enTitle} Package',
+      unitNumber: activeUnitNum,
+      unitTitle: 'Unit $activeUnitNum',
+      languageCode: widget.languageCode,
+      isDarkMode: AppStateProvider.of(context).isDarkMode,
+      onPackageUnlocked: () {
+        _checkRegistrationStatus();
+      },
+    );
   }
 
   void _showUnitOptionsSheet(BuildContext context, int unitNumber, String unitId, String unitTitle, bool isDownloaded) {
@@ -336,6 +332,89 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                   widget.languageCode == 'en' 
                                       ? "Timed, no instant answers, final score only." 
                                       : "በጊዜ የተገደበ ፈተና ፣ ፈጣን መልስ የሌለው ፣ የመጨረሻ ውጤት ብቻ",
+                                  style: TextStyle(fontSize: 11.5, color: descColor, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right_rounded, color: descColor, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 4. Worksheet & Model Solutions Card
+                  InkWell(
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => WorksheetScreen(
+                            grade: widget.grade,
+                            subject: widget.enTitle,
+                            unitNumber: unitNumber,
+                            unitTitle: unitTitle,
+                            languageCode: widget.languageCode,
+                            themeColor: widget.color,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.assignment_turned_in_rounded, color: Color(0xFF10B981), size: 24),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      widget.languageCode == 'en' ? "Practice Worksheets" : "የልምምድ ወረቀቶች",
+                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: headerColor),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        unitNumber == 1 ? "FREE" : "SOLUTIONS",
+                                        style: const TextStyle(
+                                          color: Color(0xFF10B981),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  widget.languageCode == 'en' 
+                                      ? "Curriculum problems with step-by-step solutions." 
+                                      : "ከደረጃ በደረጃ የተሰሩ ማብራሪያዎች ጋር የተዘጋጁ ጥያቄዎች",
                                   style: TextStyle(fontSize: 11.5, color: descColor, fontWeight: FontWeight.w500),
                                 ),
                               ],
@@ -1211,7 +1290,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                     final int activeUnitNum = originalIndex >= 0 ? originalIndex + 1 : index + 1;
 
                     final indexFactor = index * 100;
-                    final bool isLocked = activeUnitNum > 1 && !_isRegistered;
+                    final bool isLocked = activeUnitNum > 1 && !_isPackageUnlocked;
                     return TweenAnimationBuilder<double>(
                       tween: Tween<double>(begin: 0.0, end: 1.0),
                       duration: Duration(milliseconds: 300 + indexFactor),
@@ -1487,7 +1566,21 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                           size: 22,
                                         ),
                                         onPressed: () {
-                                          if (isLocked) return;
+                                          if (isLocked) {
+                                            UpgradeTelegramModal.show(
+                                              context,
+                                              grade: widget.grade,
+                                              packageName: 'Grade ${widget.grade} ${widget.enTitle} Package',
+                                              unitNumber: activeUnitNum,
+                                              unitTitle: title,
+                                              languageCode: widget.languageCode,
+                                              isDarkMode: AppStateProvider.of(context).isDarkMode,
+                                              onPackageUnlocked: () {
+                                                _checkRegistrationStatus();
+                                              },
+                                            );
+                                            return;
+                                          }
                                           if (isDownloaded && !isExpired) {
                                             ScaffoldMessenger.of(context).showSnackBar(
                                               SnackBar(

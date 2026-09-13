@@ -5,13 +5,14 @@ import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/question_model.dart';
+import '../models/worksheet_model.dart';
 
 class OfflineMetadata {
   final String unitId;
   final int grade;
   final int unit;
   final int downloadedAt;
-  final String type; // 'quiz' or 'note'
+  final String type; // 'quiz', 'note', or 'worksheet'
 
   OfflineMetadata({
     required this.unitId,
@@ -209,6 +210,67 @@ class OfflineManager {
     }
   }
 
+  static Future<void> saveOfflineWorksheets(
+    String unitId,
+    List<WorksheetModel> worksheets, {
+    int? grade,
+    int? unit,
+  }) async {
+    try {
+      final cleanId = _cleanKey(unitId);
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> jsonList =
+          worksheets.map((w) => jsonEncode(w.toJson())).toList();
+      await prefs.setStringList('offline_worksheets_$cleanId', jsonList);
+
+      final parsed = _parseMetadata(cleanId, explicitGrade: grade, explicitUnit: unit);
+      final metadata = OfflineMetadata(
+        unitId: cleanId,
+        grade: parsed['grade']!,
+        unit: parsed['unit']!,
+        downloadedAt: DateTime.now().millisecondsSinceEpoch,
+        type: 'worksheet',
+      );
+      await prefs.setString(
+          'offline_metadata_$cleanId', jsonEncode(metadata.toJson()));
+      await addDownload(cleanId);
+    } catch (e) {
+      debugPrint('[OfflineManager] Error saving offline worksheets: $e');
+    }
+  }
+
+  static Future<List<WorksheetModel>> getOfflineWorksheets(String unitId) async {
+    await init();
+    final cleanId = _cleanKey(unitId);
+    await checkExpirationAndPrune(cleanId);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String>? jsonList =
+          prefs.getStringList('offline_worksheets_$cleanId');
+      if (jsonList == null || jsonList.isEmpty) return [];
+      return jsonList
+          .map((str) =>
+              WorksheetModel.fromJson(jsonDecode(str) as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('[OfflineManager] Error loading offline worksheets: $e');
+      return [];
+    }
+  }
+
+  static Future<bool> hasOfflineWorksheets(String unitId) async {
+    await init();
+    final cleanId = _cleanKey(unitId);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String>? jsonList =
+          prefs.getStringList('offline_worksheets_$cleanId');
+      return jsonList != null && jsonList.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<bool> hasOfflineQuestions(String unitId) async {
     await init();
     final cleanId = _cleanKey(unitId);
@@ -310,10 +372,12 @@ class OfflineManager {
   static Future<void> _deleteOfflineDataForUnit(SharedPreferences prefs, String unitId) async {
     await prefs.remove('offline_questions_$unitId');
     await prefs.remove('offline_notes_$unitId');
+    await prefs.remove('offline_worksheets_$unitId');
     await prefs.remove('offline_metadata_$unitId');
     // Also remove legacy keys if present
     await prefs.remove('offline_questions_${unitId}_notes');
     await prefs.remove('offline_notes_${unitId}_notes');
+    await prefs.remove('offline_worksheets_${unitId}_notes');
     await prefs.remove('offline_metadata_${unitId}_notes');
   }
 

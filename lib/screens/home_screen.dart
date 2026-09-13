@@ -11,6 +11,7 @@ import '../services/offline_manager.dart';
 import 'quiz_screen.dart';
 import 'notes_screen.dart';
 import '../widgets/image_slider_carousel.dart';
+import '../widgets/how_to_start_banner.dart';
 import '../widgets/subject_vector_widgets.dart';
 import '../widgets/interactive_subject_card.dart';
 import '../main.dart';
@@ -1203,11 +1204,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
 
+          const SizedBox(height: 8.0),
+
+          // Interactive "How to Start" (እንዴት ልጀምር?) Guide Banner
+          _animateItem(
+            index: 2,
+            child: HowToStartBanner(
+              isDarkMode: !isLight,
+              languageCode: widget.languageCode,
+              onGradeSelected: (grade) => _navigateToGradeScreen(grade),
+            ),
+          ),
+
           const SizedBox(height: 12.0),
 
           // Section Title: Grade selection
           _animateItem(
-            index: 2,
+            index: 3,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 6.0),
               child: Text(
