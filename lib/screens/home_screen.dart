@@ -1101,9 +1101,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             color: const Color(0xFF0284C7).withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Row(
+                          child: const Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Icon(
                                 Icons.lock_outline_rounded,
                                 size: 12,
