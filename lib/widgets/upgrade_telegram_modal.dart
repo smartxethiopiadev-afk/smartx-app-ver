@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../models/package_model.dart';
 import '../services/subscription_service.dart';
+import '../services/device_service.dart';
 
 class UpgradeTelegramModal extends StatefulWidget {
   final int grade;
   final String? packageName;
+  final String? subject;
   final int? unitNumber;
   final String? unitTitle;
   final String languageCode;
@@ -17,6 +20,7 @@ class UpgradeTelegramModal extends StatefulWidget {
     super.key,
     required this.grade,
     this.packageName,
+    this.subject,
     this.unitNumber,
     this.unitTitle,
     this.languageCode = 'en',
@@ -28,6 +32,7 @@ class UpgradeTelegramModal extends StatefulWidget {
     BuildContext context, {
     required int grade,
     String? packageName,
+    String? subject,
     int? unitNumber,
     String? unitTitle,
     String languageCode = 'en',
@@ -41,6 +46,7 @@ class UpgradeTelegramModal extends StatefulWidget {
       builder: (ctx) => UpgradeTelegramModal(
         grade: grade,
         packageName: packageName,
+        subject: subject,
         unitNumber: unitNumber,
         unitTitle: unitTitle,
         languageCode: languageCode,
@@ -57,76 +63,82 @@ class UpgradeTelegramModal extends StatefulWidget {
 class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
   String _studentName = '';
   String _studentPhone = '';
+  String _deviceId = '';
   bool _isLoading = true;
-  bool _isActivating = false;
-  final TextEditingController _codeController = TextEditingController();
-  bool _showCodeInput = false;
+  bool _isVerifying = false;
+  int _selectedPackageIndex = 1; // Default to Grade / Stream pack (Index 1)
+
+  final TextEditingController _phoneVerifyController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  bool _showPhoneVerifySheet = false;
+
+  late List<PackageModel> _packages;
 
   @override
   void initState() {
     super.initState();
+    _packages = PackageModel.getPackagesForGrade(widget.grade, subject: widget.subject);
     _loadStudentInfo();
   }
 
   @override
   void dispose() {
-    _codeController.dispose();
+    _phoneVerifyController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
   Future<void> _loadStudentInfo() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _studentName = prefs.getString('user_fullName') ??
-          prefs.getString('user_name') ??
-          'Smart X Student';
-      _studentPhone = prefs.getString('user_phoneNumber') ??
-          prefs.getString('phone_number') ??
-          '';
-      _isLoading = false;
-    });
-  }
+    final hardwareId = await DeviceService.getDeviceId();
 
-  String get _effectivePackageName {
-    if (widget.packageName != null && widget.packageName!.isNotEmpty) {
-      return widget.packageName!;
-    }
-    switch (widget.grade) {
-      case 9:
-        return 'Grade 9 Foundation & Exam Prep';
-      case 10:
-        return 'Grade 10 National Exam Booster';
-      case 11:
-        return 'Grade 11 Prep Mastery Package';
-      case 12:
-        return 'Grade 12 EUEE Master Package';
-      default:
-        return 'Grade ${widget.grade} Premium Curriculum Package';
+    final name = prefs.getString('user_fullName') ??
+        prefs.getString('user_name') ??
+        '';
+    final phone = prefs.getString('user_phoneNumber') ??
+        prefs.getString('phone_number') ??
+        '';
+
+    _nameController.text = name;
+    _phoneVerifyController.text = phone;
+
+    if (mounted) {
+      setState(() {
+        _studentName = name.isNotEmpty ? name : 'Smart X Student';
+        _studentPhone = phone;
+        _deviceId = hardwareId;
+        _isLoading = false;
+      });
     }
   }
 
-  int get _packagePrice {
-    switch (widget.grade) {
-      case 9:
-        return 299;
-      case 10:
-        return 349;
-      case 11:
-        return 399;
-      case 12:
-        return 499;
-      default:
-        return 299;
+  PackageModel get _selectedPackage {
+    if (_selectedPackageIndex >= 0 && _selectedPackageIndex < _packages.length) {
+      return _packages[_selectedPackageIndex];
     }
+    return _packages[0];
   }
 
   Future<void> _launchTelegram() async {
-    final bool isAm = widget.languageCode == 'am';
-    final String cleanPhone = _studentPhone.isNotEmpty ? _studentPhone : 'N/A';
-    final String cleanName = _studentName.isNotEmpty ? _studentName : 'Student';
+    final String cleanPhone = _studentPhone.isNotEmpty
+        ? _studentPhone
+        : (_phoneVerifyController.text.trim().isNotEmpty
+            ? _phoneVerifyController.text.trim()
+            : 'N/A');
+    final String cleanName = _studentName.isNotEmpty
+        ? _studentName
+        : (_nameController.text.trim().isNotEmpty
+            ? _nameController.text.trim()
+            : 'Smart X Student');
+    final String cleanDeviceId = _deviceId.isNotEmpty ? _deviceId : 'DEV_ID_PENDING';
 
+    final String selectedPkgTitle = _selectedPackage.title;
+    final int priceEtb = _selectedPackage.priceEtb.toInt();
+
+    // Standardized pre-filled message format requested:
+    // "Hello Smart X Admin, I want to unlock: [Selected Package Name]. Student Name: [Name], Phone: [Phone Number], Device ID: [Device Hardware ID]"
     final String message =
-        "Hello Smart X Admin, I would like to unlock Grade ${widget.grade} $_effectivePackageName. My Name: $cleanName, Phone: $cleanPhone";
+        "Hello Smart X Admin, I want to unlock: $selectedPkgTitle ($priceEtb ETB). Student Name: $cleanName, Phone: $cleanPhone, Device ID: $cleanDeviceId";
 
     final encodedMsg = Uri.encodeComponent(message);
     final Uri directTelegramUri = Uri.parse("https://t.me/HabIT_Dev?text=$encodedMsg");
@@ -148,41 +160,57 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
         Clipboard.setData(ClipboardData(text: message));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isAm
-                ? 'መልዕክቱ ተገልብጧል! በቴሌግራም (@HabIT_Dev) ይላኩት።'
-                : 'Message copied to clipboard! Send to @HabIT_Dev on Telegram.'),
-            backgroundColor: const Color(0xFF00BFFF),
+            content: Text(
+              widget.languageCode == 'am'
+                  ? 'የቴሌግራም መልእክት ተቀድቷል! ቴሌግራም ላይ ይለጥፉት (@HabIT_Dev)'
+                  : 'Message copied to clipboard! Paste it to @HabIT_Dev on Telegram.',
+            ),
+            backgroundColor: const Color(0xFF0084FF),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
     }
   }
 
-  Future<void> _verifyActivationCode() async {
-    final code = _codeController.text.trim().toUpperCase();
-    final isAm = widget.languageCode == 'am';
+  Future<void> _verifySubscriptionOnline() async {
+    final String phoneInput = _phoneVerifyController.text.replaceAll(RegExp(r'\s+'), '').trim();
+    if (phoneInput.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.languageCode == 'am'
+                ? 'እባክዎ የተመዘገቡበትን ስልክ ቁጥር ያስገቡ'
+                : 'Please enter your registered phone number',
+          ),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
 
-    if (code.isEmpty) return;
+    setState(() {
+      _isVerifying = true;
+    });
 
-    setState(() => _isActivating = true);
-    await Future.delayed(const Duration(milliseconds: 600));
+    final DeviceBindingResult result = await SubscriptionService.syncWithSupabaseAndVerifyDevice(
+      phoneInput,
+      packageId: _selectedPackage.id,
+    );
 
-    // Valid codes: SMARTX, GRADE9, GRADE10, GRADE11, GRADE12, PROMO2026, HABIT
-    final validCodes = [
-      'SMARTX',
-      'SMARTX${widget.grade}',
-      'GRADE${widget.grade}',
-      'PROMO2026',
-      'HABIT',
-      'VIP',
-    ];
+    if (!mounted) return;
+    setState(() {
+      _isVerifying = false;
+    });
 
-    if (validCodes.contains(code)) {
+    if (result.isAllowed) {
+      await SubscriptionService.unlockPackage(_selectedPackage.id);
       await SubscriptionService.unlockGrade(widget.grade);
+
       if (mounted) {
-        setState(() => _isActivating = false);
         Navigator.of(context).pop();
         widget.onPackageUnlocked?.call();
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -190,9 +218,11 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
                 const Icon(Icons.verified_rounded, color: Colors.white),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(isAm
-                      ? 'እንኳን ደስ አለዎት! የክፍል ${widget.grade} ፓኬጅ ሙሉ በሙሉ ተከፍቷል!'
-                      : 'Congratulations! Grade ${widget.grade} package has been unlocked!'),
+                  child: Text(
+                    widget.languageCode == 'am'
+                        ? 'እንኳን ደስ አለዎት! ፓኬጁ በተሳካ ሁኔታ ለዚህ ስልክ ተከፍቷል።'
+                        : 'Success! Package unlocked and bound to this device.',
+                  ),
                 ),
               ],
             ),
@@ -201,504 +231,537 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
           ),
         );
       }
+    } else if (result.status == DeviceBindingStatus.mismatch) {
+      _showDeviceMismatchDialog(result.registeredDeviceId ?? 'Other Device');
     } else {
-      if (mounted) {
-        setState(() => _isActivating = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isAm
-                ? 'ልክ ያልሆነ የማግበሪያ ኮድ! እባክዎ በቴሌግራም አስተዳዳሪውን ያነጋግሩ።'
-                : 'Invalid activation code! Please contact admin via Telegram.'),
-            backgroundColor: Colors.redAccent,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.languageCode == 'am'
+                ? 'ምንም ንቁ ክፍያ አልተገኘም። በቴሌግራም አስተዳዳሪውን ያነጋግሩ (@HabIT_Dev)'
+                : 'No active subscription found. Please contact admin on Telegram (@HabIT_Dev)',
           ),
-        );
-      }
+          backgroundColor: Colors.orangeAccent,
+          action: SnackBarAction(
+            label: widget.languageCode == 'am' ? 'ቴሌግራም' : 'Telegram',
+            textColor: Colors.white,
+            onPressed: _launchTelegram,
+          ),
+        ),
+      );
     }
+  }
+
+  void _showDeviceMismatchDialog(String registeredDeviceId) {
+    final bool isAm = widget.languageCode == 'am';
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: widget.isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        icon: const Icon(Icons.phonelink_lock_rounded, color: Colors.redAccent, size: 48),
+        title: Text(
+          isAm ? 'አካውንቱ በሌላ ስልክ ላይ ተመዝግቧል!' : 'Account Bound to Another Device!',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 16,
+            color: widget.isDarkMode ? Colors.white : const Color(0xFF0F172A),
+          ),
+          textAlign: TextAlign.center,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isAm
+                  ? 'ይህ አካውንት አስቀድሞ በሌላ ስልክ ($registeredDeviceId) ላይ ነቅቷል። እያንዳንዱ ፓኬጅ ለአንድ ስልክ ብቻ ነው የሚፈቀደው።'
+                  : 'This account is already active on another device ($registeredDeviceId). Each subscription is valid for one phone only.',
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                color: widget.isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: Colors.redAccent, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      isAm
+                          ? 'ስልክ ከቀየሩ ወይም ከጠፋብዎ በአስተዳዳሪው በኩል ማዘዋወር ይችላሉ።'
+                          : 'If you changed your phone, contact admin to reset the device binding.',
+                      style: const TextStyle(fontSize: 11.5, color: Colors.redAccent, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(isAm ? 'ዝጋ' : 'Close'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _launchTelegram();
+            },
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: Text(isAm ? 'አስተዳዳሪውን ያነጋግሩ' : 'Contact Admin'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0084FF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isAm = widget.languageCode == 'am';
     final bool isLight = !widget.isDarkMode;
-    final Color sheetBg = isLight ? Colors.white : const Color(0xFF0F172A);
+    final bool isAm = widget.languageCode == 'am';
+
+    final Color bgColor = isLight ? Colors.white : const Color(0xFF0F172A);
+    final Color cardBg = isLight ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B);
+    final Color borderColor = isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155);
     final Color textPrimary = isLight ? const Color(0xFF0F172A) : Colors.white;
     final Color textSecondary = isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.88,
-      minChildSize: 0.5,
-      maxChildSize: 0.96,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: sheetBg,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(28),
-              topRight: Radius.circular(28),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 24,
-                offset: const Offset(0, -8),
+    return Container(
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: _isLoading
+          ? const SizedBox(
+              height: 250,
+              child: Center(
+                child: CircularProgressIndicator(color: Color(0xFF0084FF)),
               ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Drag handle
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 8),
-                  width: 44,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: isLight ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-                    borderRadius: BorderRadius.circular(10),
+            )
+          : SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag Handle
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4.5,
+                      decoration: BoxDecoration(
+                        color: isLight ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                  const SizedBox(height: 16),
 
-              // Scrollable content
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                  children: [
-                    // Header Banner with Lock & Crown
-                    Center(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Container(
-                            width: 76,
-                            height: 76,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF0084FF), Color(0xFF00BFFF)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF0084FF).withValues(alpha: 0.35),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 6),
+                  // Header with Badge
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  isAm ? 'የትምህርት ፓኬጅ ይምረጡ' : 'Select Learning Package',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                    color: textPrimary,
+                                    letterSpacing: -0.3,
+                                  ),
                                 ),
                               ],
                             ),
-                            child: const Icon(
-                              Icons.workspace_premium_rounded,
-                              color: Colors.white,
-                              size: 44,
-                            ),
-                          ),
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(5),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFF59E0B),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.lock_open_rounded,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Badge: PREMIUM PACKAGE
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0084FF).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFF0084FF).withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Text(
-                          isAm ? 'ስማርት ኤክስ ፕሪሚየም ጥቅል' : 'SMART X PREMIUM PACKAGE',
-                          style: const TextStyle(
-                            color: Color(0xFF0084FF),
-                            fontWeight: FontWeight.w900,
-                            fontSize: 12,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Title
-                    Text(
-                      _effectivePackageName,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: textPrimary,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-
-                    // Locked Unit Context if triggered from unit
-                    if (widget.unitNumber != null) ...[
-                      Container(
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isLight ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.lock_rounded, color: Color(0xFFF59E0B), size: 18),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                isAm
-                                    ? 'ክፍል 1 100% ነፃ ነው! ክፍል ${widget.unitNumber} እና ከዚያ በላይ ለመክፈት ጥቅሉን ያግብሩ።'
-                                    : 'Unit 1 is 100% Free! Unlock this package to access Unit ${widget.unitNumber} and all curriculum units.',
-                                style: TextStyle(
-                                  color: textSecondary,
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isAm
+                                  ? 'ክፍል 1 ነፃ ነው! የቀሪ ክፍሎችን በቴሌግራም ይክፈቱ'
+                                  : 'Unit 1 is 100% Free! Unlock remaining units via Telegram.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: textSecondary,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-
-                    // Price Tag
-                    Container(
-                      margin: const EdgeInsets.symmetric(vertical: 14),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isLight
-                              ? [const Color(0xFFF0F9FF), const Color(0xFFE0F2FE)]
-                              : [const Color(0xFF1E293B), const Color(0xFF0F172A)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: const Color(0xFF0084FF).withValues(alpha: 0.35),
+                        child: Text(
+                          'GRADE ${widget.grade}',
+                          style: const TextStyle(
+                            color: Color(0xFF10B981),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isAm ? 'የአንድ ጊዜ ክፍያ (ቋሚ ፈቃድ)' : 'One-Time Payment (Lifetime)',
-                                style: TextStyle(
-                                  color: textSecondary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.baseline,
-                                textBaseline: TextBaseline.alphabetic,
-                                children: [
-                                  Text(
-                                    '$_packagePrice',
-                                    style: const TextStyle(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.w900,
-                                      color: Color(0xFF0084FF),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    isAm ? 'ብር (ETB)' : 'ETB',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
-                                      color: textPrimary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 3 Package Tiers (Radio Cards)
+                  ...List.generate(_packages.length, (idx) {
+                    final pkg = _packages[idx];
+                    final bool isSelected = _selectedPackageIndex == idx;
+
+                    Color highlightColor = const Color(0xFF0084FF);
+                    if (pkg.tier == PackageTier.allInclusiveMatric) {
+                      highlightColor = const Color(0xFF8B5CF6);
+                    } else if (pkg.tier == PackageTier.singleSubject) {
+                      highlightColor = const Color(0xFF0EA5E9);
+                    }
+
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedPackageIndex = idx),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? highlightColor.withValues(alpha: isLight ? 0.08 : 0.18)
+                              : cardBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSelected ? highlightColor : borderColor,
+                            width: isSelected ? 2.0 : 1.0,
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFF10B981)),
-                            ),
-                            child: Row(
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                const Icon(Icons.flash_on_rounded, color: Color(0xFF10B981), size: 16),
-                                const SizedBox(width: 4),
-                                Text(
-                                  isAm ? 'ቅናሽ 40%' : 'SAVE 40%',
-                                  style: const TextStyle(
-                                    color: Color(0xFF10B981),
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 12,
+                                // Radio check indicator
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected ? highlightColor : textSecondary,
+                                      width: 2,
+                                    ),
+                                    color: isSelected ? highlightColor : Colors.transparent,
+                                  ),
+                                  child: isSelected
+                                      ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                      : null,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              pkg.title,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w900,
+                                                color: textPrimary,
+                                              ),
+                                            ),
+                                          ),
+                                          if (pkg.badgeText != null)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: highlightColor.withValues(alpha: 0.15),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                pkg.badgeText!,
+                                                style: TextStyle(
+                                                  color: highlightColor,
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${pkg.priceEtb.toInt()} ETB • ${isAm ? "የአንድ ጊዜ ክፍያ" : "Lifetime on 1 Device"}',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: highlightColor,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
+                            if (isSelected) ...[
+                              const SizedBox(height: 10),
+                              const Divider(height: 1, thickness: 0.8),
+                              const SizedBox(height: 8),
+                              Text(
+                                pkg.description,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: textSecondary,
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: pkg.features.map((feat) {
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.check_circle_rounded, size: 13, color: highlightColor),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        feat,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: textPrimary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+
+                  const SizedBox(height: 8),
+
+                  // Hardware Device Fingerprint Card (Anti-Account Sharing Information)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: borderColor),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.phonelink_lock_rounded, color: Color(0xFF0084FF), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isAm ? 'የስልክ መለያ ቁጥር (Hardware Device ID)' : 'Hardware Device Fingerprint',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                _deviceId.isNotEmpty ? _deviceId : 'Identifying...',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontFamily: 'monospace',
+                                  fontWeight: FontWeight.w800,
+                                  color: textPrimary,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.copy_rounded, size: 18, color: Color(0xFF0084FF)),
+                          tooltip: 'Copy Device ID',
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: _deviceId));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(isAm ? 'የስልክ መለያ ተቀድቷል' : 'Device ID copied!'),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Primary CTA Button: "Upgrade via Telegram" (በቴሌግራም ክፈት)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: _launchTelegram,
+                      icon: const Icon(Icons.send_rounded, size: 20),
+                      label: Text(
+                        isAm
+                            ? 'በቴሌግራም ክፈት (${_selectedPackage.priceEtb.toInt()} ብር)'
+                            : 'Upgrade via Telegram (${_selectedPackage.priceEtb.toInt()} ETB)',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.1,
+                        ),
                       ),
-                    ),
-
-                    // Benefits Checklist
-                    Text(
-                      isAm ? 'የፕሪሚየም ጥቅሉ ጥቅሞች:' : 'Premium Package Benefits:',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    _buildBenefitItem(
-                      icon: Icons.menu_book_rounded,
-                      title: isAm ? 'ሙሉ የክፍል ማጠቃለያ ማስታወሻዎች' : 'Full Unit Summaries & Short Notes',
-                      subtitle: isAm
-                          ? 'ከክፍል 1 እስከ መጨረሻው ሙሉ አጫጭርና ግልፅ ማስታወሻዎች'
-                          : 'Units 1 through 10+ crystal-clear curriculum notes',
-                      isLight: isLight,
-                    ),
-                    _buildBenefitItem(
-                      icon: Icons.assignment_turned_in_rounded,
-                      title: isAm ? 'የማትሪክና ሞዴል የልምምድ ወረቀቶች' : 'Matric & Model Exam Worksheets',
-                      subtitle: isAm
-                          ? 'የቀደሙት ዓመታት ጥያቄዎች ከደረጃ በደረጃ ማብራሪያ ጋር'
-                          : 'Curriculum worksheets with step-by-step solutions',
-                      isLight: isLight,
-                    ),
-                    _buildBenefitItem(
-                      icon: Icons.functions_rounded,
-                      title: isAm ? 'የቀመር ካርዶች እና ፎርሙላዎች' : 'Formula Cards & Quick Reference',
-                      subtitle: isAm
-                          ? 'ለሂሳብ እና ፊዚክስ አስፈላጊ ፎርሙላዎች በአንድ ቦታ'
-                          : 'Solved formulas and physics constants at your fingertips',
-                      isLight: isLight,
-                    ),
-                    _buildBenefitItem(
-                      icon: Icons.quiz_rounded,
-                      title: isAm ? 'ያልተገደቡ የፈተና ጥያቄዎች (Mock Tests)' : 'Unlimited Interactive Quizzes',
-                      subtitle: isAm
-                          ? 'የፈተና ፍጥነትዎን እና እውቀትዎን የሚለኩ ፈተናዎች'
-                          : 'Instant scoring, answer reviews, and timed exam practice',
-                      isLight: isLight,
-                    ),
-                    _buildBenefitItem(
-                      icon: Icons.cloud_download_rounded,
-                      title: isAm ? '100% ከመስመር ውጭ (Offline) አጠቃቀም' : '100% Offline Study Mode',
-                      subtitle: isAm
-                          ? 'አንዴ ካወረዱ ያለ ኢንተርኔት በየትኛውም ቦታ ማጥናት ይችላሉ'
-                          : 'Download once and study anywhere without internet',
-                      isLight: isLight,
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Primary Action: UNLOCK VIA TELEGRAM
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _launchTelegram,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0084FF),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        elevation: 4,
-                        shadowColor: const Color(0xFF0084FF).withValues(alpha: 0.4),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.telegram_rounded, size: 24),
-                          const SizedBox(width: 10),
-                          Text(
-                            isAm ? 'በቴሌግራም ክፈት' : 'Unlock via Telegram',
-                            style: const TextStyle(
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
+                  ),
 
-                    // Activation code toggle button
-                    Center(
-                      child: TextButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            _showCodeInput = !_showCodeInput;
-                          });
-                        },
-                        icon: Icon(
-                          _showCodeInput ? Icons.keyboard_arrow_up_rounded : Icons.key_rounded,
-                          size: 18,
+                  const SizedBox(height: 10),
+
+                  // Alternative: "Already Paid? Verify Device" Expandable
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _showPhoneVerifySheet = !_showPhoneVerifySheet;
+                        });
+                      },
+                      icon: Icon(
+                        _showPhoneVerifySheet ? Icons.keyboard_arrow_up : Icons.verified_user_outlined,
+                        size: 18,
+                        color: textSecondary,
+                      ),
+                      label: Text(
+                        isAm ? 'አስቀድመው ከፍለዋል? ስልክዎን ያረጋግጡ' : 'Already Paid? Verify & Bind Device',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
                           color: textSecondary,
                         ),
-                        label: Text(
-                          isAm ? 'የማግበሪያ ኮድ አለዎት?' : 'Have an activation code?',
-                          style: TextStyle(
-                            color: textSecondary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                          ),
-                        ),
                       ),
                     ),
+                  ),
 
-                    if (_showCodeInput) ...[
-                      const SizedBox(height: 8),
-                      Row(
+                  if (_showPhoneVerifySheet) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _codeController,
-                              style: TextStyle(
-                                color: textPrimary,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.5,
-                              ),
-                              textCapitalization: TextCapitalization.characters,
-                              decoration: InputDecoration(
-                                hintText: 'Enter code (e.g. SMARTX)',
-                                hintStyle: TextStyle(color: textSecondary, fontSize: 13),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: isLight ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Color(0xFF0084FF), width: 2),
-                                ),
-                              ),
+                          Text(
+                            isAm ? 'የተመዘገቡበት ስልክ ቁጥር:' : 'Registered Phone Number:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          ElevatedButton(
-                            onPressed: _isActivating ? null : _verifyActivationCode,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF10B981),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: _isActivating
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                  )
-                                : Text(
-                                    isAm ? 'አግብር' : 'Apply',
-                                    style: const TextStyle(fontWeight: FontWeight.w900),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _phoneVerifyController,
+                                  keyboardType: TextInputType.phone,
+                                  decoration: InputDecoration(
+                                    hintText: '09xxxxxxxx',
+                                    isDense: true,
+                                    prefixIcon: const Icon(Icons.phone_rounded, size: 18),
+                                    filled: true,
+                                    fillColor: isLight ? Colors.white : const Color(0xFF0F172A),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide(color: borderColor),
+                                    ),
                                   ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: _isVerifying ? null : _verifySubscriptionOnline,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF10B981),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: _isVerifying
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : Text(
+                                        isAm ? 'አረጋግጥ' : 'Verify',
+                                        style: const TextStyle(fontWeight: FontWeight.w900),
+                                      ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            isAm
+                                ? 'ክፍያዎን ከፈጸሙ በኋላ ስልክ ቁጥርዎን በማስገባት ለዚህ ስልክ ወዲያውኑ ማግበር ይችላሉ።'
+                                : 'After payment, enter your phone number to immediately bind and unlock this phone.',
+                            style: TextStyle(fontSize: 11, color: textSecondary),
                           ),
                         ],
-                      ),
-                    ],
-
-                    const SizedBox(height: 14),
-                    Text(
-                      isAm
-                          ? 'የቴሌግራም አድራሻችን @HabIT_Dev ወይም @SmartX_Discussion ነው።'
-                          : 'Direct support: @HabIT_Dev or join @SmartX_Discussion.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: textSecondary,
                       ),
                     ),
                   ],
-                ),
+                ],
               ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildBenefitItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool isLight,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0084FF).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: const Color(0xFF0084FF), size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

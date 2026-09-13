@@ -101,7 +101,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
   }
 
   void _checkRegistrationStatus() async {
-    final bool isUnlocked = await SubscriptionService.isGradeUnlocked(widget.grade);
+    final bool isUnlocked = await SubscriptionService.isGradeUnlocked(widget.grade, subject: widget.enTitle);
     if (mounted) {
        setState(() {
          _isPackageUnlocked = isUnlocked;
@@ -127,6 +127,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       context,
       grade: widget.grade,
       packageName: 'Grade ${widget.grade} ${widget.enTitle} Package',
+      subject: widget.enTitle,
       unitNumber: activeUnitNum,
       unitTitle: 'Unit $activeUnitNum',
       languageCode: widget.languageCode,
@@ -1571,6 +1572,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                               context,
                                               grade: widget.grade,
                                               packageName: 'Grade ${widget.grade} ${widget.enTitle} Package',
+                                              subject: widget.enTitle,
                                               unitNumber: activeUnitNum,
                                               unitTitle: title,
                                               languageCode: widget.languageCode,

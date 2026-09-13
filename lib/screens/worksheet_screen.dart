@@ -53,6 +53,7 @@ class _WorksheetScreenState extends State<WorksheetScreen> {
     final bool accessible = await SubscriptionService.isUnitAccessible(
       widget.grade,
       widget.unitNumber,
+      subject: widget.subject,
     );
 
     final bool downloaded = await OfflineManager.hasOfflineWorksheets(_unitKey);
@@ -654,7 +655,8 @@ class _WorksheetScreenState extends State<WorksheetScreen> {
                 UpgradeTelegramModal.show(
                   context,
                   grade: widget.grade,
-                  packageName: 'Grade ${widget.grade} Premium Package',
+                  packageName: 'Grade ${widget.grade} ${widget.subject} Package',
+                  subject: widget.subject,
                   unitNumber: widget.unitNumber,
                   unitTitle: widget.unitTitle,
                   languageCode: widget.languageCode,

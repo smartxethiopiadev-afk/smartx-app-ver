@@ -6,6 +6,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/question_model.dart';
 import '../models/worksheet_model.dart';
+import 'device_service.dart';
 
 class OfflineMetadata {
   final String unitId;
@@ -147,6 +148,8 @@ class OfflineManager {
 
   static Future<List<QuestionModel>> getOfflineQuestions(String unitId) async {
     await init();
+    final bool tamperOk = await DeviceService.verifyOfflineTamperIntegrity();
+    if (!tamperOk) return [];
     await checkExpirationAndPrune(unitId);
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -184,6 +187,8 @@ class OfflineManager {
 
   static Future<List<Map<String, dynamic>>> getOfflineNotes(String unitId) async {
     await init();
+    final bool tamperOk = await DeviceService.verifyOfflineTamperIntegrity();
+    if (!tamperOk) return [];
     final cleanId = _cleanKey(unitId);
     await checkExpirationAndPrune(cleanId);
     try {
@@ -241,6 +246,8 @@ class OfflineManager {
 
   static Future<List<WorksheetModel>> getOfflineWorksheets(String unitId) async {
     await init();
+    final bool tamperOk = await DeviceService.verifyOfflineTamperIntegrity();
+    if (!tamperOk) return [];
     final cleanId = _cleanKey(unitId);
     await checkExpirationAndPrune(cleanId);
     try {
