@@ -10,6 +10,9 @@ import 'unit_selection_screen.dart';
 import '../services/offline_manager.dart';
 import 'quiz_screen.dart';
 import 'notes_screen.dart';
+import '../models/video_model.dart';
+import '../services/video_service.dart';
+import '../widgets/youtube_video_player_dialog.dart';
 import '../widgets/image_slider_carousel.dart';
 import '../widgets/how_to_start_banner.dart';
 import '../widgets/subject_vector_widgets.dart';
@@ -86,6 +89,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   int _selectedGradeForQuizTab = 9;
   int _selectedGradeForNotesTab = 9;
+  int _selectedGradeForVideosTab = 9;
+  String _selectedSubjectForVideosTab = 'All';
 
   // Dictionary for dynamic translation matching 'EN/አማርኛ'
   final Map<String, Map<String, String>> _localizedValues = {
@@ -103,9 +108,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'g12_title': 'Grade 12',
       'g12_sub': 'Achieve your\ngoals!',
       'nav_home': 'Home',
-      'nav_courses': 'Offline',
+      'nav_videos': 'Videos',
       'nav_quiz': 'Quizzes',
-      'nav_notes': 'Short Note',
+      'nav_notes': 'Notes',
+      'nav_offline': 'Offline',
+      'nav_courses': 'Offline',
       'nav_leaderboard': 'Leaderboard',
       'nav_account': 'Account',
       'nav_profile': 'Profile',
@@ -135,9 +142,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'g12_title': 'ክፍል 12',
       'g12_sub': 'ግብዎን ያሳኩ!',
       'nav_home': 'መነሻ',
-      'nav_courses': 'ከመስመር ውጭ',
+      'nav_videos': 'ቪዲዮዎች',
       'nav_quiz': 'ጥያቄዎች',
-      'nav_notes': 'አጫጭር ማስታወሻዎች',
+      'nav_notes': 'ማስታወሻዎች',
+      'nav_offline': 'ከመስመር ውጭ',
+      'nav_courses': 'ከመስመር ውጭ',
       'nav_leaderboard': 'መሪዎች ሰሌዳ',
       'nav_account': 'መለያ',
       'nav_profile': 'መገለጫ',
@@ -369,9 +378,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     bool isLight = !widget.isDarkMode;
-    final bool isCoursesActive = _currentIndex == 1;
+    final bool isVideosActive = _currentIndex == 1;
     final bool isQuizActive = _currentIndex == 2;
     final bool isNotesActive = _currentIndex == 3;
+    final bool isOfflineActive = _currentIndex == 4;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -392,13 +402,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           },
         ),
         title: Text(
-          isCoursesActive
-              ? (widget.languageCode == 'en' ? 'Browse Courses' : 'ኮርሶችን ያስሱ')
+          isVideosActive
+              ? (widget.languageCode == 'en' ? 'Video Lessons' : 'የቪዲዮ ትምህርቶች')
               : (isQuizActive
                   ? (widget.languageCode == 'en' ? 'Quizzes' : 'ጥያቄዎች')
                   : (isNotesActive
-                      ? (widget.languageCode == 'en' ? 'Short Notes' : 'አጫጭር ማስታወሻዎች')
-                      : _local('title'))),
+                      ? (widget.languageCode == 'en' ? 'Notes' : 'ማስታወሻዎች')
+                      : (isOfflineActive
+                          ? (widget.languageCode == 'en' ? 'Offline Downloads' : 'ከመስመር ውጭ')
+                          : _local('title')))),
           style: TextStyle(
             fontSize: 21,
             fontWeight: FontWeight.w900,
@@ -683,9 +695,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                     _buildBottomNavItem(
                       index: 1,
-                      iconActive: Icons.offline_pin_rounded,
-                      iconInactive: Icons.offline_pin_outlined,
-                      label: _local('nav_courses'),
+                      iconActive: Icons.play_circle_filled_rounded,
+                      iconInactive: Icons.play_circle_outline_rounded,
+                      label: _local('nav_videos'),
                       isLight: isLight,
                     ),
                     _buildBottomNavItem(
@@ -700,6 +712,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       iconActive: Icons.article_rounded,
                       iconInactive: Icons.article_outlined,
                       label: _local('nav_notes'),
+                      isLight: isLight,
+                    ),
+                    _buildBottomNavItem(
+                      index: 4,
+                      iconActive: Icons.offline_pin_rounded,
+                      iconInactive: Icons.offline_pin_outlined,
+                      label: _local('nav_offline'),
                       isLight: isLight,
                     ),
                   ],
@@ -717,19 +736,698 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       case 0:
         return _buildHomeScreenContent(isLight);
       case 1:
-        return _buildOfflineScreen(isLight);
+        return _buildVideosScreenTab(isLight); // Videos (New)
       case 2:
         return _buildQuizScreenTab(isLight); // Quiz
       case 3:
         return _buildNotesScreenTab(isLight); // Notes
+      case 4:
+        return _buildOfflineScreen(isLight); // Offline
       default:
         return _buildHomeScreenContent(isLight);
     }
   }
 
+  Widget _buildUnifiedSegmentedGradeSelectorForVideos(bool isLight) {
+    final List<int> grades = [9, 10, 11, 12];
+
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: isLight ? const Color(0xFFEFF3F8) : const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(24.0),
+        border: Border.all(
+          color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+          width: 1.0,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(4.0),
+        child: Row(
+          children: grades.map((gradeNum) {
+            final bool isSelected = _selectedGradeForVideosTab == gradeNum;
+            final String title =
+                widget.languageCode == 'en' ? 'G-$gradeNum' : 'ክ-$gradeNum';
+
+            Color activeColor;
+            switch (gradeNum) {
+              case 9:
+                activeColor = const Color(0xFF3B82F6);
+                break;
+              case 10:
+                activeColor = const Color(0xFF10B981);
+                break;
+              case 11:
+                activeColor = const Color(0xFFEA580C);
+                break;
+              case 12:
+                activeColor = const Color(0xFF8B5CF6);
+                break;
+              default:
+                activeColor = const Color(0xFF3B82F6);
+            }
+
+            return Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedGradeForVideosTab = gradeNum;
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isSelected ? activeColor : Colors.transparent,
+                    borderRadius: BorderRadius.circular(20.0),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: activeColor.withValues(alpha: 0.2),
+                              blurRadius: 16.0,
+                              offset: const Offset(0, 4),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13.0,
+                      fontWeight:
+                          isSelected ? FontWeight.w900 : FontWeight.w600,
+                      color: isSelected
+                          ? Colors.white
+                          : (isLight
+                              ? const Color(0xFF475569)
+                              : const Color(0xFF94A3B8)),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideosScreenTab(bool isLight) {
+    final bool isAmharic = widget.languageCode == 'am';
+    final Color textColor =
+        isLight ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final Color subColor =
+        isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+
+    final List<Map<String, String>> subjects = [
+      {'id': 'All', 'title': isAmharic ? 'ሁሉም' : 'All'},
+      {'id': 'Mathematics', 'title': isAmharic ? 'ሂሳብ' : 'Mathematics'},
+      {'id': 'Physics', 'title': isAmharic ? 'ፊዚክስ' : 'Physics'},
+      {'id': 'Chemistry', 'title': isAmharic ? 'ኬሚስትሪ' : 'Chemistry'},
+      {'id': 'Biology', 'title': isAmharic ? 'ስነ-ህይወት' : 'Biology'},
+      {'id': 'English', 'title': isAmharic ? 'እንግሊዝኛ' : 'English'},
+      {'id': 'Economics', 'title': isAmharic ? 'ኢኮኖሚክስ' : 'Economics'},
+    ];
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Grade Selector
+                  _buildUnifiedSegmentedGradeSelectorForVideos(isLight),
+
+                  const SizedBox(height: 16),
+
+                  // Hero Banner for Video Hub
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isLight
+                            ? [const Color(0xFFDC2626), const Color(0xFFEA580C)]
+                            : [const Color(0xFF991B1B), const Color(0xFFC2410C)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFDC2626).withValues(alpha: 0.25),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.play_circle_filled_rounded,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isAmharic
+                                    ? 'የስማርት ኤክስ ቪዲዮ ማስተርክላስ'
+                                    : 'Smart X Video Masterclasses',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                isAmharic
+                                    ? 'በምርጥ መምህራን የተዘጋጁ የስርዓተ-ትምህርት ማብራሪያዎች'
+                                    : 'Step-by-step concept walkthroughs & solved models',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.88),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Subject Horizontal Filter Chips
+                  SizedBox(
+                    height: 40,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: subjects.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final item = subjects[index];
+                        final bool isSelected =
+                            _selectedSubjectForVideosTab == item['id'];
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedSubjectForVideosTab = item['id']!;
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xFFEF4444)
+                                  : (isLight
+                                      ? Colors.white
+                                      : const Color(0xFF1E293B)),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xFFEF4444)
+                                    : (isLight
+                                        ? const Color(0xFFE2E8F0)
+                                        : const Color(0xFF334155)),
+                              ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFFEF4444)
+                                            .withValues(alpha: 0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Center(
+                              child: Text(
+                                item['title']!,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : (isLight
+                                          ? const Color(0xFF475569)
+                                          : const Color(0xFF94A3B8)),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+          ),
+
+          // Videos Stream / Future Builder
+          FutureBuilder<List<VideoModel>>(
+            future: VideoService.fetchVideos(
+              grade: _selectedGradeForVideosTab,
+              subject: _selectedSubjectForVideosTab == 'All'
+                  ? null
+                  : _selectedSubjectForVideosTab,
+            ),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFFEF4444),
+                    ),
+                  ),
+                );
+              }
+
+              final videos = snapshot.data ?? [];
+
+              if (videos.isEmpty) {
+                return SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.video_library_outlined,
+                            size: 64,
+                            color: subColor.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            isAmharic
+                                ? 'ለዚህ ክፍል እና ትምህርት ምንም ቪዲዮ አልተገኘም'
+                                : 'No video lessons found for this selection',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            isAmharic
+                                ? 'እባክዎ ሌላ ክፍል ወይም የትምህርት አይነት ይምረጡ'
+                                : 'Please try selecting another grade or subject tab above.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: subColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final video = videos[index];
+                      return _buildVideoCard(
+                        video: video,
+                        isLight: isLight,
+                        isAmharic: isAmharic,
+                        textColor: textColor,
+                        subColor: subColor,
+                      );
+                    },
+                    childCount: videos.length,
+                  ),
+                ),
+              );
+            },
+          ),
+
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 40),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVideoCard({
+    required VideoModel video,
+    required bool isLight,
+    required bool isAmharic,
+    required Color textColor,
+    required Color subColor,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: isLight ? Colors.white : const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isLight
+                ? const Color(0xFF0F1B2B).withValues(alpha: 0.04)
+                : Colors.black.withValues(alpha: 0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () {
+            YouTubeVideoPlayerDialog.show(
+              context,
+              video: video,
+              isDarkMode: widget.isDarkMode,
+              languageCode: widget.languageCode,
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 16:9 Thumbnail Area with YouTube style overlay
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Video Thumbnail
+                      Image.network(
+                        video.thumbnailUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: const Color(0xFF0F172A),
+                          child: const Center(
+                            child: Icon(
+                              Icons.play_circle_fill_rounded,
+                              size: 48,
+                              color: Color(0xFFEF4444),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Gradient overlay for contrast
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withValues(alpha: 0.1),
+                              Colors.black.withValues(alpha: 0.65),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                      ),
+
+                      // Center Play Icon Button
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow_rounded,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                      ),
+
+                      // Duration Badge (Bottom Right)
+                      if (video.durationText != null)
+                        Positioned(
+                          bottom: 10,
+                          right: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.8),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              video.durationText!,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      // Unlisted / HD Badge (Top Left)
+                      Positioned(
+                        top: 10,
+                        left: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0284C7).withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(
+                                Icons.lock_outline_rounded,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'UNLISTED HD',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Video Meta Info & Actions
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Tags row
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3B82F6).withValues(
+                                alpha: isLight ? 0.12 : 0.22),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Grade ${video.grade}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF3B82F6),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(
+                                alpha: isLight ? 0.12 : 0.22),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            video.subject,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF10B981),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B5CF6).withValues(
+                                alpha: isLight ? 0.12 : 0.22),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Unit ${video.unitNumber}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF8B5CF6),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Title
+                    Text(
+                      video.title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: textColor,
+                        height: 1.35,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Action buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              YouTubeVideoPlayerDialog.show(
+                                context,
+                                video: video,
+                                isDarkMode: widget.isDarkMode,
+                                languageCode: widget.languageCode,
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.play_arrow_rounded,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                            label: Text(
+                              isAmharic ? 'ቪዲዮውን ይመልከቱ' : 'Watch Lesson',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                                color: Colors.white,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFEF4444),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          tooltip: isAmharic ? 'ጥያቄ ጠይቅ' : 'Ask Tutor',
+                          onPressed: () async {
+                            final msg = Uri.encodeComponent(
+                                'ሰላም ስማርት ኤክስ፣ ስለ Grade ${video.grade} ${video.subject} Unit ${video.unitNumber} (${video.title}) ጥያቄ አለኝ።');
+                            final uri = Uri.parse(
+                                'https://t.me/SmartX_Discussion?text=$msg');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri,
+                                  mode: LaunchMode.externalApplication);
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.telegram_rounded,
+                            color: Color(0xFF0284C7),
+                            size: 24,
+                          ),
+                          style: IconButton.styleFrom(
+                            backgroundColor: const Color(0xFF0284C7)
+                                .withValues(alpha: isLight ? 0.1 : 0.2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildUnifiedSegmentedGradeSelector(bool isLight) {
     final List<int> grades = [9, 10, 11, 12];
-    
+
     return Container(
       height: 48,
       decoration: BoxDecoration(
@@ -745,8 +1443,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: Row(
           children: grades.map((gradeNum) {
             final bool isSelected = _selectedGradeForNotesTab == gradeNum;
-            final String title = widget.languageCode == 'en' ? 'G-$gradeNum' : 'ክ-$gradeNum';
-            
+            final String title =
+                widget.languageCode == 'en' ? 'G-$gradeNum' : 'ክ-$gradeNum';
+
             Color activeColor;
             switch (gradeNum) {
               case 9:
@@ -781,8 +1480,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: activeColor.withValues(alpha: 0.2), // Softer, more elegant shadow color
-                              blurRadius: 16.0, // Soft glowing effect
+                              color: activeColor.withValues(alpha: 0.2),
+                              blurRadius: 16.0,
                               offset: const Offset(0, 4),
                             ),
                           ]
@@ -792,10 +1491,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     title,
                     style: TextStyle(
                       fontSize: 13.0,
-                      fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                      color: isSelected 
-                          ? Colors.white 
-                          : (isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8)),
+                      fontWeight:
+                          isSelected ? FontWeight.w900 : FontWeight.w600,
+                      color: isSelected
+                          ? Colors.white
+                          : (isLight
+                              ? const Color(0xFF475569)
+                              : const Color(0xFF94A3B8)),
                     ),
                   ),
                 ),
@@ -2432,13 +3134,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               logScreen('HomeScreen');
               break;
             case 1:
-              logScreen('OfflineScreen');
+              logScreen('VideosScreen');
               break;
             case 2:
               logScreen('QuizScreen');
               break;
             case 3:
               logScreen('ShortNotesScreen');
+              break;
+            case 4:
+              logScreen('OfflineScreen');
               break;
           }
         },
