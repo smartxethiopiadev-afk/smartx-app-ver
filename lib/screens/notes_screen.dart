@@ -69,7 +69,7 @@ class _NotesScreenState extends State<NotesScreen> {
     _isDarkMode = widget.isDarkMode;
     _pageController = PageController(initialPage: 0);
 
-    // Firebase Analytics tracking for screen view and custom event
+    // Analytics tracking for screen view and custom event
     logScreen('ShortNotesScreen');
     logEvent(
       name: 'short_note_opened',

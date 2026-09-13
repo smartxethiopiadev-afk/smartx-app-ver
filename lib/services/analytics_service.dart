@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
 
 /// Top-level convenience function to log screen views manually across the app.
 Future<void> logScreen(String screenName, {String? screenClass}) async {
@@ -20,86 +18,24 @@ Future<void> logEvent({
   await AnalyticsService.logEvent(name: name, parameters: parameters);
 }
 
-/// Production-ready service for Google Analytics (Firebase Analytics).
-/// Enforces resilient error handling, parameter sanitation according to GA4 specs,
-/// safe route navigation observing, and offline-safe execution.
+/// Standalone, privacy-focused application event dispatcher and observer.
+/// Completely decoupled from external telemetry/Firebase services.
 class AnalyticsService {
   AnalyticsService._();
 
-  static FirebaseAnalytics? _analyticsInstance;
   static NavigatorObserver? _observerInstance;
-  static bool _hasLoggedInitNotice = false;
+  static bool _collectionEnabled = true;
 
-  /// Checks if Firebase Core is initialized and available.
-  static bool get isAvailable {
-    try {
-      return Firebase.apps.isNotEmpty;
-    } catch (_) {
-      return false;
-    }
-  }
+  /// Analytics service status
+  static bool get isAvailable => true;
 
-  /// Safe singleton accessor for [FirebaseAnalytics].
-  /// Returns `null` if Firebase is uninitialized or unconfigured.
-  static FirebaseAnalytics? get analytics {
-    if (!isAvailable) {
-      if (!_hasLoggedInitNotice && kDebugMode) {
-        debugPrint('[AnalyticsService] Notice: Firebase is not initialized. Analytics events will be silently skipped.');
-        _hasLoggedInitNotice = true;
-      }
-      return null;
-    }
-    try {
-      _analyticsInstance ??= FirebaseAnalytics.instance;
-      return _analyticsInstance;
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] Error accessing FirebaseAnalytics instance: $e');
-      }
-      return null;
-    }
-  }
-
-  /// Production-ready [NavigatorObserver] for automatic screen view tracking in [MaterialApp].
-  /// Uses a custom name extractor for clean route names and guarantees zero runtime crashes.
+  /// Lightweight [NavigatorObserver] for route tracking in [MaterialApp].
   static NavigatorObserver get observer {
-    if (_observerInstance != null) {
-      return _observerInstance!;
-    }
-
-    try {
-      final fa = analytics;
-      if (fa != null) {
-        _observerInstance = _SafeFirebaseAnalyticsObserver(
-          analytics: fa,
-          nameExtractor: _defaultRouteNameExtractor,
-        );
-        return _observerInstance!;
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] Error creating FirebaseAnalyticsObserver: $e');
-      }
-    }
-
-    // Fallback safe observer when Firebase is not active
-    _observerInstance = _FallbackNavigatorObserver();
+    _observerInstance ??= _AppNavigatorObserver();
     return _observerInstance!;
   }
 
-  /// Intelligently extracts readable screen names from [RouteSettings].
-  static String? _defaultRouteNameExtractor(RouteSettings settings) {
-    final name = settings.name;
-    if (name != null && name.isNotEmpty && name != '/') {
-      return _sanitizeName(name.replaceAll('/', '_'));
-    }
-    return null;
-  }
-
-  /// Sanitizes an event or screen name to match Google Analytics 4 (GA4) specifications:
-  /// - Max 40 characters
-  /// - Alphanumeric and underscores only
-  /// - Must start with an alphabetic character
+  /// Sanitizes an event or screen name
   static String _sanitizeName(String raw) {
     String clean = raw.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '_');
     while (clean.startsWith('_')) {
@@ -112,9 +48,7 @@ class AnalyticsService {
     return clean;
   }
 
-  /// Sanitizes parameter map according to GA4 constraints:
-  /// - Parameter names: max 40 characters, alphanumeric and underscores only
-  /// - String values: max 100 characters
+  /// Sanitizes parameter map
   static Map<String, Object>? _sanitizeParameters(Map<String, Object>? rawParams) {
     if (rawParams == null || rawParams.isEmpty) return null;
 
@@ -144,124 +78,55 @@ class AnalyticsService {
     required String screenName,
     String? screenClass,
   }) async {
-    try {
-      final fa = analytics;
-      if (fa == null) return;
-
-      final sanitizedScreenName = _sanitizeName(screenName);
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] 📱 Screen View: "$sanitizedScreenName" (Class: $screenClass)');
-      }
-
-      await fa.logScreenView(
-        screenName: sanitizedScreenName,
-        screenClass: screenClass ?? screenName,
-      );
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] Error logging screen "$screenName": $e');
-      }
+    if (!_collectionEnabled) return;
+    final sanitizedScreenName = _sanitizeName(screenName);
+    if (kDebugMode) {
+      debugPrint('[AnalyticsService] 📱 Screen View: "$sanitizedScreenName" (Class: $screenClass)');
     }
   }
 
-  /// Logs a custom GA4 event with optional payload parameters.
+  /// Logs a custom application event with optional payload parameters.
   static Future<void> logEvent({
     required String name,
     Map<String, Object>? parameters,
   }) async {
-    try {
-      final fa = analytics;
-      if (fa == null) return;
-
-      final sanitizedEventName = _sanitizeName(name);
-      final sanitizedParams = _sanitizeParameters(parameters);
-
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] 📊 Event: "$sanitizedEventName" -> $sanitizedParams');
-      }
-
-      await fa.logEvent(
-        name: sanitizedEventName,
-        parameters: sanitizedParams,
-      );
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] Error logging event "$name": $e');
-      }
+    if (!_collectionEnabled) return;
+    final sanitizedEventName = _sanitizeName(name);
+    final sanitizedParams = _sanitizeParameters(parameters);
+    if (kDebugMode) {
+      debugPrint('[AnalyticsService] 📊 Event: "$sanitizedEventName" -> $sanitizedParams');
     }
   }
 
-  /// Sets the user ID for cross-device tracking and user-scoped analytics.
+  /// Sets the user ID for user-scoped sessions.
   static Future<void> setUserId(String? userId) async {
-    try {
-      final fa = analytics;
-      if (fa == null) return;
-      await fa.setUserId(id: userId);
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] 👤 User ID set: $userId');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] Error setting user ID: $e');
-      }
+    if (kDebugMode) {
+      debugPrint('[AnalyticsService] 👤 User ID: $userId');
     }
   }
 
-  /// Sets a user property for audience segmentation (e.g. `preferred_grade`, `preferred_lang`).
+  /// Sets a user property (e.g. `preferred_grade`, `preferred_lang`).
   static Future<void> setUserProperty({
     required String name,
     required String value,
   }) async {
-    try {
-      final fa = analytics;
-      if (fa == null) return;
-
-      final sanitizedName = _sanitizeName(name);
-      final sanitizedValue = value.length > 36 ? value.substring(0, 36) : value;
-
-      await fa.setUserProperty(
-        name: sanitizedName,
-        value: sanitizedValue,
-      );
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] 🏷️ User Property set: $sanitizedName = $sanitizedValue');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] Error setting user property "$name": $e');
-      }
+    if (kDebugMode) {
+      debugPrint('[AnalyticsService] 🏷️ User Property: $name = $value');
     }
   }
 
-  /// Enables or disables analytics data collection (useful for user privacy / GDPR toggles).
+  /// Enables or disables analytics data collection.
   static Future<void> setAnalyticsCollectionEnabled(bool enabled) async {
-    try {
-      final fa = analytics;
-      if (fa == null) return;
-      await fa.setAnalyticsCollectionEnabled(enabled);
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] Analytics collection enabled: $enabled');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] Error setting analytics collection enabled: $e');
-      }
+    _collectionEnabled = enabled;
+    if (kDebugMode) {
+      debugPrint('[AnalyticsService] Analytics collection enabled: $enabled');
     }
   }
 
-  /// Resets all analytics data for the current app instance (e.g. on user logout).
+  /// Resets analytics data for the current app instance.
   static Future<void> resetAnalyticsData() async {
-    try {
-      final fa = analytics;
-      if (fa == null) return;
-      await fa.resetAnalyticsData();
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] Analytics data reset successfully.');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[AnalyticsService] Error resetting analytics data: $e');
-      }
+    if (kDebugMode) {
+      debugPrint('[AnalyticsService] Analytics data reset.');
     }
   }
 
@@ -395,62 +260,14 @@ class AnalyticsService {
   }
 }
 
-// =============================================================================
-// SAFE OBSERVER IMPLEMENTATIONS
-// =============================================================================
-
-/// A wrapper around [FirebaseAnalyticsObserver] that guarantees runtime exceptions
-/// inside navigation callbacks never bubble up or disrupt the Flutter Navigator.
-class _SafeFirebaseAnalyticsObserver extends FirebaseAnalyticsObserver {
-  _SafeFirebaseAnalyticsObserver({
-    required super.analytics,
-    super.nameExtractor,
-  });
-
+/// Safe [NavigatorObserver] used for navigation monitoring.
+class _AppNavigatorObserver extends NavigatorObserver {
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    try {
-      super.didPush(route, previousRoute);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[_SafeFirebaseAnalyticsObserver] didPush notice: $e');
-      }
-    }
-  }
-
-  @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    try {
-      super.didPop(route, previousRoute);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[_SafeFirebaseAnalyticsObserver] didPop notice: $e');
-      }
-    }
-  }
-
-  @override
-  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    try {
-      super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[_SafeFirebaseAnalyticsObserver] didReplace notice: $e');
-      }
-    }
-  }
-
-  @override
-  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    try {
-      super.didRemove(route, previousRoute);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[_SafeFirebaseAnalyticsObserver] didRemove notice: $e');
-      }
+    super.didPush(route, previousRoute);
+    final name = route.settings.name;
+    if (name != null && name.isNotEmpty && name != '/') {
+      AnalyticsService.logScreenView(screenName: name);
     }
   }
 }
-
-/// Fallback [NavigatorObserver] used when Firebase is uninitialized or disabled.
-class _FallbackNavigatorObserver extends NavigatorObserver {}

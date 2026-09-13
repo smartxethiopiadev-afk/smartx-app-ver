@@ -4,12 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'config/app_config.dart';
 import 'screens/splash_screen.dart';
 import 'services/offline_manager.dart';
 import 'services/analytics_service.dart';
-import 'services/ad_helper.dart';
 
 void main() {
   runZonedGuarded<Future<void>>(() async {
@@ -27,12 +25,7 @@ void main() {
       debugPrint('[FlutterError] Uncaught Flutter Framework Error: ${details.exception}');
     };
 
-    // 4. Safe Firebase Core & Google Services Initialization
-    // Supports native android/app/google-services.json and ios/Runner/GoogleService-Info.plist seamlessly.
-    // Wrapped in a strict timeout to ensure offline startup is instant and non-blocking.
-    await _initFirebaseSafely();
-
-    // 5. Load fast local preferences
+    // 4. Load fast local preferences
     SharedPreferences? prefs;
     try {
       prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
@@ -46,34 +39,15 @@ void main() {
       debugPrint('[GoogleFonts] Runtime fetch notice: $e');
     }
 
-    // 6. Launch Flutter application UI immediately
+    // 5. Launch Flutter application UI immediately
     runApp(SmartXAcademyApp(prefs: prefs));
 
-    // 7. Non-blocking background initialization of secondary services
+    // 6. Non-blocking background initialization of secondary services
     _initServicesBackground();
   }, (Object error, StackTrace stack) {
     debugPrint('[runZonedGuarded] Uncaught Async Exception: $error');
     debugPrint(stack.toString());
   });
-}
-
-/// Safely initializes Firebase without blocking app execution if offline or unconfigured.
-Future<void> _initFirebaseSafely() async {
-  try {
-    if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp().timeout(const Duration(seconds: 3));
-      debugPrint('[Firebase] Successfully initialized with native platform configuration.');
-    } else {
-      debugPrint('[Firebase] Already initialized with active apps: ${Firebase.apps.map((a) => a.name).join(', ')}');
-    }
-
-    // Log app open analytics event safely in background
-    AnalyticsService.logEvent(name: 'app_open');
-  } on TimeoutException {
-    debugPrint('[Firebase] Initialization timed out (device offline or slow network). Proceeding in offline mode.');
-  } catch (e) {
-    debugPrint('[Firebase] Firebase.initializeApp notice (offline/config fallback): $e');
-  }
 }
 
 /// A developer-friendly fallback UI displayed whenever a rendering crash or unhandled UI error occurs.
@@ -279,13 +253,6 @@ Future<void> _initServicesBackground() async {
     await OfflineManager.init();
   } catch (e) {
     debugPrint('[OfflineManager] Local init notice: $e');
-  }
-  
-  // Initialize Mobile Ads SDK silently in background
-  try {
-    await AdHelper.initialize();
-  } catch (e) {
-    debugPrint('[MobileAds] Background init notice: $e');
   }
 
   // Initialize Supabase client silently in background

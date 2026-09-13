@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/ad_helper.dart';
 import 'subject_selection_screen.dart';
 import 'splash_screen.dart';
 import 'unit_selection_screen.dart';
@@ -88,10 +86,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   int _selectedGradeForQuizTab = 9;
   int _selectedGradeForNotesTab = 9;
 
-  // --- AdMob Ads State ---
-  BannerAd? _bannerAd;
-  bool _isBannerAdLoaded = false;
-
   // Dictionary for dynamic translation matching 'EN/አማርኛ'
   final Map<String, Map<String, String>> _localizedValues = {
     'en': {
@@ -170,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _fullNameController = TextEditingController();
     _phoneController = TextEditingController();
 
-    // Log Screen View for Firebase Analytics
+    // Log Screen View
     logScreen('HomeScreen');
 
     _loadProfileData();
@@ -180,7 +174,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
 
     // Replicating tutorial video with standard Youtube embedded controller
-    _loadBannerAd();
     _fadeController.forward();
     _checkAndShowTelegramDialog();
   }
@@ -369,43 +362,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _fullNameController.dispose();
     _phoneController.dispose();
     _fadeController.dispose();
-    _bannerAd?.dispose();
     super.dispose();
-  }
-
-  /// Initialize AdMob and trigger async load for HomeScreen banner
-  void _loadBannerAd() {
-    _bannerAd?.dispose();
-    _bannerAd = null;
-    _isBannerAdLoaded = false;
-
-    _bannerAd = BannerAd(
-      adUnitId: AdHelper.bannerAdUnitId,
-      request: const AdRequest(),
-      size: AdSize.banner,
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (mounted) {
-            setState(() {
-              _isBannerAdLoaded = true;
-            });
-          } else {
-            ad.dispose();
-          }
-        },
-        onAdFailedToLoad: (ad, err) {
-          debugPrint('HomeScreen BannerAd failed to load: $err. Code: ${err.code}');
-          ad.dispose();
-          if (mounted) {
-            setState(() {
-              _isBannerAdLoaded = false;
-              _bannerAd = null;
-            });
-          }
-        },
-      ),
-    );
-    _bannerAd!.load();
   }
 
   @override
@@ -686,29 +643,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: _buildCurrentTab(isLight),
             ),
           ),
-          if (_isBannerAdLoaded && _bannerAd != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14.0),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: isLight ? Colors.white : const Color(0xFF1E293B),
-                border: Border(
-                  top: BorderSide(
-                    color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-                    width: 0.8,
-                  ),
-                ),
-              ),
-              child: SizedBox(
-                height: 50.0,
-                child: SizedBox(
-                  width: _bannerAd!.size.width.toDouble(),
-                  height: _bannerAd!.size.height.toDouble(),
-                  child: AdWidget(ad: _bannerAd!),
-                ),
-              ),
-            ),
         ],
       ),
       bottomNavigationBar: Container(
@@ -1694,7 +1628,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final bool isLight = !widget.isDarkMode;
     final bool isAmharic = widget.languageCode == 'am';
 
-    // Log Grade Selection Screen for Firebase Analytics
+    // Log Grade Selection Screen View
     logScreen('GradeSelectionScreen');
 
     showModalBottomSheet(

@@ -18,14 +18,6 @@
         android:supportsRtl="true">
         
         <!-- ======================================================================= -->
-        <!-- ADVERTISING METADATA CONTEXT                                            -->
-        <!-- ======================================================================= -->
-        <!-- Google Mobile Ads SDK (AdMob) ID mapping -->
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3033531181358996~9368730269"/>
-
-        <!-- ======================================================================= -->
         <!-- MAIN LAUNCHER ENTRY POINT                                               -->
         <!-- ======================================================================= -->
         <activity

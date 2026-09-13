@@ -1,0 +1,4 @@
+# Configuration for dependency_validator
+# https://pub.dev/packages/dependency_validator
+ignore:
+  - flutter_test

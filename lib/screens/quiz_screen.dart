@@ -5,13 +5,10 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../models/question_model.dart';
 import '../services/quiz_service.dart';
 import '../services/offline_manager.dart';
-import '../services/ad_helper.dart';
 import '../main.dart';
-import '../widgets/ad_loading_dialog.dart';
 import '../widgets/quiz_result_dialog.dart';
 import '../widgets/math_text.dart';
 import '../services/analytics_service.dart';
@@ -46,7 +43,6 @@ class QuizScreen extends StatefulWidget {
 class _QuizScreenState extends State<QuizScreen> {
   bool _isLoading = true;
   bool _isSubmittingScore = false;
-  bool _isAdLoading = false;
   String? _errorMessage;
   List<QuestionModel> _questions = [];
   
@@ -81,14 +77,6 @@ class _QuizScreenState extends State<QuizScreen> {
     return 'g${widget.grade}_$prefix${widget.unit ?? 1}';
   }
 
-  RewardedAd? _rewardedAd;
-
-  InterstitialAd? _interstitialAd;
-  bool _isInterstitialAdLoaded = false;
-
-  BannerAd? _bannerAd;
-  bool _isBannerAdLoaded = false;
-
   // Timer fields
   Timer? _quizTimer;
   int _timeLeftSeconds = 0;
@@ -100,17 +88,11 @@ class _QuizScreenState extends State<QuizScreen> {
   void initState() {
     super.initState();
     logScreen('QuizScreen');
-    _loadRewardedAd();
-    _loadInterstitialAd();
-    _loadBannerAd();
     _checkAndRestoreProgress();
   }
 
   @override
   void dispose() {
-    _rewardedAd?.dispose();
-    _interstitialAd?.dispose();
-    _bannerAd?.dispose();
     _quizTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
@@ -123,74 +105,6 @@ class _QuizScreenState extends State<QuizScreen> {
     if (sub.contains('bio')) return const Color(0xFFEC4899); // Pink
     if (sub.contains('math')) return const Color(0xFF3B82F6); // Blue
     return const Color(0xFF6366F1); // Indigo default
-  }
-
-  void _loadBannerAd() {
-    _bannerAd?.dispose();
-    _bannerAd = null;
-    _isBannerAdLoaded = false;
-
-    _bannerAd = BannerAd(
-      adUnitId: AdHelper.bannerAdUnitId,
-      request: const AdRequest(),
-      size: AdSize.banner,
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (mounted) {
-            setState(() {
-              _isBannerAdLoaded = true;
-            });
-          } else {
-            ad.dispose();
-          }
-        },
-        onAdFailedToLoad: (ad, err) {
-          debugPrint('QuizScreen BannerAd failed to load: $err. Code: ${err.code}');
-          ad.dispose();
-          if (mounted) {
-            setState(() {
-              _isBannerAdLoaded = false;
-              _bannerAd = null;
-            });
-          }
-        },
-      ),
-    );
-    _bannerAd!.load();
-  }
-
-  void _loadRewardedAd() {
-    RewardedAd.load(
-      adUnitId: AdHelper.rewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          _rewardedAd = ad;
-        },
-        onAdFailedToLoad: (err) {
-          debugPrint('Failed to load a rewarded ad: ${err.message}');
-          _rewardedAd = null;
-        },
-      ),
-    );
-  }
-
-  void _loadInterstitialAd() {
-    InterstitialAd.load(
-      adUnitId: AdHelper.interstitialAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          _interstitialAd = ad;
-          _isInterstitialAdLoaded = true;
-        },
-        onAdFailedToLoad: (err) {
-          debugPrint('Failed to load an interstitial ad: ${err.message}');
-          _isInterstitialAdLoaded = false;
-          _interstitialAd = null;
-        },
-      ),
-    );
   }
 
   Future<void> _loadQuestions() async {
@@ -279,26 +193,7 @@ class _QuizScreenState extends State<QuizScreen> {
         }
       }
 
-      // Trigger AdMob Interstitial Ad before the quiz starts!
-      if (_isInterstitialAdLoaded && _interstitialAd != null) {
-        _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-          onAdDismissedFullScreenContent: (ad) {
-            ad.dispose();
-            _loadInterstitialAd();
-            startQuizTimerAndFinishLoading();
-          },
-          onAdFailedToShowFullScreenContent: (ad, err) {
-            ad.dispose();
-            _loadInterstitialAd();
-            startQuizTimerAndFinishLoading();
-          },
-        );
-        _interstitialAd!.show();
-        _interstitialAd = null;
-        _isInterstitialAdLoaded = false;
-      } else {
-        startQuizTimerAndFinishLoading();
-      }
+      startQuizTimerAndFinishLoading();
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
@@ -800,7 +695,7 @@ class _QuizScreenState extends State<QuizScreen> {
     final percent = (score / _questions.length * 100).round();
     final bool isLight = Theme.of(context).brightness == Brightness.light;
 
-    // Log Quiz Completed Event for Firebase Analytics
+    // Log Quiz Completed Event
     logEvent(
       name: 'quiz_completed',
       parameters: {
@@ -854,26 +749,7 @@ class _QuizScreenState extends State<QuizScreen> {
         );
       }
 
-      // Trigger AdMob interstitial or rewarded ad transition before pushing
-      if (_isInterstitialAdLoaded && _interstitialAd != null) {
-        _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-          onAdDismissedFullScreenContent: (ad) {
-            ad.dispose();
-            _loadInterstitialAd();
-            performNavigation();
-          },
-          onAdFailedToShowFullScreenContent: (ad, err) {
-            ad.dispose();
-            _loadInterstitialAd();
-            performNavigation();
-          },
-        );
-        _interstitialAd!.show();
-        _interstitialAd = null;
-        _isInterstitialAdLoaded = false;
-      } else {
-        performNavigation();
-      }
+      performNavigation();
     }
 
     QuizResultDialog.show(
@@ -1001,13 +877,6 @@ class _QuizScreenState extends State<QuizScreen> {
         body: Stack(
           children: [
             _buildBody(),
-            if (_isAdLoading)
-              Positioned.fill(
-                child: AdLoadingDialog(
-                  languageCode: AppStateProvider.of(context).languageCode,
-                  isDark: !isLight,
-                ),
-              ),
             if (_isSubmittingScore)
               Positioned.fill(
                 child: Container(
@@ -1072,24 +941,6 @@ class _QuizScreenState extends State<QuizScreen> {
               ),
           ],
         ),
-        bottomNavigationBar: (_isBannerAdLoaded && _bannerAd != null)
-            ? Container(
-                color: backgroundColor,
-                child: SafeArea(
-                  top: false,
-                  child: SizedBox(
-                    height: _bannerAd!.size.height.toDouble(),
-                    child: Center(
-                      child: SizedBox(
-                        width: _bannerAd!.size.width.toDouble(),
-                        height: _bannerAd!.size.height.toDouble(),
-                        child: AdWidget(ad: _bannerAd!),
-                      ),
-                    ),
-                  ),
-                ),
-              )
-            : null,
       ),
     );
   }

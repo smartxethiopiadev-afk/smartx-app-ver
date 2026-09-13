@@ -3,17 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:io';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/ad_helper.dart';
 import '../services/offline_manager.dart';
 import '../services/quiz_service.dart';
 import '../main.dart';
 import 'quiz_screen.dart';
 import 'registration_overlay.dart';
 import 'notes_screen.dart';
-import '../widgets/ad_loading_dialog.dart';
 import '../services/analytics_service.dart';
 import '../data/curriculum_units.dart';
 
@@ -55,15 +52,6 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
   final Set<String> _expiredUnits = {};
   final Map<String, double> _downloadProgress = {}; // unitId -> 0.0 to 1.0
 
-  BannerAd? _bannerAd;
-  bool _isBannerAdLoaded = false;
-  
-  RewardedAd? _rewardedAd;
-  bool _isRewardedAdLoaded = false;
-
-  InterstitialAd? _interstitialAd;
-  bool _isInterstitialAdLoaded = false;
-
   bool _isRegistered = false;
   final Map<int, int> _unitBestScores = {};
 
@@ -73,9 +61,6 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
   void initState() {
     super.initState();
     logScreen(widget.isShortNotesMode ? 'ShortNotesUnitScreen' : 'UnitSelectionScreen');
-    _loadBannerAd();
-    _loadRewardedAd();
-    _loadInterstitialAd();
     _loadOfflineDownloads();
     _loadBestScores();
     _checkRegistrationStatus();
@@ -241,11 +226,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                           },
                         );
                       };
-                      if (isDownloaded) {
-                        startQuizAction();
-                      } else {
-                        _executeWithInterstitialAd(startQuizAction);
-                      }
+                      startQuizAction();
                     },
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
@@ -319,11 +300,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                           },
                         );
                       };
-                      if (isDownloaded) {
-                        startQuizAction();
-                      } else {
-                        _executeWithRewardedAd(startQuizAction);
-                      }
+                      startQuizAction();
                     },
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
@@ -515,281 +492,6 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
     }
   }
 
-  void _showAdLoadingDialog(BuildContext context) {
-    final isDark = AppStateProvider.of(context).isDarkMode;
-    AdLoadingDialog.show(
-      context,
-      languageCode: widget.languageCode,
-      isDark: isDark,
-    );
-  }
-
-  Future<void> _executeWithInterstitialAd(VoidCallback action) async {
-    try {
-      final bool hasConn = await _hasInternet();
-      if (!hasConn) {
-        action();
-        return;
-      }
-
-      // Show loading dialog immediately
-      _showAdLoadingDialog(context);
-
-      bool dialogClosed = false;
-      Timer? timeoutTimer;
-
-      // Helper to close dialog and perform action
-      void closeDialogAndProceed() {
-        if (!dialogClosed) {
-          dialogClosed = true;
-          timeoutTimer?.cancel();
-          Navigator.of(context, rootNavigator: true).pop(); // Close spinner
-          action();
-        }
-      }
-
-      // If an interstitial ad is ALREADY loaded, show it immediately
-      if (_isInterstitialAdLoaded && _interstitialAd != null) {
-        _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-          onAdDismissedFullScreenContent: (ad) {
-            ad.dispose();
-            _loadInterstitialAd();
-            closeDialogAndProceed();
-          },
-          onAdFailedToShowFullScreenContent: (ad, err) {
-            ad.dispose();
-            _loadInterstitialAd();
-            closeDialogAndProceed();
-          },
-        );
-        _interstitialAd!.show();
-        _interstitialAd = null;
-        _isInterstitialAdLoaded = false;
-        return;
-      }
-
-      // Otherwise, actively load a new ad and wait up to 5 seconds
-      timeoutTimer = Timer(const Duration(seconds: 5), () {
-        debugPrint("Interstitial ad load timed out after 5 seconds");
-        closeDialogAndProceed();
-      });
-
-      InterstitialAd.load(
-        adUnitId: AdHelper.interstitialAdUnitId,
-        request: const AdRequest(),
-        adLoadCallback: InterstitialAdLoadCallback(
-          onAdLoaded: (ad) {
-            if (dialogClosed) {
-              ad.dispose();
-              return;
-            }
-            timeoutTimer?.cancel();
-            ad.fullScreenContentCallback = FullScreenContentCallback(
-              onAdDismissedFullScreenContent: (dismissedAd) {
-                dismissedAd.dispose();
-                _loadInterstitialAd(); // Cache the next one
-                closeDialogAndProceed();
-              },
-              onAdFailedToShowFullScreenContent: (failedAd, err) {
-                failedAd.dispose();
-                _loadInterstitialAd();
-                closeDialogAndProceed();
-              },
-            );
-            dialogClosed = true;
-            Navigator.of(context, rootNavigator: true).pop();
-            ad.show();
-          },
-          onAdFailedToLoad: (err) {
-            debugPrint("Interstitial ad failed to load within timeout: $err");
-            closeDialogAndProceed();
-          },
-        ),
-      );
-    } catch (e) {
-      debugPrint("Error in interstitial ad: $e");
-      action();
-    }
-  }
-
-  void _loadRewardedAd() {
-    RewardedAd.load(
-      adUnitId: AdHelper.rewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
-              ad.dispose();
-              _loadRewardedAd();
-            },
-            onAdFailedToShowFullScreenContent: (ad, err) {
-              ad.dispose();
-              _loadRewardedAd();
-            },
-          );
-          _rewardedAd = ad;
-          _isRewardedAdLoaded = true;
-        },
-        onAdFailedToLoad: (err) {
-          debugPrint('Failed to load a rewarded ad: ${err.message}');
-          _isRewardedAdLoaded = false;
-        },
-      ),
-    );
-  }
-
-  void _executeWithRewardedAd(VoidCallback action) async {
-    final bool hasConn = await _hasInternet();
-    if (!hasConn) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (BuildContext dialogContext) {
-            final isLight = !AppStateProvider.of(context).isDarkMode;
-            return AlertDialog(
-              backgroundColor: isLight ? Colors.white : const Color(0xFF1E293B),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Text(
-                widget.languageCode == 'en' ? 'No Internet' : 'ምንም የኢንተርኔት ግንኙነት የለም',
-                style: TextStyle(
-                  color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: Text(
-                widget.languageCode == 'en'
-                    ? 'Please check your internet connection and try again.'
-                    : 'እባክዎን የኢንተርኔት ግንኙነትዎን አስተካክለው ድጋሚ ይሞክሩ።',
-                style: TextStyle(
-                  color: isLight ? const Color(0xFF334155) : const Color(0xFF94A3B8),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: Text(
-                    widget.languageCode == 'en' ? 'OK' : 'እሺ',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      }
-      return; // STOP execution
-    }
-
-    // Show loading spinner immediately
-    _showAdLoadingDialog(context);
-
-    bool dialogClosed = false;
-    Timer? timeoutTimer;
-
-    void closeDialogAndProceed() {
-      if (!dialogClosed) {
-        dialogClosed = true;
-        timeoutTimer?.cancel();
-        Navigator.of(context, rootNavigator: true).pop(); // Close spinner
-        action();
-      }
-    }
-
-    // If a rewarded ad is ALREADY loaded, show it immediately
-    if (_isRewardedAdLoaded && _rewardedAd != null) {
-      _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          _loadRewardedAd();
-          closeDialogAndProceed();
-        },
-        onAdFailedToShowFullScreenContent: (ad, err) {
-          ad.dispose();
-          _loadRewardedAd();
-          closeDialogAndProceed();
-        },
-      );
-      _rewardedAd!.show(
-        onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
-          closeDialogAndProceed();
-        },
-      );
-      _rewardedAd = null;
-      _isRewardedAdLoaded = false;
-      return;
-    }
-
-    // Otherwise, actively load a new rewarded ad and wait up to 5 seconds
-    timeoutTimer = Timer(const Duration(seconds: 5), () {
-      debugPrint("Rewarded ad load timed out after 5 seconds");
-      closeDialogAndProceed();
-    });
-
-    RewardedAd.load(
-      adUnitId: AdHelper.rewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          if (dialogClosed) {
-            ad.dispose();
-            return;
-          }
-          timeoutTimer?.cancel();
-          ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (dismissedAd) {
-              dismissedAd.dispose();
-              _loadRewardedAd(); // Cache next rewarded ad
-              closeDialogAndProceed();
-            },
-            onAdFailedToShowFullScreenContent: (failedAd, err) {
-              failedAd.dispose();
-              _loadRewardedAd();
-              closeDialogAndProceed();
-            },
-          );
-          
-          ad.show(
-            onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
-              closeDialogAndProceed();
-            },
-          );
-        },
-        onAdFailedToLoad: (err) {
-          debugPrint("Rewarded ad failed to load within timeout: $err");
-          closeDialogAndProceed();
-        },
-      ),
-    );
-  }
-
-  void _loadInterstitialAd() {
-    InterstitialAd.load(
-      adUnitId: AdHelper.interstitialAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          _interstitialAd = ad;
-          _isInterstitialAdLoaded = true;
-          _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
-              ad.dispose();
-              _loadInterstitialAd();
-            },
-            onAdFailedToShowFullScreenContent: (ad, err) {
-              ad.dispose();
-              _loadInterstitialAd();
-            },
-          );
-        },
-        onAdFailedToLoad: (err) {
-          debugPrint('Failed to load an interstitial ad: ${err.message}');
-          _isInterstitialAdLoaded = false;
-        },
-      ),
-    );
-  }
-
   void _loadOfflineDownloads() async {
     final downloaded = await OfflineManager.getDownloadedUnitIds();
     final Set<String> expired = {};
@@ -828,48 +530,6 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
         });
       }
     } catch (_) {}
-  }
-
-  @override
-  void dispose() {
-    _bannerAd?.dispose();
-    _rewardedAd?.dispose();
-    _interstitialAd?.dispose();
-    super.dispose();
-  }
-
-  void _loadBannerAd() {
-    _bannerAd?.dispose();
-    _bannerAd = null;
-    _isBannerAdLoaded = false;
-
-    _bannerAd = BannerAd(
-      adUnitId: AdHelper.bannerAdUnitId,
-      request: const AdRequest(),
-      size: AdSize.banner,
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (mounted) {
-            setState(() {
-              _isBannerAdLoaded = true;
-            });
-          } else {
-            ad.dispose();
-          }
-        },
-        onAdFailedToLoad: (ad, err) {
-          debugPrint('UnitSelectionScreen BannerAd failed to load: $err. Code: ${err.code}');
-          ad.dispose();
-          if (mounted) {
-            setState(() {
-              _isBannerAdLoaded = false;
-              _bannerAd = null;
-            });
-          }
-        },
-      ),
-    );
-    _bannerAd!.load();
   }
 
   // Bilingual translation helper
@@ -915,7 +575,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
 
 
 
-  Future<void> _downloadUnitWithAd(String unitId) async {
+  Future<void> _downloadUnit(String unitId) async {
     final String typeSuffix = widget.isShortNotesMode ? '_notes' : '_quiz';
     final String downloadKey = 'g${widget.grade}_${unitId}$typeSuffix';
     final String cleanKey = downloadKey.replaceAll('_notes', '');
@@ -1049,7 +709,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
         }
         await OfflineManager.addDownload(downloadKey);
 
-        // Log Firebase Analytics Event for offline unit download
+        // Log Analytics Event for offline unit download
         AnalyticsService.logOfflineDownload(
           unitTitle: 'Unit $activeUnitNum',
           subject: widget.subjectId,
@@ -1168,8 +828,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
         return;
       }
 
-      // Use AdMob rewarded video loading system on download question action
-      _executeWithRewardedAd(performDownload);
+      performDownload();
     } catch (e) {
       debugPrint("Error in download logic: $e");
       performDownload();
@@ -1306,32 +965,6 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      bottomNavigationBar: (_isBannerAdLoaded && _bannerAd != null)
-          ? Container(
-              decoration: BoxDecoration(
-                color: isLight ? Colors.white : const Color(0xFF1E293B),
-                border: Border(
-                  top: BorderSide(
-                    color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-                    width: 0.8,
-                  ),
-                ),
-              ),
-              child: SafeArea(
-                top: false,
-                child: SizedBox(
-                  height: 50.0,
-                  child: Center(
-                    child: SizedBox(
-                      width: _bannerAd!.size.width.toDouble(),
-                      height: 50.0,
-                      child: AdWidget(ad: _bannerAd!),
-                    ),
-                  ),
-                ),
-              ),
-            )
-          : null,
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -1626,21 +1259,19 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                             _selectedUnitIndex = index;
                                           });
                                           if (widget.isShortNotesMode) {
-                                            _executeWithRewardedAd(() {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (context) => NotesScreen(
-                                                    grade: widget.grade,
-                                                    subjectId: widget.subjectId,
-                                                    unitNumber: activeUnitNum,
-                                                    unitTitle: title,
-                                                    themeColor: widget.color,
-                                                    isDarkMode: AppStateProvider.of(context).isDarkMode,
-                                                    languageCode: widget.languageCode,
-                                                  ),
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (context) => NotesScreen(
+                                                  grade: widget.grade,
+                                                  subjectId: widget.subjectId,
+                                                  unitNumber: activeUnitNum,
+                                                  unitTitle: title,
+                                                  themeColor: widget.color,
+                                                  isDarkMode: AppStateProvider.of(context).isDarkMode,
+                                                  languageCode: widget.languageCode,
                                                 ),
-                                              );
-                                            });
+                                              ),
+                                            );
                                           } else {
                                             _showUnitOptionsSheet(context, activeUnitNum, unitId, title, isDownloaded);
                                           }
@@ -1877,7 +1508,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                             return;
                                           }
                                           _checkRegistrationAndProceed(index, activeUnitNum, onSuccess: () {
-                                            _downloadUnitWithAd(unitId);
+                                            _downloadUnit(unitId);
                                           });
                                         },
                                       ),
@@ -1898,259 +1529,4 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
   );
   }
 }
-
-class TestInterstitialAdDialog extends StatefulWidget {
-  final VoidCallback onDismiss;
-
-  const TestInterstitialAdDialog({
-    super.key,
-    required this.onDismiss,
-  });
-
-  @override
-  State<TestInterstitialAdDialog> createState() => _TestInterstitialAdDialogState();
-}
-
-class _TestInterstitialAdDialogState extends State<TestInterstitialAdDialog> {
-  int _secondsRemaining = 3;
-  StreamSubscription? _timerSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    _timerSubscription = Stream.periodic(const Duration(seconds: 1)).listen((_) {
-      if (mounted) {
-        setState(() {
-          if (_secondsRemaining > 0) {
-            _secondsRemaining--;
-          } else {
-            _timerSubscription?.cancel();
-          }
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timerSubscription?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    
-    return PopScope(
-      canPop: false, // Prevent physical back button pop
-      child: Center(
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.88,
-          constraints: const BoxConstraints(maxHeight: 520),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                blurRadius: 25,
-                offset: const Offset(0, 10),
-              )
-            ],
-            border: Border.all(
-              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-              width: 1.5,
-            ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: Scaffold(
-              backgroundColor: Colors.transparent,
-              body: Stack(
-                children: [
-                  // Core Ad Content
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // AdMob Watermark Label
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'Test Interstitial Ad',
-                            style: TextStyle(
-                              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // Smart X Logo Badge
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFCC4A52).withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.school_rounded,
-                              color: Color(0xFFCC4A52),
-                              size: 44,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // Premium Title
-                        const Text(
-                          'SMART X PREMIUM',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
-                            color: Color(0xFFCC4A52),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Unlock the complete offline classroom & interactive test bank',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // Premium Highlight bullet points
-                        _buildHighlightRow(Icons.offline_bolt_rounded, '100% Offline Practice', 'No active internet connection required'),
-                        _buildHighlightRow(Icons.no_accounts_rounded, 'Zero Commercial Ads', 'Completely uninterrupted learning flow'),
-                        _buildHighlightRow(Icons.psychology_rounded, 'Smart Explanation AI Assistant', 'Instant deep breakdown for wrong answers'),
-                        const Spacer(),
-                        // Primary CTA Button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFCC4A52),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              elevation: 2,
-                            ),
-                            onPressed: _secondsRemaining == 0
-                                ? () {
-                                    Navigator.of(context).pop();
-                                    widget.onDismiss();
-                                  }
-                                : null,
-                            child: Text(
-                              _secondsRemaining > 0
-                                  ? 'Closing in ${_secondsRemaining}s...'
-                                  : 'Continue to Download',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Top Close Button
-                  Positioned(
-                    top: 14,
-                    right: 14,
-                    child: AnimatedCrossFade(
-                      firstChild: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          shape: BoxShape.circle,
-                        ),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            value: (3 - _secondsRemaining) / 3.0,
-                            strokeWidth: 2,
-                            color: const Color(0xFFCC4A52),
-                            backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                          ),
-                        ),
-                      ),
-                      secondChild: IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        visualDensity: VisualDensity.compact,
-                        style: IconButton.styleFrom(
-                          backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                        ),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          widget.onDismiss();
-                        },
-                      ),
-                      crossFadeState: _secondsRemaining > 0
-                          ? CrossFadeState.showFirst
-                          : CrossFadeState.showSecond,
-                      duration: const Duration(milliseconds: 200),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHighlightRow(IconData icon, String title, String subtitle) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        children: [
-          Icon(icon, color: const Color(0xFFCC4A52), size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF1E293B),
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isDark ? const Color(0xFF64748B) : const Color(0xFF64748B),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 

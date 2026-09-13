@@ -18,18 +18,12 @@ dependencies:
   shared_preferences: ^2.2.3
   carousel_slider: ^5.0.0
   connectivity_plus: ^6.0.3
-  path_provider: ^2.1.2
-  http: ^1.2.1
 
-  # Backend & Analytics Integration
+  # Backend Integration
   supabase_flutter: ^2.6.0
-  firebase_core: ^3.0.0
-  firebase_analytics: ^11.0.0
 
-  # Ads, Sharing & Utilities
-  google_mobile_ads: ^7.0.0
+  # Sharing & Utilities
   url_launcher: ^6.3.0
-  permission_handler: ^11.3.1
   flutter_widget_from_html: ^0.15.2
   share_plus: ^10.0.0
 
@@ -40,10 +34,6 @@ dev_dependencies:
   flutter_native_splash: ^2.4.1
   dependency_validator: ^3.2.3
   flutter_lints: ^3.0.0
-
-dependency_validator:
-  ignore:
-    - connectivity_plus
 
 flutter_launcher_icons:
   android: true
