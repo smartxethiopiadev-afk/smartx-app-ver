@@ -37,6 +37,25 @@ class DeviceService {
   static const String _verifiedBindingKey = 'smartx_verified_device_binding';
   static String? _cachedDeviceId;
 
+  /// Binds the current device to the student's subscription and records verification
+  static Future<void> bindDeviceToSubscription(String phoneNumber, String packageId) async {
+    try {
+      final String currentDeviceId = await getDeviceId();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_verifiedBindingKey, currentDeviceId);
+
+      final supabase = Supabase.instance.client;
+      final cleanPhone = phoneNumber.replaceAll(RegExp(r'\s+'), '').trim();
+
+      await supabase
+          .from('user_subscriptions')
+          .update({'device_id': currentDeviceId})
+          .eq('phone_number', cleanPhone);
+    } catch (e) {
+      debugPrint('[DeviceService] bindDeviceToSubscription notice: $e');
+    }
+  }
+
   /// Gets a persistent hardware fingerprint for the device.
   /// On Android, extracts unique Android ID / hardware ID.
   /// On Web/Fallback, stores a unique hardware GUID in local persistent storage.

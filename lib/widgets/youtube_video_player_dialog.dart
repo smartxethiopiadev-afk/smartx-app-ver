@@ -42,8 +42,6 @@ class YouTubeVideoPlayerDialog extends StatefulWidget {
 }
 
 class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
-  bool _isPlaying = true;
-
   @override
   Widget build(BuildContext context) {
     final bool isLight = !widget.isDarkMode;
@@ -53,7 +51,6 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
         isLight ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final Color subColor =
         isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
-    final Color primaryBlue = const Color(0xFF0284C7);
 
     // Responsive embed HTML for YouTube unlisted / embedded player
     final String youtubeEmbedHtml = '''

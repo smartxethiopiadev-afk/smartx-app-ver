@@ -13,7 +13,7 @@ import 'notes_screen.dart';
 import 'worksheet_screen.dart';
 import '../services/analytics_service.dart';
 import '../services/subscription_service.dart';
-import '../widgets/upgrade_telegram_modal.dart';
+import 'payment_screen.dart';
 import '../data/curriculum_units.dart';
 
 class UnitSelectionScreen extends StatefulWidget {
@@ -122,17 +122,16 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       return;
     }
 
-    // If not unlocked, show the Upgrade via Telegram bottom sheet
-    UpgradeTelegramModal.show(
+    // If not unlocked, show the In-App Payment Screen
+    PaymentScreen.push(
       context,
       grade: widget.grade,
-      packageName: 'Grade ${widget.grade} ${widget.enTitle} Package',
       subject: widget.enTitle,
       unitNumber: activeUnitNum,
       unitTitle: 'Unit $activeUnitNum',
       languageCode: widget.languageCode,
       isDarkMode: AppStateProvider.of(context).isDarkMode,
-      onPackageUnlocked: () {
+      onPaymentVerified: () {
         _checkRegistrationStatus();
       },
     );
@@ -1568,16 +1567,15 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                         ),
                                         onPressed: () {
                                           if (isLocked) {
-                                            UpgradeTelegramModal.show(
+                                            PaymentScreen.push(
                                               context,
                                               grade: widget.grade,
-                                              packageName: 'Grade ${widget.grade} ${widget.enTitle} Package',
                                               subject: widget.enTitle,
                                               unitNumber: activeUnitNum,
                                               unitTitle: title,
                                               languageCode: widget.languageCode,
                                               isDarkMode: AppStateProvider.of(context).isDarkMode,
-                                              onPackageUnlocked: () {
+                                              onPaymentVerified: () {
                                                 _checkRegistrationStatus();
                                               },
                                             );

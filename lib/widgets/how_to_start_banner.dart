@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widgets/upgrade_telegram_modal.dart';
+import '../screens/payment_screen.dart';
 import '../models/package_model.dart';
 
 class HowToStartBanner extends StatefulWidget {
@@ -67,10 +67,10 @@ class _HowToStartBannerState extends State<HowToStartBanner> {
         'number': '4',
         'icon': Icons.workspace_premium_rounded,
         'color': const Color(0xFF8B5CF6),
-        'title': isAm ? 'በቴሌግራም ወደ ፕሪሚየም ያሳድጉ' : 'Upgrade via Telegram',
+        'title': isAm ? 'ክፍያ ፈጽመው መለያዎን ያግብሩ' : 'Pay & Activate Full Access',
         'desc': isAm
-            ? 'ለማትሪክ ፈተና፣ ለቀመር ካርዶችና ለቀሪ ክፍሎች በቴሌግራም ፈጣን ማግበር ያግኙ።'
-            : 'Unlock Units 2+, EUEE exam worksheets, and cheat sheets directly via Telegram.',
+            ? 'በቴሌብር ወይም በኢትዮጵያ ንግድ ባንክ ከፍለው በይለፍ ቃል ሙሉ ይዘቶችን ይክፈቱ።'
+            : 'Pay via Telebirr or CBE to receive your admin-issued credentials for full lifetime access.',
         'tag': isAm ? 'ደረጃ 4' : 'Step 4',
       },
     ];
@@ -519,10 +519,9 @@ class _HowToStartBannerState extends State<HowToStartBanner> {
                       ElevatedButton(
                         onPressed: () {
                           Navigator.of(ctx).pop();
-                          UpgradeTelegramModal.show(
+                          PaymentScreen.push(
                             context,
                             grade: pkg.grade,
-                            packageName: pkg.title,
                             languageCode: widget.languageCode,
                             isDarkMode: widget.isDarkMode,
                           );

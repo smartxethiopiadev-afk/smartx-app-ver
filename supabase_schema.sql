@@ -1,6 +1,6 @@
 -- =====================================================================
 -- SMART X ETHIOPIAN LEARNING APP - SUPABASE DATABASE MIGRATION
--- Anti-Piracy, Dynamic Packages, Worksheets, Videos & Activation Codes
+-- Admin-Issued Student Credentials, In-App Payments & Single-Device Locking
 -- =====================================================================
 
 -- 1. PACKAGES TABLE (Flexible Package Tiers: Single Subject, Stream, All-Inclusive Matric)
@@ -30,81 +30,67 @@ CREATE TABLE IF NOT EXISTS public.worksheets (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. USER SUBSCRIPTIONS & STRICT SINGLE-DEVICE BINDING TABLE
+-- 3. ADMIN-ISSUED STUDENT CREDENTIALS TABLE (Single-Device Hardware Bound)
+CREATE TABLE IF NOT EXISTS public.student_credentials (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name TEXT NOT NULL,
+    phone_number TEXT NOT NULL,
+    password TEXT NOT NULL,
+    package_id TEXT NOT NULL DEFAULT 'pkg_grade_12', -- e.g. 'pkg_grade_12', 'g12_all', 'g12_math', 'pkg_all_inclusive_g12'
+    device_id TEXT, -- Hardware Device ID (e.g. AND_9F82A31B...). NULL allows first login to lock.
+    is_active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    CONSTRAINT unique_phone_cred UNIQUE(phone_number)
+);
+
+-- 4. USER SUBSCRIPTIONS TABLE (Historical & Multi-Package Sync)
 CREATE TABLE IF NOT EXISTS public.user_subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     phone_number TEXT NOT NULL,
     package_id TEXT NOT NULL,
-    device_id TEXT, -- Hardware Device ID (e.g. AND_9F82A31B...). NULL allows next login to bind.
+    device_id TEXT,
     is_active BOOLEAN DEFAULT true NOT NULL,
     activated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     CONSTRAINT unique_phone_package UNIQUE(phone_number, package_id)
 );
 
--- 4. ACTIVATION CODES TABLE (Package-Specific Single-Device Bound Codes)
-CREATE TABLE IF NOT EXISTS public.activation_codes (
-    code TEXT PRIMARY KEY,
-    package_id TEXT NOT NULL, -- e.g., 'pkg_g12_mathematics', 'pkg_g12_physics', 'pkg_grade_12', 'pkg_all_inclusive_g12'
-    grade INT NOT NULL,
-    subject TEXT, -- NULL if full grade package
-    is_used BOOLEAN DEFAULT false,
-    used_by_phone TEXT,
-    used_by_device TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 5. VIDEOS TABLE (Unlisted YouTube Masterclasses & Curriculum Lessons)
-CREATE TABLE IF NOT EXISTS public.videos (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    grade INT NOT NULL,
-    subject TEXT NOT NULL,
-    unit_number INT NOT NULL,
-    title TEXT NOT NULL,
-    youtube_video_id TEXT NOT NULL,
-    duration_text TEXT,
-    order_index INT DEFAULT 1,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 6. ROW LEVEL SECURITY (RLS) POLICIES
+-- 5. ROW LEVEL SECURITY (RLS) POLICIES
 ALTER TABLE public.packages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.worksheets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_credentials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_subscriptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.activation_codes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.videos ENABLE ROW LEVEL SECURITY;
 
--- Allow public read of packages
+-- Packages Policy
 DROP POLICY IF EXISTS "Allow public read packages" ON public.packages;
 CREATE POLICY "Allow public read packages" ON public.packages
     FOR SELECT USING (true);
 
--- Allow public read of worksheets
+-- Worksheets Policy
 DROP POLICY IF EXISTS "Allow public read worksheets" ON public.worksheets;
 CREATE POLICY "Allow public read worksheets" ON public.worksheets
     FOR SELECT USING (true);
 
--- Allow subscribers to read and verify their single-device binding
-DROP POLICY IF EXISTS "Allow subscribers read subscriptions" ON public.user_subscriptions;
-CREATE POLICY "Allow subscribers read subscriptions" ON public.user_subscriptions
+-- Student Credentials Policies
+DROP POLICY IF EXISTS "Allow student credentials select" ON public.student_credentials;
+CREATE POLICY "Allow student credentials select" ON public.student_credentials
     FOR SELECT USING (true);
 
--- Allow initial binding and updates
-DROP POLICY IF EXISTS "Allow update subscription device binding" ON public.user_subscriptions;
-CREATE POLICY "Allow update subscription device binding" ON public.user_subscriptions
+DROP POLICY IF EXISTS "Allow student credentials device bind update" ON public.student_credentials;
+CREATE POLICY "Allow student credentials device bind update" ON public.student_credentials
+    FOR UPDATE USING (true)
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow student credentials insert" ON public.student_credentials;
+CREATE POLICY "Allow student credentials insert" ON public.student_credentials
+    FOR INSERT WITH CHECK (true);
+
+-- Subscriptions Policy
+DROP POLICY IF EXISTS "Allow subscriptions all" ON public.user_subscriptions;
+CREATE POLICY "Allow subscriptions all" ON public.user_subscriptions
     FOR ALL USING (true);
 
--- Allow code verification and single-device activation
-DROP POLICY IF EXISTS "Allow code verification" ON public.activation_codes;
-CREATE POLICY "Allow code verification" ON public.activation_codes
-    FOR ALL USING (true);
-
--- Allow public read of videos
-DROP POLICY IF EXISTS "Allow public read access to videos" ON public.videos;
-CREATE POLICY "Allow public read access to videos" ON public.videos
-    FOR SELECT USING (true);
-
--- 7. SEED DATA FOR PACKAGES (Single Subject, Grade All-In, Matric Prep)
+-- 6. SEED DATA FOR PACKAGES
 INSERT INTO public.packages (id, title, grade, price_etb, description, badge_text, tier, subject, features)
 VALUES
     -- Single Subject Packs (150 ETB)
@@ -128,24 +114,13 @@ ON CONFLICT (id) DO UPDATE SET
     subject = EXCLUDED.subject,
     features = EXCLUDED.features;
 
--- 8. SAMPLE ACTIVATION CODES FOR TESTING
-INSERT INTO public.activation_codes (code, package_id, grade, subject, is_used)
+-- 7. SEED SAMPLE STUDENT CREDENTIALS FOR TESTING
+INSERT INTO public.student_credentials (full_name, phone_number, password, package_id, device_id, is_active)
 VALUES
-    ('SMARTX-G12-MATH-2026', 'pkg_g12_mathematics', 12, 'Mathematics', false),
-    ('SMARTX-G12-PHYS-2026', 'pkg_g12_physics', 12, 'Physics', false),
-    ('SMARTX-G12-ALL-2026', 'pkg_grade_12', 12, NULL, false),
-    ('SMARTX-G11-ALL-2026', 'pkg_grade_11', 11, NULL, false),
-    ('SMARTX-G10-ALL-2026', 'pkg_grade_10', 10, NULL, false),
-    ('SMARTX-G9-ALL-2026', 'pkg_grade_9', 9, NULL, false),
-    ('SMARTX-MATRIC-PREP-2026', 'pkg_all_inclusive_g12', 12, NULL, false)
-ON CONFLICT (code) DO NOTHING;
-
--- 9. SEED VIDEOS FOR UNLISTED YOUTUBE MASTERCLASSES
-INSERT INTO public.videos (grade, subject, unit_number, title, youtube_video_id, duration_text, order_index)
-VALUES
-    (9, 'Mathematics', 1, 'Number Systems & Rational Operations', 'dQw4w9WgXcQ', '24:15', 1),
-    (9, 'Physics', 1, 'Physics and Human Society Overview', 'dQw4w9WgXcQ', '18:30', 2),
-    (10, 'Mathematics', 1, 'Polynomial & Rational Functions Deep-Dive', 'dQw4w9WgXcQ', '32:10', 1),
-    (11, 'Chemistry', 1, 'Atomic Structure and Chemical Bonding', 'dQw4w9WgXcQ', '28:40', 1),
-    (12, 'Mathematics', 1, 'Sequences and Series - Matric Prep Special', 'dQw4w9WgXcQ', '45:00', 1)
-ON CONFLICT (id) DO NOTHING;
+    ('Abebe Kebede', '0911001122', 'smartx123', 'pkg_grade_12', NULL, true),
+    ('Selamawit Tadesse', '0922334455', 'matric2026', 'pkg_all_inclusive_g12', NULL, true),
+    ('Yohannes Hailu', '0933445566', 'mathpass12', 'pkg_g12_mathematics', NULL, true)
+ON CONFLICT (phone_number) DO UPDATE SET
+    password = EXCLUDED.password,
+    package_id = EXCLUDED.package_id,
+    is_active = EXCLUDED.is_active;
