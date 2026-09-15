@@ -97,6 +97,10 @@ class SubscriptionService {
   }
 
   /// Synchronous quick check for UI builds (uses cached in-memory set)
+  static Set<String> getUnlockedPackagesSync() {
+    return Set.unmodifiable(_unlockedPackages);
+  }
+
   static bool isUnitAccessibleSync(int grade, int unitNumber, {String? subject}) {
     if (unitNumber <= 1) {
       return true;

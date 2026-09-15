@@ -17,8 +17,13 @@ import '../widgets/image_slider_carousel.dart';
 import '../widgets/how_to_start_banner.dart';
 import '../widgets/subject_vector_widgets.dart';
 import '../widgets/interactive_subject_card.dart';
-import 'payment_screen.dart';
 import 'login_activation_screen.dart';
+import 'upgrade_registration_screen.dart';
+import '../widgets/locked_unit_dialog.dart';
+import '../services/subscription_service.dart';
+import '../services/device_service.dart';
+import '../services/credential_auth_service.dart';
+import 'package:flutter/services.dart';
 import '../main.dart';
 import '../services/analytics_service.dart';
 
@@ -89,8 +94,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   late TextEditingController _fullNameController;
   late TextEditingController _phoneController;
 
-  int _selectedGradeForQuizTab = 9;
-  int _selectedGradeForNotesTab = 9;
+  int _selectedGradeForLibraryTab = 9;
+  String _libraryMode = 'qa'; // 'qa' or 'notes'
+  String _deviceId = '';
   int _selectedGradeForVideosTab = 9;
   String _selectedSubjectForVideosTab = 'All';
 
@@ -116,6 +122,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'nav_offline': 'Offline',
       'nav_courses': 'Offline',
       'nav_leaderboard': 'Leaderboard',
+      'nav_library': 'Library',
       'nav_account': 'Account',
       'nav_profile': 'Profile',
       'nav_settings': 'Settings',
@@ -150,6 +157,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'nav_offline': 'ከመስመር ውጭ',
       'nav_courses': 'ከመስመር ውጭ',
       'nav_leaderboard': 'መሪዎች ሰሌዳ',
+      'nav_library': 'ቤተ-መጽሐፍት',
       'nav_account': 'መለያ',
       'nav_profile': 'መገለጫ',
       'nav_settings': 'ማስተካከያዎች',
@@ -191,21 +199,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<void> _loadProfileData() async {
     final prefs = await SharedPreferences.getInstance();
+    final devId = await DeviceService.getDeviceId();
+    final cached = await CredentialAuthService.getCachedCredentials();
+    final cachedName = cached['fullName'] ?? '';
+    final cachedPhone = cached['phoneNumber'] ?? '';
     setState(() {
-      _isLoggedIn = prefs.getBool('is_authenticated') ?? false;
+      _deviceId = devId;
+      if (cachedName.isNotEmpty) {
+        _isLoggedIn = true;
+        _userName = cachedName;
+        _userPhoneNumber = cachedPhone;
+      } else {
+        _isLoggedIn = prefs.getBool('is_authenticated') ?? false;
+        _userName = prefs.getString('user_fullName') ?? "Smart Student";
+        _userPhoneNumber = prefs.getString('user_phoneNumber') ?? "+251 911 ...";
+      }
       String? savedUid = prefs.getString('user_id');
       if (savedUid == null && _isLoggedIn) {
         savedUid = 'user_${DateTime.now().millisecondsSinceEpoch}_${(1000 + (DateTime.now().microsecondsSinceEpoch % 9000))}';
         prefs.setString('user_id', savedUid);
       }
-      _userName = prefs.getString('user_fullName') ?? "Abebe Bekele";
-      _userPhoneNumber = prefs.getString('user_phoneNumber') ?? "+251 911 234 567";
 
       // Populate text controllers
       _fullNameController.text = _userName;
-      _phoneController.text = _userPhoneNumber.replaceAll(RegExp(r'^\+251\s*'), ''); // parse local digits
+      _phoneController.text = _userPhoneNumber.replaceAll(RegExp(r'^\+251\s*'), '');
       
-      debugPrint('Current user: $savedUid');
+      debugPrint('Current user: $savedUid, deviceId: $_deviceId');
     });
   }
 
@@ -221,9 +240,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     bool isLight = !widget.isDarkMode;
     final bool isVideosActive = _currentIndex == 1;
-    final bool isQuizActive = _currentIndex == 2;
-    final bool isNotesActive = _currentIndex == 3;
-    final bool isOfflineActive = _currentIndex == 4;
+    final bool isOfflineActive = _currentIndex == 2;
+    final bool isLibraryActive = _currentIndex == 3;
+    final bool isAccountActive = _currentIndex == 4;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -246,12 +265,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         title: Text(
           isVideosActive
               ? (widget.languageCode == 'en' ? 'Video Lessons' : 'የቪዲዮ ትምህርቶች')
-              : (isQuizActive
-                  ? (widget.languageCode == 'en' ? 'Quizzes' : 'ጥያቄዎች')
-                  : (isNotesActive
-                      ? (widget.languageCode == 'en' ? 'Notes' : 'ማስታወሻዎች')
-                      : (isOfflineActive
-                          ? (widget.languageCode == 'en' ? 'Offline Downloads' : 'ከመስመር ውጭ')
+              : (isOfflineActive
+                  ? (widget.languageCode == 'en' ? 'Offline Lessons' : 'ከመስመር ውጭ')
+                  : (isLibraryActive
+                      ? (widget.languageCode == 'en' ? 'Library (Notes & Quizzes)' : 'ቤተ-መጽሐፍት')
+                      : (isAccountActive
+                          ? (widget.languageCode == 'en' ? 'Student Account' : 'የተማሪ መለያ')
                           : _local('title')))),
           style: TextStyle(
             fontSize: 21,
@@ -387,17 +406,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     },
                   ),
                   _buildDrawerTile(
-                    icon: Icons.account_balance_wallet_rounded,
-                    title: widget.languageCode == 'en' ? 'Payment & Bank Accounts' : 'የክፍያ እና የባንክ ሂሳቦች',
+                    icon: Icons.rocket_launch_rounded,
+                    title: widget.languageCode == 'en' ? 'Upgrade & Register' : 'የተማሪ ምዝገባ እና ማግበሪያ',
                     isSelected: false,
                     isLight: isLight,
                     onTap: () {
                       Navigator.pop(context);
-                      PaymentScreen.push(
+                      UpgradeRegistrationScreen.push(
                         context,
                         isDarkMode: widget.isDarkMode,
                         languageCode: widget.languageCode,
-                        grade: _selectedGradeForQuizTab,
+                        initialGrade: _selectedGradeForLibraryTab,
                       );
                     },
                   ),
@@ -412,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         context,
                         isDarkMode: widget.isDarkMode,
                         languageCode: widget.languageCode,
-                        preferredGrade: _selectedGradeForQuizTab,
+                        preferredGrade: _selectedGradeForLibraryTab,
                       );
                     },
                   ),
@@ -611,23 +630,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                     _buildBottomNavItem(
                       index: 2,
-                      iconActive: Icons.fact_check_rounded,
-                      iconInactive: Icons.fact_check_outlined,
-                      label: _local('nav_quiz'),
+                      iconActive: Icons.offline_pin_rounded,
+                      iconInactive: Icons.offline_pin_outlined,
+                      label: _local('nav_offline'),
                       isLight: isLight,
                     ),
                     _buildBottomNavItem(
                       index: 3,
-                      iconActive: Icons.article_rounded,
-                      iconInactive: Icons.article_outlined,
-                      label: _local('nav_notes'),
+                      iconActive: Icons.local_library_rounded,
+                      iconInactive: Icons.local_library_outlined,
+                      label: _local('nav_library'),
                       isLight: isLight,
                     ),
                     _buildBottomNavItem(
                       index: 4,
-                      iconActive: Icons.offline_pin_rounded,
-                      iconInactive: Icons.offline_pin_outlined,
-                      label: _local('nav_offline'),
+                      iconActive: Icons.person_rounded,
+                      iconInactive: Icons.person_outline_rounded,
+                      label: _local('nav_account'),
                       isLight: isLight,
                     ),
                   ],
@@ -645,13 +664,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       case 0:
         return _buildHomeScreenContent(isLight);
       case 1:
-        return _buildVideosScreenTab(isLight); // Videos (New)
+        return _buildVideosScreenTab(isLight); // Videos
       case 2:
-        return _buildQuizScreenTab(isLight); // Quiz
-      case 3:
-        return _buildNotesScreenTab(isLight); // Notes
-      case 4:
         return _buildOfflineScreen(isLight); // Offline
+      case 3:
+        return _buildLibraryScreenTab(isLight); // Library (Short notes & Quizzes in Quiz style)
+      case 4:
+        return _buildAccountScreenTab(isLight); // Account
       default:
         return _buildHomeScreenContent(isLight);
     }
@@ -950,32 +969,64 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.video_library_outlined,
-                            size: 64,
-                            color: subColor.withValues(alpha: 0.5),
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.hourglass_top_rounded,
+                              size: 48,
+                              color: Color(0xFFEF4444),
+                            ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 18),
                           Text(
                             isAmharic
-                                ? 'ለዚህ ክፍል እና ትምህርት ምንም ቪዲዮ አልተገኘም'
-                                : 'No video lessons found for this selection',
+                                ? 'በቅርብ ቀን ይጠብቁ (Coming Soon)'
+                                : 'Coming Soon!',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
                               color: textColor,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             isAmharic
-                                ? 'እባክዎ ሌላ ክፍል ወይም የትምህርት አይነት ይምረጡ'
-                                : 'Please try selecting another grade or subject tab above.',
+                                ? 'ለዚህ ክፍል እና ትምህርት የቪዲዮ ትምህርቶች በቅርቡ ወደ ዳታቤዝ ይጫናሉ። ፈጥነው እንዲለቀቁ በቴሌግራም አድሚኑን መጠየቅ ይችላሉ።'
+                                : 'Video lessons for this grade and subject will be uploaded soon. You can request this chapter from the Telegram admin.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 13,
                               color: subColor,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              final msg = Uri.encodeComponent(
+                                  'ሰላም ስማርት ኤክስ፣ Grade $_selectedGradeForVideosTab $_selectedSubjectForVideosTab ቪዲዮ እንዲጫንልኝ እፈልጋለሁ።');
+                              final uri = Uri.parse('https://t.me/SmartX_Discussion?text=$msg');
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              }
+                            },
+                            icon: const Icon(Icons.telegram_rounded, size: 20),
+                            label: Text(
+                              isAmharic ? 'በቴሌግራም አድሚኑን ጠይቅ' : 'Request Lesson on Telegram',
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0284C7),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                           ),
                         ],
@@ -1021,14 +1072,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     required Color textColor,
     required Color subColor,
   }) {
+    final bool isUnitFree = video.unitNumber <= 1;
+    final bool isUnlocked = isUnitFree ||
+        SubscriptionService.isUnitAccessibleSync(video.grade, video.unitNumber,
+            subject: video.subject);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: isLight ? Colors.white : const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-          width: 1.0,
+          color: !isUnlocked
+              ? const Color(0xFFF59E0B).withValues(alpha: 0.35)
+              : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+          width: !isUnlocked ? 1.5 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
@@ -1046,12 +1104,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
           onTap: () {
-            YouTubeVideoPlayerDialog.show(
-              context,
-              video: video,
-              isDarkMode: widget.isDarkMode,
-              languageCode: widget.languageCode,
-            );
+            if (!isUnlocked) {
+              LockedUnitDialog.show(
+                context,
+                grade: video.grade,
+                subject: video.subject,
+                unitNumber: video.unitNumber,
+                unitTitle: video.title,
+                languageCode: widget.languageCode,
+                isDarkMode: widget.isDarkMode,
+                onUnlocked: () {
+                  setState(() {});
+                },
+              );
+            } else {
+              YouTubeVideoPlayerDialog.show(
+                context,
+                video: video,
+                isDarkMode: widget.isDarkMode,
+                languageCode: widget.languageCode,
+              );
+            }
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1070,11 +1143,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
                           color: const Color(0xFF0F172A),
-                          child: const Center(
+                          child: Center(
                             child: Icon(
-                              Icons.play_circle_fill_rounded,
+                              !isUnlocked
+                                  ? Icons.lock_rounded
+                                  : Icons.play_circle_fill_rounded,
                               size: 48,
-                              color: Color(0xFFEF4444),
+                              color: !isUnlocked
+                                  ? const Color(0xFFF59E0B)
+                                  : const Color(0xFFEF4444),
                             ),
                           ),
                         ),
@@ -1085,8 +1162,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              Colors.black.withValues(alpha: 0.1),
-                              Colors.black.withValues(alpha: 0.65),
+                              Colors.black.withValues(alpha: 0.15),
+                              Colors.black.withValues(alpha: 0.7),
                             ],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
@@ -1094,25 +1171,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ),
                       ),
 
-                      // Center Play Icon Button
+                      // Center Play / Lock Icon Button
                       Center(
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEF4444),
+                            color: !isUnlocked
+                                ? const Color(0xFFD97706)
+                                : const Color(0xFFEF4444),
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.4),
+                                color: Colors.black.withValues(alpha: 0.45),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.play_arrow_rounded,
+                          child: Icon(
+                            !isUnlocked
+                                ? Icons.lock_rounded
+                                : Icons.play_arrow_rounded,
                             color: Colors.white,
-                            size: 28,
+                            size: 26,
                           ),
                         ),
                       ),
@@ -1140,7 +1221,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ),
                         ),
 
-                      // Unlisted / HD Badge (Top Left)
+                      // Top Left Badge: Free vs Locked
                       Positioned(
                         top: 10,
                         left: 10,
@@ -1148,21 +1229,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0284C7).withValues(alpha: 0.9),
+                            color: !isUnlocked
+                                ? const Color(0xFFD97706).withValues(alpha: 0.95)
+                                : (isUnitFree
+                                    ? const Color(0xFF10B981).withValues(alpha: 0.95)
+                                    : const Color(0xFF0284C7).withValues(alpha: 0.9)),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                Icons.lock_outline_rounded,
+                                !isUnlocked
+                                    ? Icons.lock_rounded
+                                    : (isUnitFree
+                                        ? Icons.check_circle_rounded
+                                        : Icons.lock_open_rounded),
                                 size: 12,
                                 color: Colors.white,
                               ),
-                              SizedBox(width: 4),
+                              const SizedBox(width: 4),
                               Text(
-                                'UNLISTED HD',
-                                style: TextStyle(
+                                !isUnlocked
+                                    ? (isAmharic ? 'የተቆለፈ • ክፍል ${video.unitNumber}' : 'LOCKED • UNIT ${video.unitNumber}')
+                                    : (isUnitFree
+                                        ? (isAmharic ? 'ነጻ ትምህርት' : 'FREE LESSON')
+                                        : 'UNLOCKED HD'),
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w800,
@@ -1265,20 +1358,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: () {
-                              YouTubeVideoPlayerDialog.show(
-                                context,
-                                video: video,
-                                isDarkMode: widget.isDarkMode,
-                                languageCode: widget.languageCode,
-                              );
+                              if (!isUnlocked) {
+                                LockedUnitDialog.show(
+                                  context,
+                                  grade: video.grade,
+                                  subject: video.subject,
+                                  unitNumber: video.unitNumber,
+                                  unitTitle: video.title,
+                                  languageCode: widget.languageCode,
+                                  isDarkMode: widget.isDarkMode,
+                                  onUnlocked: () {
+                                    setState(() {});
+                                  },
+                                );
+                              } else {
+                                YouTubeVideoPlayerDialog.show(
+                                  context,
+                                  video: video,
+                                  isDarkMode: widget.isDarkMode,
+                                  languageCode: widget.languageCode,
+                                );
+                              }
                             },
-                            icon: const Icon(
-                              Icons.play_arrow_rounded,
+                            icon: Icon(
+                              !isUnlocked
+                                  ? Icons.lock_open_rounded
+                                  : Icons.play_arrow_rounded,
                               size: 18,
                               color: Colors.white,
                             ),
                             label: Text(
-                              isAmharic ? 'ቪዲዮውን ይመልከቱ' : 'Watch Lesson',
+                              !isUnlocked
+                                  ? (isAmharic ? 'በቴሌግራም ክፈት' : 'Unlock on Telegram')
+                                  : (isAmharic ? 'ቪዲዮውን ይመልከቱ' : 'Watch Lesson'),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 13,
@@ -1286,7 +1398,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFEF4444),
+                              backgroundColor: !isUnlocked
+                                  ? const Color(0xFFD97706)
+                                  : const Color(0xFFEF4444),
                               foregroundColor: Colors.white,
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1334,7 +1448,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildUnifiedSegmentedGradeSelector(bool isLight) {
+  Widget _buildUnifiedSegmentedGradeSelectorForLibrary(bool isLight) {
     final List<int> grades = [9, 10, 11, 12];
 
     return Container(
@@ -1351,9 +1465,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         padding: const EdgeInsets.all(4.0),
         child: Row(
           children: grades.map((gradeNum) {
-            final bool isSelected = _selectedGradeForNotesTab == gradeNum;
-            final String title =
-                widget.languageCode == 'en' ? 'G-$gradeNum' : 'ክ-$gradeNum';
+            final bool isSelected = _selectedGradeForLibraryTab == gradeNum;
+            final String title = widget.languageCode == 'en' ? 'G-$gradeNum' : 'ክ-$gradeNum';
 
             Color activeColor;
             switch (gradeNum) {
@@ -1377,12 +1490,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: GestureDetector(
                 onTap: () {
                   setState(() {
-                    _selectedGradeForNotesTab = gradeNum;
+                    _selectedGradeForLibraryTab = gradeNum;
                   });
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: isSelected ? activeColor : Colors.transparent,
                     borderRadius: BorderRadius.circular(20.0),
@@ -1396,17 +1508,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ]
                         : null,
                   ),
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 13.0,
-                      fontWeight:
-                          isSelected ? FontWeight.w900 : FontWeight.w600,
-                      color: isSelected
-                          ? Colors.white
-                          : (isLight
-                              ? const Color(0xFF475569)
-                              : const Color(0xFF94A3B8)),
+                  child: Center(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 13.0,
+                        fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                        color: isSelected
+                            ? Colors.white
+                            : (isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8)),
+                      ),
                     ),
                   ),
                 ),
@@ -1418,93 +1529,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildUnifiedSegmentedGradeSelectorForQuiz(bool isLight) {
-    final List<int> grades = [9, 10, 11, 12];
-    
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: isLight ? const Color(0xFFEFF3F8) : const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(24.0),
-        border: Border.all(
-          color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-          width: 1.0,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: Row(
-          children: grades.map((gradeNum) {
-            final bool isSelected = _selectedGradeForQuizTab == gradeNum;
-            final String title = widget.languageCode == 'en' ? 'G-$gradeNum' : 'ክ-$gradeNum';
-            
-            Color activeColor;
-            switch (gradeNum) {
-              case 9:
-                activeColor = const Color(0xFF3B82F6);
-                break;
-              case 10:
-                activeColor = const Color(0xFF10B981);
-                break;
-              case 11:
-                activeColor = const Color(0xFFEA580C);
-                break;
-              case 12:
-                activeColor = const Color(0xFF8B5CF6);
-                break;
-              default:
-                activeColor = const Color(0xFF3B82F6);
-            }
+  Widget _buildLibraryScreenTab(bool isLight) {
+    final bool isAmharic = widget.languageCode == 'am';
+    final Color subColor = isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
 
-            return Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedGradeForQuizTab = gradeNum;
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isSelected ? activeColor : Colors.transparent,
-                    borderRadius: BorderRadius.circular(20.0),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: activeColor.withValues(alpha: 0.2), // Softer, more elegant shadow color
-                              blurRadius: 16.0, // Soft glowing effect
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 13.0,
-                      fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                      color: isSelected 
-                          ? Colors.white 
-                          : (isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8)),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotesScreenTab(bool isLight) {
     final List<Map<String, dynamic>> allSubjects = [
       {
         'id': 'Mathematics',
         'amTitle': 'ሂሳብ',
         'enTitle': 'Mathematics',
-        'color': const Color(0xFF3B82F6), // Vibrant blue
+        'color': const Color(0xFF3B82F6),
         'lightBg': const Color(0xFFEFF6FF),
         'illustration': const DraftingGeometryWidget(),
       },
@@ -1512,7 +1546,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'id': 'Biology',
         'amTitle': 'ስነ-ህይወት',
         'enTitle': 'Biology',
-        'color': const Color(0xFF10B981), // Emerald green
+        'color': const Color(0xFF10B981),
         'lightBg': const Color(0xFFECFDF5),
         'illustration': const CellBiologyWidget(),
       },
@@ -1520,7 +1554,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'id': 'Physics',
         'amTitle': 'ፊዚክስ',
         'enTitle': 'Physics',
-        'color': const Color(0xFFDC2626), // Crimson red
+        'color': const Color(0xFFDC2626),
         'lightBg': const Color(0xFFFEF2F2),
         'illustration': const AtomPhysicsWidget(),
       },
@@ -1528,7 +1562,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'id': 'Chemistry',
         'amTitle': 'ኬሚስትሪ',
         'enTitle': 'Chemistry',
-        'color': const Color(0xFFEA580C), // Orange
+        'color': const Color(0xFFEA580C),
         'lightBg': const Color(0xFFFFF7ED),
         'illustration': const ChemistryFlaskWidget(),
       },
@@ -1536,7 +1570,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'id': 'Geography',
         'amTitle': 'ጂኦግራፊ',
         'enTitle': 'Geography',
-        'color': const Color(0xFF8E24AA), // Purple
+        'color': const Color(0xFF8E24AA),
         'lightBg': const Color(0xFFFDF4FF),
         'illustration': const WorldMapGeographyWidget(),
       },
@@ -1544,7 +1578,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'id': 'History',
         'amTitle': 'ታሪክ',
         'enTitle': 'History',
-        'color': const Color(0xFFD97706), // Brown gold
+        'color': const Color(0xFFD97706),
         'lightBg': const Color(0xFFFEF3C7),
         'illustration': const AksumObeliskWidget(),
       },
@@ -1556,9 +1590,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'lightBg': const Color(0xFFF0FDFA),
         'illustration': const EconomicsChartWidget(),
       },
+      {
+        'id': 'English',
+        'amTitle': 'እንግሊዝኛ',
+        'enTitle': 'English',
+        'color': const Color(0xFF6366F1),
+        'lightBg': const Color(0xFFEEF2FF),
+        'illustration': const DraftingGeometryWidget(),
+      },
     ];
-
-    final List<Map<String, dynamic>> subjects = allSubjects;
 
     return Container(
       width: double.infinity,
@@ -1568,163 +1608,231 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         image: DecorationImage(
           image: const AssetImage('assets/images/education_bg_pattern.png'),
           repeat: ImageRepeat.repeat,
-          opacity: isLight ? 0.09 : 0.03,
+          opacity: isLight ? 0.08 : 0.03,
           colorFilter: isLight ? null : const ColorFilter.mode(Colors.white54, BlendMode.modulate),
         ),
       ),
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Grade Selector
+            _buildUnifiedSegmentedGradeSelectorForLibrary(isLight),
+            const SizedBox(height: 16.0),
 
-
-            // Upgraded pill-shaped unified segmented grade selector matching image
-            _buildUnifiedSegmentedGradeSelector(isLight),
-            const SizedBox(height: 18.0),
-
-            // Upgraded vertical list of beautiful cards
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: subjects.length,
-              itemBuilder: (context, index) {
-                final subject = subjects[index];
-                final String subjectTitle = widget.languageCode == 'en' ? subject['enTitle'] : subject['amTitle'];
-                final String subjectSubtitle = widget.languageCode == 'en' ? 'Grade $_selectedGradeForNotesTab' : 'ክፍል $_selectedGradeForNotesTab';
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12.0),
-                  padding: const EdgeInsets.all(12.0),
-                  decoration: BoxDecoration(
-                    color: isLight ? Colors.white : const Color(0xFF1E293B),
-                    borderRadius: BorderRadius.circular(16.0),
-                    border: Border.all(
-                      color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF334155),
-                      width: 1.0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: isLight ? 0.03 : 0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // Circular subject illustration container
-                      Container(
-                        width: 52,
-                        height: 52,
-                        padding: const EdgeInsets.all(8.0),
+            // Mode Selector: Q&A Quizzes vs Short Note Question Cards
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: isLight ? const Color(0xFFE2E8F0).withValues(alpha: 0.6) : const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _libraryMode = 'qa';
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
-                          color: isLight ? subject['lightBg'] : subject['color'].withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
+                          color: _libraryMode == 'qa'
+                              ? (isLight ? Colors.white : const Color(0xFF0284C7))
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: _libraryMode == 'qa'
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.06),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
                         ),
-                        child: Center(
-                          child: SizedBox(
-                            width: 32,
-                            height: 32,
-                            child: subject['illustration'],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14.0),
-                      // Text block (Title & Grade Subtitle)
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              subjectTitle,
-                              style: TextStyle(
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w900,
-                                color: isLight ? const Color(0xFF1E293B) : Colors.white,
-                              ),
+                            Icon(
+                              Icons.quiz_rounded,
+                              size: 16,
+                              color: _libraryMode == 'qa'
+                                  ? (isLight ? const Color(0xFF0284C7) : Colors.white)
+                                  : subColor,
                             ),
-                            const SizedBox(height: 2.5),
+                            const SizedBox(width: 6),
                             Text(
-                              subjectSubtitle,
+                              isAmharic ? 'ጥያቄ እና መልስ' : 'Q&A Quizzes',
                               style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.bold,
-                                color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                                color: _libraryMode == 'qa'
+                                    ? (isLight ? const Color(0xFF0F172A) : Colors.white)
+                                    : subColor,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      // Beautiful custom START button with gradient and themed shadow
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => UnitSelectionScreen(
-                                grade: _selectedGradeForNotesTab,
-                                subjectId: subject['id'],
-                                enTitle: subject['enTitle'],
-                                amTitle: subject['amTitle'],
-                                color: subject['color'],
-                                icon: subject['illustration'],
-                                isDarkMode: widget.isDarkMode,
-                                languageCode: widget.languageCode,
-                                onToggleTheme: widget.onToggleTheme,
-                                onToggleLanguage: widget.onToggleLanguage,
-                                isShortNotesMode: true,
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _libraryMode = 'notes';
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: _libraryMode == 'notes'
+                              ? (isLight ? Colors.white : const Color(0xFF10B981))
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: _libraryMode == 'notes'
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.06),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.menu_book_rounded,
+                              size: 16,
+                              color: _libraryMode == 'notes'
+                                  ? (isLight ? const Color(0xFF10B981) : Colors.white)
+                                  : subColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isAmharic ? 'አጭር ማስታወሻ' : 'Short Notes',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                                color: _libraryMode == 'notes'
+                                    ? (isLight ? const Color(0xFF0F172A) : Colors.white)
+                                    : subColor,
                               ),
                             ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 9.0),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                subject['color'],
-                                Color.lerp(subject['color'], Colors.black, 0.12) ?? subject['color'],
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(30.0),
-                            boxShadow: [
-                              BoxShadow(
-                                color: subject['color'].withValues(alpha: 0.35),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3.5),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                widget.languageCode == 'en' ? 'SHORT NOTE' : 'አጫጭር ማስታወሻ',
-                                style: const TextStyle(
-                                  fontSize: 11.0,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: 0.4,
-                                ),
-                              ),
-                              const SizedBox(width: 4.0),
-                              const Icon(
-                                Icons.chevron_right_rounded,
-                                size: 14.0,
-                                color: Colors.white,
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 14.0),
+
+            // Free Unit 1 Notice Banner
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: isLight ? 0.09 : 0.18),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      isAmharic
+                          ? 'የክፍል 1 (Unit 1) ጥያቄዎች እና ማስታወሻዎች ሙሉ በሙሉ ነጻ ናቸው!'
+                          : 'Unit 1 questions and notes are 100% Free for all subjects!',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF10B981),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 18.0),
+
+            // Subject Cards Grid (in Quiz Style)
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16.0,
+                mainAxisSpacing: 16.0,
+                childAspectRatio: 0.92,
+              ),
+              itemCount: allSubjects.length,
+              itemBuilder: (context, index) {
+                final subject = allSubjects[index];
+
+                Color getGradeColor(int g) {
+                  switch (g) {
+                    case 9:
+                      return const Color(0xFF0084FF);
+                    case 10:
+                      return const Color(0xFF10B981);
+                    case 11:
+                      return const Color(0xFFEA580C);
+                    case 12:
+                      return const Color(0xFF8B5CF6);
+                    default:
+                      return const Color(0xFF0084FF);
+                  }
+                }
+
+                return InteractiveSubjectCard(
+                  amTitle: subject['amTitle'],
+                  enTitle: subject['enTitle'],
+                  color: subject['color'],
+                  illustration: subject['illustration'],
+                  isLight: isLight,
+                  gradeColor: getGradeColor(_selectedGradeForLibraryTab),
+                  languageCode: widget.languageCode,
+                  grade: _selectedGradeForLibraryTab,
+                  btnText: isAmharic
+                      ? (_libraryMode == 'notes' ? 'ማስታወሻ ጀምር' : 'ፈተና ጀምር')
+                      : (_libraryMode == 'notes' ? 'READ NOTES' : 'START QUIZ'),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => UnitSelectionScreen(
+                          grade: _selectedGradeForLibraryTab,
+                          subjectId: subject['id'],
+                          enTitle: subject['enTitle'],
+                          amTitle: subject['amTitle'],
+                          color: subject['color'],
+                          icon: subject['illustration'],
+                          isDarkMode: widget.isDarkMode,
+                          languageCode: widget.languageCode,
+                          onToggleTheme: widget.onToggleTheme,
+                          onToggleLanguage: widget.onToggleLanguage,
+                          isShortNotesMode: _libraryMode == 'notes',
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
+            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -1916,148 +2024,79 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ],
           ),
 
-          // Quick Access: Bank Payments & Student Activation
-          const SizedBox(height: 24.0),
+          // Student Registration & Upgrade banner
+          const SizedBox(height: 20.0),
           _animateItem(
             index: 7,
-            child: Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      PaymentScreen.push(
-                        context,
-                        isDarkMode: widget.isDarkMode,
-                        languageCode: widget.languageCode,
-                        grade: _selectedGradeForQuizTab,
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(16.0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 14.0),
+            child: InkWell(
+              onTap: () {
+                UpgradeRegistrationScreen.push(
+                  context,
+                  isDarkMode: widget.isDarkMode,
+                  languageCode: widget.languageCode,
+                  initialGrade: _selectedGradeForLibraryTab,
+                );
+              },
+              borderRadius: BorderRadius.circular(18.0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 15.0),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(18.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.28),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10.0),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0084FF).withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(16.0),
-                        border: Border.all(
-                          color: const Color(0xFF0084FF).withValues(alpha: 0.25),
-                          width: 1.0,
-                        ),
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
                       ),
-                      child: Row(
+                      child: const Icon(
+                        Icons.rocket_launch_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 14.0),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8.0),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0084FF).withValues(alpha: 0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.account_balance_rounded,
-                              color: Color(0xFF0084FF),
-                              size: 18,
+                          Text(
+                            widget.languageCode == 'am' ? 'የተማሪ ምዝገባ እና ማግበሪያ (Upgrade)' : 'Student Registration & Upgrade',
+                            style: const TextStyle(
+                              fontSize: 14.0,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
                             ),
                           ),
-                          const SizedBox(width: 10.0),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.languageCode == 'en' ? 'Bank Accounts' : 'የባንክ ሂሳቦች',
-                                  style: TextStyle(
-                                    fontSize: 13.0,
-                                    fontWeight: FontWeight.bold,
-                                    color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 2.0),
-                                Text(
-                                  widget.languageCode == 'en' ? 'Telebirr / CBE' : 'ቴሌብር እና ንግድ ባንክ',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    color: isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(height: 2.0),
+                          Text(
+                            widget.languageCode == 'am' ? 'በቴሌግራም አድሚኑን በማነጋገር ስም፣ ስልክ እና ፓስወርድ ይቀበሉ' : 'Contact admin on Telegram to receive credentials for this device',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 14),
+                  ],
                 ),
-                const SizedBox(width: 12.0),
-                Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      LoginActivationScreen.push(
-                        context,
-                        isDarkMode: widget.isDarkMode,
-                        languageCode: widget.languageCode,
-                        preferredGrade: _selectedGradeForQuizTab,
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(16.0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 14.0),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(16.0),
-                        border: Border.all(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.25),
-                          width: 1.0,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8.0),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.vpn_key_rounded,
-                              color: Color(0xFF10B981),
-                              size: 18,
-                            ),
-                          ),
-                          const SizedBox(width: 10.0),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.languageCode == 'en' ? 'Student Login' : 'የተማሪ መግቢያ',
-                                  style: TextStyle(
-                                    fontSize: 13.0,
-                                    fontWeight: FontWeight.bold,
-                                    color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 2.0),
-                                Text(
-                                  widget.languageCode == 'en' ? 'Unlock Units 2+' : 'ይዘቶችን አግብር',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    color: isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],
@@ -2857,67 +2896,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     };
   }
 
-  Widget _buildQuizScreenTab(bool isLight) {
-    final List<Map<String, dynamic>> allSubjects = [
-      {
-        'id': 'Mathematics',
-        'amTitle': 'ሂሳብ',
-        'enTitle': 'Mathematics',
-        'color': const Color(0xFF3B82F6), // Vibrant blue
-        'lightBg': const Color(0xFFEFF6FF),
-        'illustration': const DraftingGeometryWidget(),
-      },
-      {
-        'id': 'Biology',
-        'amTitle': 'ስነ-ህይወት',
-        'enTitle': 'Biology',
-        'color': const Color(0xFF10B981), // Emerald green
-        'lightBg': const Color(0xFFECFDF5),
-        'illustration': const CellBiologyWidget(),
-      },
-      {
-        'id': 'Physics',
-        'amTitle': 'ፊዚክስ',
-        'enTitle': 'Physics',
-        'color': const Color(0xFFDC2626), // Crimson red
-        'lightBg': const Color(0xFFFEF2F2),
-        'illustration': const AtomPhysicsWidget(),
-      },
-      {
-        'id': 'Chemistry',
-        'amTitle': 'ኬሚስትሪ',
-        'enTitle': 'Chemistry',
-        'color': const Color(0xFFEA580C), // Orange
-        'lightBg': const Color(0xFFFFF7ED),
-        'illustration': const ChemistryFlaskWidget(),
-      },
-      {
-        'id': 'Geography',
-        'amTitle': 'ጂኦግራፊ',
-        'enTitle': 'Geography',
-        'color': const Color(0xFF8E24AA), // Purple
-        'lightBg': const Color(0xFFFDF4FF),
-        'illustration': const WorldMapGeographyWidget(),
-      },
-      {
-        'id': 'History',
-        'amTitle': 'ታሪክ',
-        'enTitle': 'History',
-        'color': const Color(0xFFD97706), // Brown gold
-        'lightBg': const Color(0xFFFEF3C7),
-        'illustration': const AksumObeliskWidget(),
-      },
-      {
-        'id': 'Economics',
-        'amTitle': 'ኢኮኖሚክስ',
-        'enTitle': 'Economics',
-        'color': const Color(0xFF0F766E),
-        'lightBg': const Color(0xFFF0FDFA),
-        'illustration': const EconomicsChartWidget(),
-      },
-    ];
+  Widget _buildAccountScreenTab(bool isLight) {
+    final bool isAmharic = widget.languageCode == 'am';
+    final Color textColor = isLight ? const Color(0xFF0F172A) : Colors.white;
+    final Color subColor = isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+    final Color cardBg = isLight ? Colors.white : const Color(0xFF1E293B);
+    final Color borderColor = isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155);
 
-    final List<Map<String, dynamic>> subjects = allSubjects;
+    final Set<String> unlockedPkgs = SubscriptionService.getUnlockedPackagesSync();
 
     return Container(
       width: double.infinity,
@@ -2927,84 +2913,547 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         image: DecorationImage(
           image: const AssetImage('assets/images/education_bg_pattern.png'),
           repeat: ImageRepeat.repeat,
-          opacity: isLight ? 0.09 : 0.03,
+          opacity: isLight ? 0.08 : 0.03,
           colorFilter: isLight ? null : const ColorFilter.mode(Colors.white54, BlendMode.modulate),
         ),
       ),
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-
-            // Redesigned compact pill-shaped unified segmented grade selector
-            _buildUnifiedSegmentedGradeSelectorForQuiz(isLight),
-            const SizedBox(height: 18.0),
-
-            // Subject Cards Grid (GridView.builder) matching the requested high-fidelity bento grid 100%
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16.0,
-                mainAxisSpacing: 16.0,
-                childAspectRatio: 0.92, // Optimized ratio for taller, elegant cards with floating buttons
+            // Student Profile Header Card
+            Container(
+              padding: const EdgeInsets.all(18.0),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20.0),
+                border: Border.all(color: borderColor, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              itemCount: subjects.length,
-              itemBuilder: (context, index) {
-                final subject = subjects[index];
-                
-                // Helper to get grade-based color accents
-                Color getGradeColor(int g) {
-                  switch (g) {
-                    case 9:
-                      return const Color(0xFF0084FF); // Blue
-                    case 10:
-                      return const Color(0xFF10B981); // Emerald Green
-                    case 11:
-                      return const Color(0xFFEA580C); // Warm Orange
-                    case 12:
-                      return const Color(0xFF8B5CF6); // Purple
-                    default:
-                      return const Color(0xFF0084FF);
-                  }
-                }
-
-                return InteractiveSubjectCard(
-                  amTitle: subject['amTitle'],
-                  enTitle: subject['enTitle'],
-                  color: subject['color'],
-                  illustration: subject['illustration'],
-                  isLight: isLight,
-                  gradeColor: getGradeColor(_selectedGradeForQuizTab),
-                  languageCode: widget.languageCode,
-                  grade: _selectedGradeForQuizTab,
-                  btnText: widget.languageCode == 'en' ? 'START' : 'ጀምር',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => UnitSelectionScreen(
-                          grade: _selectedGradeForQuizTab,
-                          subjectId: subject['id'],
-                          enTitle: subject['enTitle'],
-                          amTitle: subject['amTitle'],
-                          color: subject['color'],
-                          icon: subject['illustration'],
-                          isDarkMode: widget.isDarkMode,
-                          languageCode: widget.languageCode,
-                          onToggleTheme: widget.onToggleTheme,
-                          onToggleLanguage: widget.onToggleLanguage,
-                          isShortNotesMode: false, // Quizzes mode
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 58,
+                        height: 58,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0084FF), Color(0xFF0056B3)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0084FF).withValues(alpha: 0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.person_rounded,
+                          size: 32,
+                          color: Colors.white,
                         ),
                       ),
-                    );
-                  },
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _userName.isNotEmpty ? _userName : (isAmharic ? 'ተማሪ' : 'Student'),
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                                color: textColor,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              _userPhoneNumber.isNotEmpty ? _userPhoneNumber : (isAmharic ? 'ስልክ አልተመዘገበም' : 'No phone linked'),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: subColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF10B981)),
+                            const SizedBox(width: 4),
+                            Text(
+                              isAmharic ? 'ነቃ' : 'Active',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF10B981),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 14),
+
+                  // Single-Device Hardware Binding Card
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.phonelink_lock_rounded, size: 16, color: Color(0xFF0084FF)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                isAmharic ? 'የስልክ መለያ ቁልፍ (Device ID - ለአንድ ስልክ ብቻ)' : 'Bound Hardware Device ID (Single-Device)',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: isLight ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                if (_deviceId.isNotEmpty) {
+                                  Clipboard.setData(ClipboardData(text: _deviceId));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(isAmharic ? 'የስልክ መለያ ኮፒ ተደርጓል!' : 'Device ID copied!'),
+                                      backgroundColor: const Color(0xFF10B981),
+                                      behavior: SnackBarBehavior.floating,
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0084FF).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.copy_rounded, size: 12, color: Color(0xFF0084FF)),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      isAmharic ? 'ኮፒ' : 'Copy',
+                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0084FF)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _deviceId.isNotEmpty ? _deviceId : 'DEV_CHECKING...',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: subColor,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Active Subscriptions / Database Permissions Section
+            Text(
+              isAmharic ? 'የተፈቀዱ የትምህርት ክፍሎች' : 'Active Content Access',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: borderColor, width: 1.2),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isAmharic ? 'ክፍል 1 (Unit 1) - ሙሉ በሙሉ ነጻ' : 'Unit 1 (All Subjects) - 100% Free',
+                              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: textColor),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isAmharic ? 'ለሁሉም ተማሪዎች ክፍት የተደረገ' : 'Always open for trial practice',
+                              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: subColor),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (unlockedPkgs.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Divider(height: 1),
+                    ),
+                    Text(
+                      isAmharic ? 'በዚህ ስልክ የተፈቀዱ ሙሉ ክፍሎች:' : 'Unlocked on this single device:',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textColor),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: unlockedPkgs.map((pkg) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0084FF).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF0084FF).withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.lock_open_rounded, size: 13, color: Color(0xFF0084FF)),
+                              const SizedBox(width: 5),
+                              Text(
+                                pkg.replaceAll('pkg_', '').replaceAll('_', ' ').toUpperCase(),
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF0084FF)),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Authentication & Upgrade Action Buttons
+            Text(
+              isAmharic ? 'የመለያ አማራጮች' : 'Account Actions',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Button 1: Login Activation
+            GestureDetector(
+              onTap: () async {
+                final res = await LoginActivationScreen.push(
+                  context,
+                  isDarkMode: widget.isDarkMode,
+                  languageCode: widget.languageCode,
+                  preferredGrade: _selectedGradeForLibraryTab,
+                );
+                if (res == true) {
+                  _loadProfileData();
+                }
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0084FF), Color(0xFF0056B3)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0084FF).withValues(alpha: 0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.key_rounded, color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isAmharic ? 'በይለፍ ቃል ግባ (Student Login)' : 'Student Login with Password',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            isAmharic ? 'ከአድሚኑ የተሰጠዎትን ስም፣ ስልክ እና የይለፍ ቃል ያስገቡ' : 'Sign in with name, phone, and password from Admin',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.85)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 15, color: Colors.white),
+                  ],
+                ),
+              ),
+            ),
+
+            // Button 2: Upgrade Registration
+            GestureDetector(
+              onTap: () {
+                UpgradeRegistrationScreen.push(
+                  context,
+                  isDarkMode: widget.isDarkMode,
+                  languageCode: widget.languageCode,
+                  initialGrade: _selectedGradeForLibraryTab,
                 );
               },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.5), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isLight ? 0.03 : 0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.how_to_reg_rounded, color: Color(0xFF10B981), size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isAmharic ? 'መለያ በአድሚን አስከፍት (Register)' : 'Register for Access via Admin',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: textColor),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            isAmharic ? 'ስም እና ስልክዎን አስመዝግበው የይለፍ ቃል ያግኙ' : 'Send your details to Admin to get access password',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_ios_rounded, size: 15, color: subColor),
+                  ],
+                ),
+              ),
             ),
+
+            // Button 3: Direct Telegram Admin Chat
+            GestureDetector(
+              onTap: () async {
+                final Uri telegramUri = Uri.parse('https://t.me/SmartX_Tutor');
+                if (await canLaunchUrl(telegramUri)) {
+                  await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
+                }
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF0088CC).withValues(alpha: 0.5), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isLight ? 0.03 : 0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0088CC).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.send_rounded, color: Color(0xFF0088CC), size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isAmharic ? 'አድሚኑን በቴሌግራም ያግኙ (@SmartX_Tutor)' : 'Contact Admin on Telegram',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: textColor),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            isAmharic ? 'ለፈጣን ምላሽ እና መለያ ለማስከፈት' : 'Fast response for account activation',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_ios_rounded, size: 15, color: subColor),
+                  ],
+                ),
+              ),
+            ),
+
+            // Button 4: Logout / Reset Device
+            GestureDetector(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: cardBg,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    title: Text(
+                      isAmharic ? 'ከመለያ መውጣት' : 'Sign Out',
+                      style: TextStyle(fontWeight: FontWeight.w900, color: textColor),
+                    ),
+                    content: Text(
+                      isAmharic
+                          ? 'እርግጠኛ ነዎት ከመለያዎ መውጣት ይፈልጋሉ?'
+                          : 'Are you sure you want to sign out?',
+                      style: TextStyle(color: subColor, fontSize: 13.5),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(isAmharic ? 'ይቅር' : 'Cancel', style: TextStyle(color: subColor, fontWeight: FontWeight.bold)),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEF4444),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () async {
+                          await CredentialAuthService.logout();
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.remove('is_authenticated');
+                          await prefs.remove('user_fullName');
+                          await prefs.remove('user_phoneNumber');
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                          }
+                          _loadProfileData();
+                        },
+                        child: Text(isAmharic ? 'ውጣ' : 'Sign Out', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                decoration: BoxDecoration(
+                  color: isLight ? const Color(0xFFFEF2F2) : const Color(0xFF450A0A),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      isAmharic ? 'ከመለያ ውጣ (Sign Out)' : 'Sign Out',
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFFEF4444),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 36),
           ],
         ),
       ),
@@ -3050,13 +3499,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               logScreen('VideosScreen');
               break;
             case 2:
-              logScreen('QuizScreen');
+              logScreen('OfflineScreen');
               break;
             case 3:
-              logScreen('ShortNotesScreen');
+              logScreen('LibraryScreen');
               break;
             case 4:
-              logScreen('OfflineScreen');
+              logScreen('AccountScreen');
               break;
           }
         },

@@ -122,12 +122,15 @@ class CredentialAuthService {
       await prefs.setString(_keyActivePackage, packageId);
       await prefs.setString(_keyBoundDeviceId, currentDeviceId);
 
-      // 4. Unlock the package locally via SubscriptionService
-      await SubscriptionService.unlockPackage(packageId);
-      await SubscriptionService.unlockPackage('pkg_grade_$grade');
-      if (subject != null && subject.isNotEmpty) {
-        final slug = subject.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
-        await SubscriptionService.unlockPackage('pkg_g${grade}_$slug');
+      // 4. Unlock the package(s) locally via SubscriptionService strictly based on DB package_id.
+      // E.g., 'pkg_g9_physics' unlocks ONLY Grade 9 Physics.
+      // 'pkg_grade_9' unlocks all subjects of Grade 9.
+      // Supports comma-separated packages e.g. 'pkg_g9_physics,pkg_g9_chemistry'.
+      for (final pkg in packageId.split(',')) {
+        final trimmed = pkg.trim();
+        if (trimmed.isNotEmpty) {
+          await SubscriptionService.unlockPackage(trimmed);
+        }
       }
 
       return CredentialAuthResult(
@@ -182,5 +185,16 @@ class CredentialAuthService {
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyIsAuth, false);
+  }
+
+  /// Returns saved student credentials if available
+  static Future<Map<String, String>> getCachedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'fullName': prefs.getString(_keyFullName) ?? '',
+      'phoneNumber': prefs.getString(_keyPhone) ?? '',
+      'activePackage': prefs.getString(_keyActivePackage) ?? '',
+      'boundDeviceId': prefs.getString(_keyBoundDeviceId) ?? '',
+    };
   }
 }

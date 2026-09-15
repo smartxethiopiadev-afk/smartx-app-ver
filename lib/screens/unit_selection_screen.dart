@@ -13,7 +13,7 @@ import 'notes_screen.dart';
 import 'worksheet_screen.dart';
 import '../services/analytics_service.dart';
 import '../services/subscription_service.dart';
-import 'payment_screen.dart';
+import '../widgets/locked_unit_dialog.dart';
 import '../data/curriculum_units.dart';
 
 class UnitSelectionScreen extends StatefulWidget {
@@ -122,8 +122,8 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       return;
     }
 
-    // If not unlocked, show the In-App Payment Screen
-    PaymentScreen.push(
+    // Unit 2+ locked: Show the Telegram pop-up with video tutorial
+    LockedUnitDialog.show(
       context,
       grade: widget.grade,
       subject: widget.enTitle,
@@ -131,8 +131,9 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       unitTitle: 'Unit $activeUnitNum',
       languageCode: widget.languageCode,
       isDarkMode: AppStateProvider.of(context).isDarkMode,
-      onPaymentVerified: () {
+      onUnlocked: () {
         _checkRegistrationStatus();
+        onSuccess();
       },
     );
   }
@@ -1567,7 +1568,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                         ),
                                         onPressed: () {
                                           if (isLocked) {
-                                            PaymentScreen.push(
+                                            LockedUnitDialog.show(
                                               context,
                                               grade: widget.grade,
                                               subject: widget.enTitle,
@@ -1575,7 +1576,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                               unitTitle: title,
                                               languageCode: widget.languageCode,
                                               isDarkMode: AppStateProvider.of(context).isDarkMode,
-                                              onPaymentVerified: () {
+                                              onUnlocked: () {
                                                 _checkRegistrationStatus();
                                               },
                                             );

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../screens/payment_screen.dart';
 import '../screens/login_activation_screen.dart';
 
 class HowToStartBanner extends StatelessWidget {
@@ -44,12 +43,12 @@ class HowToStartBanner extends StatelessWidget {
       },
       {
         'num': '3',
-        'icon': Icons.account_balance_wallet_rounded,
-        'color': const Color(0xFFF59E0B),
-        'title': isAm ? 'ፓኬጅ ያንቁ / ክፍያ ይፈጽሙ' : 'Pay & Activate Full Access',
+        'icon': Icons.send_rounded,
+        'color': const Color(0xFF0088CC),
+        'title': isAm ? 'በቴሌግራም አድሚኑን ያነጋግሩ' : 'Contact Telegram Admin',
         'desc': isAm
-            ? 'በቴሌብር (Telebirr) ወይም በኢትዮጵያ ንግድ ባንክ (CBE) ከፍለው መለያዎን በቋሚነት ያግብሩ።'
-            : 'Pay via Telebirr or CBE bank to unlock all units lifetime on your single device.',
+            ? 'በቴሌግራም አድሚኑን በማነጋገር ስም፣ ስልክ እና የይለፍ ቃል ተቀብለው መለያዎን ለአንድ ስልክ ያግብሩ።'
+            : 'Contact admin on Telegram to receive credentials and unlock subjects on this device.',
       },
       {
         'num': '4',
@@ -217,49 +216,51 @@ class HowToStartBanner extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         Navigator.of(ctx).pop();
-                        PaymentScreen.push(
-                          context,
-                          isDarkMode: isDarkMode,
-                          languageCode: languageCode,
-                          grade: 12,
-                        );
+                        final Uri telegramUri = Uri.parse('https://t.me/smartxsupport');
+                        if (await canLaunchUrl(telegramUri)) {
+                          await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
+                        }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
+                        backgroundColor: const Color(0xFF0088CC),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         elevation: 0,
                       ),
-                      child: Text(
-                        isAm ? 'ክፍያ ፈጽም' : 'Pay Now',
-                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              const Icon(Icons.send_rounded, size: 16, color: Colors.white),
+                              Positioned(
+                                right: -3,
+                                top: -3,
+                                child: Container(
+                                  padding: const EdgeInsets.all(1.5),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF10B981),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.add, size: 7, color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            isAm ? 'ቴሌግራም አግኙን' : 'Contact Admin',
+                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: TextButton.icon(
-                  onPressed: () async {
-                    final Uri telegramUri = Uri.parse('https://t.me/smartxsupport');
-                    if (await canLaunchUrl(telegramUri)) {
-                      await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
-                    }
-                  },
-                  icon: const Icon(Icons.send_rounded, size: 16, color: Color(0xFF0088CC)),
-                  label: Text(
-                    isAm ? 'በቴሌግራም አስተዳዳሪውን አግኙ' : 'Contact Admin on Telegram',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0088CC),
-                    ),
-                  ),
-                ),
               ),
             ],
           ),

@@ -138,12 +138,11 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
     final String cleanDeviceId = _deviceId.isNotEmpty ? _deviceId : 'DEV_ID_PENDING';
 
     final String selectedPkgTitle = _selectedPackage.title;
-    final int priceEtb = _selectedPackage.priceEtb.toInt();
 
     // Standardized pre-filled message format requested:
     // "Hello Smart X Admin, I want to unlock: [Selected Package Name]. Student Name: [Name], Phone: [Phone Number], Device ID: [Device Hardware ID]"
     final String message =
-        "Hello Smart X Admin, I want to unlock: $selectedPkgTitle ($priceEtb ETB). Student Name: $cleanName, Phone: $cleanPhone, Device ID: $cleanDeviceId";
+        "Hello Smart X Admin, I want to unlock: $selectedPkgTitle. Student Name: $cleanName, Phone: $cleanPhone, Device ID: $cleanDeviceId";
 
     final encodedMsg = Uri.encodeComponent(message);
     final Uri directTelegramUri = Uri.parse("https://t.me/HabIT_Dev?text=$encodedMsg");
@@ -607,7 +606,7 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        '${pkg.priceEtb.toInt()} ETB • ${isAm ? "የአንድ ጊዜ ክፍያ" : "Lifetime on 1 Device"}',
+                                        isAm ? "ለአንድ ስልክ ቋሚ መዳረሻ" : "Lifetime Access on 1 Device",
                                         style: TextStyle(
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w800,
@@ -729,8 +728,8 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
                       icon: const Icon(Icons.send_rounded, size: 20),
                       label: Text(
                         isAm
-                            ? 'በቴሌግራም ክፈት (${_selectedPackage.priceEtb.toInt()} ብር)'
-                            : 'Upgrade via Telegram (${_selectedPackage.priceEtb.toInt()} ETB)',
+                            ? 'በቴሌግራም አድሚኑን አግኝ'
+                            : 'Request Access on Telegram',
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
