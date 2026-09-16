@@ -550,9 +550,9 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
               isAm ? 'የፍጥነት ደረጃ ግስጋሴ (Progressive Velocity)' : 'Progressive Velocity Milestones',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: textCol),
             ),
-            Text(
+            const Text(
               '85% To Level 5',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF0284C7)),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF0284C7)),
             ),
           ],
         ),
@@ -698,9 +698,9 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
               isAm ? 'የትምህርት ብቃት ደረጃዎች' : 'Curriculum Mastery Tier Progression',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: textCol),
             ),
-            Text(
+            const Text(
               'Rank: Master',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF10B981)),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF10B981)),
             ),
           ],
         ),
@@ -855,9 +855,9 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
               isAm ? 'የፈተና ንግድ ስርዓት ደረጃ (Quiz Trade Rank)' : 'Quiz Trade Progressive System',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: textCol),
             ),
-            Text(
+            const Text(
               'Level 7: Matric Ready',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF8B5CF6)),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF8B5CF6)),
             ),
           ],
         ),

@@ -2,75 +2,70 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 
-class ImageSliderCarousel extends StatefulWidget {
+class VideoSliderCarousel extends StatefulWidget {
   final bool isDarkMode;
   final String languageCode;
+  final VoidCallback? onWatchTutorial;
 
-  const ImageSliderCarousel({
+  const VideoSliderCarousel({
     super.key,
     required this.isDarkMode,
     required this.languageCode,
+    this.onWatchTutorial,
   });
 
   @override
-  State<ImageSliderCarousel> createState() => _ImageSliderCarouselState();
+  State<VideoSliderCarousel> createState() => _VideoSliderCarouselState();
 }
 
-class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
+class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
   int _currentSlideIndex = 0;
   final CarouselSliderController _carouselController = CarouselSliderController();
 
-  // Education Oriented high quality slides with translated titles and descriptions
-  final List<Map<String, dynamic>> _slidesData = [
+  final List<Map<String, dynamic>> _videoBanners = [
     {
-      'assetPath': 'assets/images/student_phone.png',
-      'titleEn': 'Collaborative Learning Hub',
-      'titleAm': 'የጋራ ጥናት እና ማጠቃለያ',
-      'descEn': 'Connect and share summaries and matric preparation strategies with students nationwide.',
-      'descAm': 'አጠቃላይ ማጠቃለያዎችን እና የማትሪክ ዝግጅቶችን በሀገር አቀፍ ደረጃ ካሉ ተማሪዎች ጋር ይጋሩ።',
-      'accentColor': Color(0xFF0084FF),
-      'tagEn': 'ETHIO CONCEPT CENTER',
-      'tagAm': 'ኢትዮ ኮንሴፕት ሴንተር',
+      'assetPath': 'assets/images/student_laptop.png',
+      'titleEn': 'Curriculum Video Lessons',
+      'titleAm': 'የክፍል ቪዲዮ ትምህርቶች (Grade 9-12)',
+      'descEn': 'Crystal clear explanations organized by Grade, Subject, and Unit breakdown.',
+      'descAm': 'በአዲሱ ሥርዓተ ትምህርት መሠረት በክፍል፣ በትምህርት ዓይነት እና በዩኒት የተደራጁ።',
+      'accentColor': Color(0xFFEF4444),
+      'tagEn': 'CURRICULUM MASTERY',
+      'tagAm': 'የቪዲዮ ማብራሪያ',
+      'icon': Icons.play_circle_fill_rounded,
     },
     {
       'assetPath': 'assets/images/student_tablet.png',
-      'titleEn': 'Curriculum Video Masterclasses',
-      'titleAm': 'የቪዲዮ ትምህርቶች እና ማብራሪያዎች',
-      'descEn': 'Master Grade 9-12 units with crystal clear visual breakdowns and formulas.',
-      'descAm': 'ከ9-12ኛ ክፍል ያሉትን ሁሉንም የትምህርት ክፍሎች በቪዲዮ ማብራሪያ በቀላሉ ይረዱ።',
-      'accentColor': Color(0xFFEF4444),
-      'tagEn': 'VIDEO LESSONS',
-      'tagAm': 'የቪዲዮ ትምህርቶች',
+      'titleEn': 'Step-by-Step Problem Solving',
+      'titleAm': 'የፈተና ጥያቄዎች ደረጃ በደረጃ አሰራር',
+      'descEn': 'Learn smart exam problem solving techniques with experienced top tutors.',
+      'descAm': 'አስቸጋሪ የሂሳብ፣ ፊዚክስ እና ኬሚስትሪ ጥያቄዎችን በቀላሉ የማስላት ዘዴዎች።',
+      'accentColor': Color(0xFF0284C7),
+      'tagEn': 'EXAM TACTICS',
+      'tagAm': 'የጥያቄ አሰራር',
+      'icon': Icons.lightbulb_rounded,
+    },
+    {
+      'assetPath': 'assets/images/student_phone.png',
+      'titleEn': 'Concept Walkthroughs & Formulas',
+      'titleAm': 'የቁልፍ ፎርሙላዎች እና ፅንሰ ሀሳቦች ዳሰሳ',
+      'descEn': 'Grasp foundational science rules and derivations in fast 15-30 min sessions.',
+      'descAm': 'ቁልፍ የሳይንስ ፎርሙላዎችን እና ህጎችን በአጭር ጊዜ ውስጥ በግልጽ ይረዱ።',
+      'accentColor': Color(0xFF10B981),
+      'tagEn': 'CONCEPT CLARITY',
+      'tagAm': 'ፈጣን ግንዛቤ',
+      'icon': Icons.auto_stories_rounded,
     },
     {
       'assetPath': 'assets/images/student_laptop.png',
-      'titleEn': 'Excellence in National Exams',
-      'titleAm': 'ለማትሪክ ፈተና ከፍተኛ ውጤት',
-      'descEn': 'Unlock high-quality practice tests, interactive flashcards, and verified solutions.',
-      'descAm': 'ከፍተኛ ጥራት ያላቸው የልምምድ ፈተናዎች፣ አጫጭር ካርዶች እና የተረጋገጡ ማብራሪያዎችን ያግኙ።',
-      'accentColor': Color(0xFF10B981),
-      'tagEn': 'MATRIC READY',
-      'tagAm': 'ለፈተና ዝግጁ',
-    },
-    {
-      'assetPath': 'assets/images/student_phone.png',
-      'titleEn': 'Track Academic Velocity',
-      'titleAm': 'የትምህርት እድገትዎን ይከታተሉ',
-      'descEn': 'Monitor study hours, completed chapters, and detailed mock success statistics.',
-      'descAm': 'የጥናት ሰዓታትን፣ ያለቁ ምዕራፎችን እና ዝርዝር የፈተና ውጤቶችን ይቆጣጠሩ።',
-      'accentColor': Color(0xFFF59E0B),
-      'tagEn': 'STUDY ANALYTICS',
-      'tagAm': 'የውጤት ትንታኔ',
-    },
-    {
-      'assetPath': 'assets/images/student_tablet.png',
-      'titleEn': 'Offline Study Anywhere',
-      'titleAm': 'ያለ ኢንተርኔት በየትኛውም ቦታ ያጥኑ',
-      'descEn': 'Download textbooks, short notes, unit formulas, and mock tests for offline learning.',
-      'descAm': 'የትምህርት ክፍሎችን፣ አጫጭር ማስታወሻዎችን እና የልምምድ ፈተናዎችን አውርደው ያለ ኢንተርኔት ይጠቀሙ።',
+      'titleEn': 'National & Matric Exam Revisions',
+      'titleAm': 'የማትሪክ እና ሞዴል ፈተናዎች ትንታኔ',
+      'descEn': 'In-depth past matric exam revisions and model test walkthroughs.',
+      'descAm': 'ያለፉት ዓመታት የማትሪክ ፈተናዎች ትንታኔ እና ሙሉ አሰራር ማብራሪያ።',
       'accentColor': Color(0xFF8B5CF6),
-      'tagEn': 'OFFLINE ACCESS',
-      'tagAm': 'ከመስመር ውጭ ዝግጁ',
+      'tagEn': 'MATRIC REVISION',
+      'tagAm': 'የማትሪክ ክለሳ',
+      'icon': Icons.military_tech_rounded,
     },
   ];
 
@@ -82,11 +77,11 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
       children: [
         CarouselSlider.builder(
           carouselController: _carouselController,
-          itemCount: _slidesData.length,
+          itemCount: _videoBanners.length,
           options: CarouselOptions(
-            height: 125.0,
+            height: 132.0,
             autoPlay: true,
-            autoPlayInterval: const Duration(seconds: 4),
+            autoPlayInterval: const Duration(seconds: 5),
             autoPlayAnimationDuration: const Duration(milliseconds: 700),
             autoPlayCurve: Curves.easeInOutCubic,
             enlargeCenterPage: false,
@@ -98,10 +93,11 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
             },
           ),
           itemBuilder: (context, index, realIndex) {
-            final slide = _slidesData[index];
+            final slide = _videoBanners[index];
             final String title = widget.languageCode == 'en' ? slide['titleEn']! : slide['titleAm']!;
             final String desc = widget.languageCode == 'en' ? slide['descEn']! : slide['descAm']!;
             final Color accentColor = slide['accentColor']!;
+            final IconData icon = slide['icon']!;
 
             return Container(
               margin: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 1.0),
@@ -109,8 +105,8 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                 borderRadius: BorderRadius.circular(16.0),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isLight ? 0.06 : 0.25),
-                    blurRadius: 8.0,
+                    color: Colors.black.withValues(alpha: isLight ? 0.07 : 0.28),
+                    blurRadius: 10.0,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -119,18 +115,18 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                 borderRadius: BorderRadius.circular(16.0),
                 child: Stack(
                   children: [
-                    // Slide Image background
+                    // Background Image
                     Positioned.fill(
                       child: Image.asset(
                         slide['assetPath']!,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => Container(
                           color: isLight ? const Color(0xFFEDF2F7) : const Color(0xFF1E293B),
-                          child: Icon(Icons.school_rounded, size: 40, color: accentColor.withValues(alpha: 0.5)),
+                          child: Icon(icon, size: 40, color: accentColor.withValues(alpha: 0.5)),
                         ),
                       ),
                     ),
-                    // High-quality dark multi-gradient mask overlay
+                    // High-contrast gradient overlay
                     Positioned.fill(
                       child: Container(
                         decoration: BoxDecoration(
@@ -138,18 +134,35 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              Colors.black.withValues(alpha: 0.1),
-                              Colors.black.withValues(alpha: 0.4),
-                              Colors.black.withValues(alpha: 0.82),
+                              Colors.black.withValues(alpha: 0.15),
+                              Colors.black.withValues(alpha: 0.45),
+                              Colors.black.withValues(alpha: 0.88),
                             ],
                           ),
                         ),
                       ),
                     ),
-                    // Text details and badge info overlay
+                    // Play icon watermark in top-right
+                    Positioned(
+                      top: 10,
+                      right: 12,
+                      child: Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: accentColor.withValues(alpha: 0.85),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          icon,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                    // Content details
                     Positioned(
                       left: 14,
-                      bottom: 10,
+                      bottom: 12,
                       right: 14,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,19 +171,19 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
-                              color: accentColor.withValues(alpha: 0.25),
+                              color: accentColor.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(color: accentColor, width: 1),
                             ),
                             child: Text(
                               widget.languageCode == 'en' 
-                                  ? (slide['tagEn'] ?? 'ETHIO CONCEPT CENTER') 
-                                  : (slide['tagAm'] ?? 'ኢትዮ ኮንሴፕት ሴንተር'),
+                                  ? (slide['tagEn'] ?? 'VIDEO HUB') 
+                                  : (slide['tagAm'] ?? 'የቪዲዮ ማዕከል'),
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 8.0,
+                                fontSize: 8.5,
                                 fontWeight: FontWeight.w900,
-                                letterSpacing: 0.6,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),
@@ -180,7 +193,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 14.5,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w900,
                               letterSpacing: -0.2,
                             ),
                           ),
@@ -190,8 +203,8 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontSize: 10.0,
+                              color: Colors.white.withValues(alpha: 0.88),
+                              fontSize: 10.5,
                               height: 1.2,
                               fontWeight: FontWeight.w500,
                             ),
@@ -206,10 +219,10 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
           },
         ),
         const SizedBox(height: 8),
-        // Dots Indicator for slide selection
+        // Dots Indicator
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: _slidesData.asMap().entries.map((entry) {
+          children: _videoBanners.asMap().entries.map((entry) {
             final int index = entry.key;
             final bool isActive = _currentSlideIndex == index;
 
@@ -223,7 +236,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(3.0),
                   color: isActive
-                      ? (isLight ? const Color(0xFF0284C7) : const Color(0xFF38BDF8))
+                      ? const Color(0xFFEF4444)
                       : (isLight ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
                 ),
               ),

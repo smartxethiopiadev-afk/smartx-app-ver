@@ -209,11 +209,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       if (isAuth) {
         debugPrint('[Splash] Authenticated session -> HomeScreen');
         _navigateToHomeScreen();
+      } else if (!hasSeenOnboarding) {
+        debugPrint('[Splash] First time user -> OnboardingScreen');
+        _navigateToOnboarding();
       } else if (!isOnline) {
         debugPrint('[Splash] Offline launch -> LoginActivationScreen (Welcome Back)');
         _navigateToLogin(isOffline: true);
       } else if (!hasRegistered) {
-        debugPrint('[Splash] New user -> RegistrationScreen');
+        debugPrint('[Splash] Unregistered user -> RegistrationScreen');
         _navigateToRegistration();
       } else {
         debugPrint('[Splash] Registered user -> LoginActivationScreen');

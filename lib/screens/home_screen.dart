@@ -14,6 +14,7 @@ import '../models/video_model.dart';
 import '../services/video_service.dart';
 import '../widgets/youtube_video_player_dialog.dart';
 import '../widgets/image_slider_carousel.dart';
+import '../widgets/video_slider_carousel.dart';
 import '../widgets/how_to_start_banner.dart';
 import '../widgets/subject_vector_widgets.dart';
 import '../widgets/interactive_subject_card.dart';
@@ -97,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   int _selectedGradeForLibraryTab = 9;
   String _libraryMode = 'qa'; // 'qa' or 'notes'
   String _deviceId = '';
-  int _selectedGradeForVideosTab = 9;
+  int? _selectedGradeForVideosTab;
   int _selectedUnitForVideosTab = 0; // 0 for All Units, 1, 2, 3...
   String _selectedSubjectForVideosTab = 'All';
 
@@ -679,7 +680,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                   decoration: BoxDecoration(
                     gradient: isSelected
                         ? LinearGradient(
@@ -691,7 +692,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     color: isSelected
                         ? null
                         : (isLight ? Colors.white : const Color(0xFF1E293B)),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: isSelected
                           ? primaryColor
@@ -703,8 +704,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         color: isSelected
                             ? primaryColor.withValues(alpha: 0.35)
                             : Colors.black.withValues(alpha: isLight ? 0.03 : 0.15),
-                        blurRadius: isSelected ? 10 : 4,
-                        offset: Offset(0, isSelected ? 4 : 2),
+                        blurRadius: isSelected ? 8 : 3,
+                        offset: Offset(0, isSelected ? 3 : 1),
                       ),
                     ],
                   ),
@@ -712,7 +713,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(6),
+                        padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? Colors.white.withValues(alpha: 0.22)
@@ -721,15 +722,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ),
                         child: Icon(
                           icon,
-                          size: 16,
+                          size: 14,
                           color: isSelected ? Colors.white : primaryColor,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         isAmharic ? '$gradeNumኛ ክፍል' : 'Grade $gradeNum',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w900,
                           color: isSelected
                               ? Colors.white
@@ -738,17 +739,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        isAmharic ? 'ትምህርቶች' : 'Lessons',
-                        style: TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected
-                              ? Colors.white.withValues(alpha: 0.88)
-                              : (isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -756,6 +746,248 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  /// Full-width wide Grade Card for video tab landing
+  Widget _buildGradeVideoLandingCard({
+    required int gradeNum,
+    required bool isLight,
+    required bool isAmharic,
+  }) {
+    Color primaryColor;
+    Color secondaryColor;
+    IconData icon;
+    String title;
+    String subtitle;
+    List<String> subjectTags;
+
+    switch (gradeNum) {
+      case 9:
+        primaryColor = const Color(0xFF2563EB);
+        secondaryColor = const Color(0xFF1D4ED8);
+        icon = Icons.school_rounded;
+        title = isAmharic ? '9ኛ ክፍል (Grade 9)' : 'Grade 9 Curriculum';
+        subtitle = isAmharic
+            ? 'የ9ኛ ክፍል የቪዲዮ ትምህርቶች፣ ዩኒት ማብራሪያዎች እና የፈተና ጥያቄዎች'
+            : 'Grade 9 unit walkthroughs, formula derivations, and practice solutions.';
+        subjectTags = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Civics', 'English'];
+        break;
+      case 10:
+        primaryColor = const Color(0xFF059669);
+        secondaryColor = const Color(0xFF047857);
+        icon = Icons.auto_stories_rounded;
+        title = isAmharic ? '10ኛ ክፍል (Grade 10)' : 'Grade 10 Curriculum';
+        subtitle = isAmharic
+            ? 'ለማትሪክ መሠረት የሚሆኑ ሙሉ የትምህርት ክፍሎች በቪዲዮ ማብራሪያ'
+            : 'Foundational lessons and matric preparation with verified problem walkthroughs.';
+        subjectTags = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Civics', 'English'];
+        break;
+      case 11:
+        primaryColor = const Color(0xFFD97706);
+        secondaryColor = const Color(0xFFB45309);
+        icon = Icons.science_rounded;
+        title = isAmharic ? '11ኛ ክፍል (Grade 11)' : 'Grade 11 Curriculum';
+        subtitle = isAmharic
+            ? 'የተፈጥሮ እና ማህበራዊ ሳይንስ የዩኒት ማብራሪያዎች እና ማጠቃለያዎች'
+            : 'Natural & Social Science advanced unit breakdowns and key concepts.';
+        subjectTags = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Agriculture', 'Civics'];
+        break;
+      case 12:
+        primaryColor = const Color(0xFF7C3AED);
+        secondaryColor = const Color(0xFF6D28D9);
+        icon = Icons.military_tech_rounded;
+        title = isAmharic ? '12ኛ ክፍል (Grade 12)' : 'Grade 12 Curriculum';
+        subtitle = isAmharic
+            ? 'የማትሪክ ፈተና ዝግጅት፣ የሞዴል ፈተናዎች ትንታኔ እና ሙሉ አሰራር'
+            : 'National Matric Exam mastery, model tests analysis, and solved questions.';
+        subjectTags = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Agriculture', 'Economics'];
+        break;
+      default:
+        primaryColor = const Color(0xFF2563EB);
+        secondaryColor = const Color(0xFF1D4ED8);
+        icon = Icons.school_rounded;
+        title = 'Grade $gradeNum';
+        subtitle = 'Curriculum video lessons';
+        subjectTags = ['Mathematics', 'Physics', 'Chemistry'];
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: isLight ? Colors.white : const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: primaryColor.withValues(alpha: isLight ? 0.3 : 0.5),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: isLight ? 0.09 : 0.22),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () {
+            setState(() {
+              _selectedGradeForVideosTab = gradeNum;
+              _selectedSubjectForVideosTab = 'Mathematics';
+              _selectedUnitForVideosTab = 1;
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Row: Icon + Grade Title + Lesson Count
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [primaryColor, secondaryColor],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withValues(alpha: 0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        icon,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                title,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withValues(alpha: isLight ? 0.12 : 0.25),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  isAmharic ? '48+ ቪዲዮዎች' : '48+ Lessons',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                // Subject Badges Preview
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: subjectTags.map((subj) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                        ),
+                      ),
+                      child: Text(
+                        subj,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isLight ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+
+                const SizedBox(height: 14),
+
+                // Bottom Call To Action
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryColor, secondaryColor],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        isAmharic
+                            ? '$gradeNumኛ ክፍል ቪዲዮዎችን ይመልከቱ'
+                            : 'Explore Grade $gradeNum Video Lessons',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -775,10 +1007,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       {'id': 'Biology', 'title': isAmharic ? 'ስነ-ህይወት' : 'Biology'},
     ];
 
-    if (_selectedGradeForVideosTab == 9 || _selectedGradeForVideosTab == 10) {
+    final int currentGrade = _selectedGradeForVideosTab ?? 9;
+
+    if (currentGrade == 9 || currentGrade == 10) {
       subjects.add({'id': 'Civics', 'title': isAmharic ? 'የዜግነት ትምህርት' : 'Civics'});
     }
-    if (_selectedGradeForVideosTab == 11 || _selectedGradeForVideosTab == 12) {
+    if (currentGrade == 11 || currentGrade == 12) {
       subjects.add({'id': 'Agriculture', 'title': isAmharic ? 'ግብርና' : 'Agriculture'});
     }
 
@@ -789,8 +1023,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       {'id': 'ICT', 'title': isAmharic ? 'ኢንፎርሜሽን ቴክኖሎጂ (ICT)' : 'ICT'},
     ]);
 
-    final VideoModel appOverviewVideo = VideoService.getAppOverviewVideo();
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: CustomScrollView(
@@ -798,330 +1030,228 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- TOP FEATURED APP OVERVIEW VIDEO CARD ---
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: isLight ? Colors.white : const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isLight
-                            ? const Color(0xFF0284C7).withValues(alpha: 0.3)
-                            : const Color(0xFF0284C7).withValues(alpha: 0.5),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0284C7).withValues(alpha: isLight ? 0.08 : 0.2),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
+                  // --- TOP VIDEO BANNER CAROUSEL (3-5 Rotating Slides) ---
+                  VideoSliderCarousel(
+                    isDarkMode: !isLight,
+                    languageCode: widget.languageCode,
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // CONDITIONAL CONTENT:
+                  // IF NO GRADE SELECTED -> Show 4 Stacked Full-Width Grade Cards
+                  if (_selectedGradeForVideosTab == null) ...[
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: Color(0x1FEF4444),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.video_library_rounded, size: 16, color: Color(0xFFEF4444)),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          isAmharic ? 'ክፍልዎን ይምረጡ (የቪዲዮ ትምህርቶች)' : 'Select Your Grade (Video Lessons)',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: textColor,
+                          ),
                         ),
                       ],
                     ),
-                    child: Material(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(18),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: () {
-                          YouTubeVideoPlayerDialog.show(
-                            context,
-                            video: appOverviewVideo,
-                            isDarkMode: widget.isDarkMode,
-                            languageCode: widget.languageCode,
-                          );
-                        },
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Thumbnail with 12% reduced height
-                            ClipRRect(
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
-                              child: AspectRatio(
-                                aspectRatio: 16 / 7.92,
-                                child: Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    Image.network(
-                                      appOverviewVideo.thumbnailUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(
-                                        color: const Color(0xFF0F172A),
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.play_circle_fill_rounded,
-                                            size: 50,
-                                            color: Color(0xFFEF4444),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Colors.black.withValues(alpha: 0.1),
-                                            Colors.black.withValues(alpha: 0.65),
-                                          ],
-                                          begin: Alignment.topCenter,
-                                          end: Alignment.bottomCenter,
-                                        ),
-                                      ),
-                                    ),
-                                    // Play Button Center
-                                    Center(
-                                      child: Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFEF4444),
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.4),
-                                              blurRadius: 12,
-                                              offset: const Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                          Icons.play_arrow_rounded,
-                                          color: Colors.white,
-                                          size: 28,
-                                        ),
-                                      ),
-                                    ),
-                                    // Tutorial Badge (Top Left)
-                                    Positioned(
-                                      top: 10,
-                                      left: 10,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF0284C7).withValues(alpha: 0.95),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(Icons.school_rounded, size: 12, color: Colors.white),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              isAmharic ? 'የመተግበሪያ ገለፃ' : 'APP TUTORIAL',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w900,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    // In-App Only Indicator (Bottom Right)
-                                    Positioned(
-                                      bottom: 8,
-                                      right: 10,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withValues(alpha: 0.75),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(Icons.touch_app_rounded, size: 12, color: Colors.white),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              isAmharic ? 'ለመመልከት ይጫኑ' : 'Tap to Play In-App',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 10.5,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                    const SizedBox(height: 12),
+                    _buildGradeVideoLandingCard(gradeNum: 9, isLight: isLight, isAmharic: isAmharic),
+                    _buildGradeVideoLandingCard(gradeNum: 10, isLight: isLight, isAmharic: isAmharic),
+                    _buildGradeVideoLandingCard(gradeNum: 11, isLight: isLight, isAmharic: isAmharic),
+                    _buildGradeVideoLandingCard(gradeNum: 12, isLight: isLight, isAmharic: isAmharic),
+                  ] else ...[
+                    // IF GRADE IS SELECTED -> Show Grade Header + Quick switcher + Subject + Unit Selectors
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isLight ? Colors.white : const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _selectedGradeForVideosTab = null;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0x1F0284C7),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                            ),
-                            // Title & Description
-                            Padding(
-                              padding: const EdgeInsets.all(14),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  const Icon(Icons.arrow_back_rounded, size: 15, color: Color(0xFF0284C7)),
+                                  const SizedBox(width: 4),
                                   Text(
-                                    isAmharic
-                                        ? 'የኢትዮ ኮንሴፕት ሴንተር መተግበሪያ አጠቃቀም ሙሉ ገለፃ'
-                                        : 'Ethio Concept Center App Master Overview & Guide',
-                                    style: TextStyle(
-                                      fontSize: 14.5,
-                                      fontWeight: FontWeight.w900,
-                                      color: textColor,
-                                      height: 1.3,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    isAmharic
-                                        ? 'የክፍል ትምህርቶችን፣ ፈተናዎችን እና ማስታወሻዎችን በቀላሉ እንዴት እንደሚጠቀሙበት ያሳያል'
-                                        : 'Learn how to easily navigate curriculum units, quizzes, and offline packages',
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w500,
-                                      color: subColor,
+                                    isAmharic ? 'ወደ ክፍሎች' : 'All Grades',
+                                    style: const TextStyle(
+                                      color: Color(0xFF0284C7),
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Section Header: Grade Lessons
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444).withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.video_library_rounded, size: 16, color: Color(0xFFEF4444)),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        isAmharic ? 'የክፍል ቪዲዮ ትምህርቶች (በ Unit የተከፋፈሉ)' : 'Curriculum Video Lessons (By Unit)',
-                        style: TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w900,
-                          color: textColor,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Grade Selector (9, 10, 11, 12)
-                  _buildUnifiedSegmentedGradeSelectorForVideos(isLight),
-
-                  const SizedBox(height: 12),
-
-                  // Unit Filter Horizontal Pills
-                  SizedBox(
-                    height: 34,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        _buildUnitFilterChip(
-                          unitNum: 0,
-                          label: isAmharic ? 'ሁሉም ክፍሎች (All)' : 'All Units',
-                          isSelected: _selectedUnitForVideosTab == 0,
-                          isLight: isLight,
-                        ),
-                        ...List.generate(6, (index) {
-                          final unitNum = index + 1;
-                          return _buildUnitFilterChip(
-                            unitNum: unitNum,
-                            label: isAmharic ? 'ክፍል $unitNum (Unit $unitNum)' : 'Unit $unitNum',
-                            isSelected: _selectedUnitForVideosTab == unitNum,
-                            isLight: isLight,
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Subject Horizontal Filter Chips
-                  SizedBox(
-                    height: 34,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: subjects.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 6),
-                      itemBuilder: (context, index) {
-                        final item = subjects[index];
-                        final bool isSelected =
-                            _selectedSubjectForVideosTab == item['id'];
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedSubjectForVideosTab = item['id']!;
-                            });
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
-                              color: isSelected
-                                  ? const Color(0xFFEF4444)
-                                  : (isLight ? Colors.white : const Color(0xFF1E293B)),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
+                              color: const Color(0x1FEF4444),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.school_rounded, size: 14, color: Color(0xFFEF4444)),
+                                const SizedBox(width: 5),
+                                Text(
+                                  isAmharic ? '$_selectedGradeForVideosTabኛ ክፍል' : 'Grade $_selectedGradeForVideosTab',
+                                  style: const TextStyle(
+                                    color: Color(0xFFEF4444),
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 12.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // Quick switcher for grades
+                    _buildUnifiedSegmentedGradeSelectorForVideos(isLight),
+
+                    const SizedBox(height: 10),
+
+                    // Subject Horizontal Filter Chips
+                    SizedBox(
+                      height: 34,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: subjects.length,
+                        separatorBuilder: (context, index) => const SizedBox(width: 6),
+                        itemBuilder: (context, index) {
+                          final item = subjects[index];
+                          final bool isSelected =
+                              _selectedSubjectForVideosTab == item['id'];
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedSubjectForVideosTab = item['id']!;
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
                                 color: isSelected
                                     ? const Color(0xFFEF4444)
-                                    : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
-                              ),
-                              boxShadow: isSelected
-                                  ? [
-                                      BoxShadow(
-                                        color: const Color(0xFFEF4444).withValues(alpha: 0.25),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: Center(
-                              child: Text(
-                                item['title']!,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                    : (isLight ? Colors.white : const Color(0xFF1E293B)),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
                                   color: isSelected
-                                      ? Colors.white
-                                      : (isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8)),
+                                      ? const Color(0xFFEF4444)
+                                      : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: const Color(0x40EF4444),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  item['title']!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : (isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8)),
                                 ),
                               ),
                             ),
                           ),
                         );
                       },
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 10),
+                    const SizedBox(height: 10),
+
+                    // Unit Filter Horizontal Pills
+                    SizedBox(
+                      height: 34,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        children: [
+                          _buildUnitFilterChip(
+                            unitNum: 0,
+                            label: isAmharic ? 'ሁሉም ክፍሎች (All)' : 'All Units',
+                            isSelected: _selectedUnitForVideosTab == 0,
+                            isLight: isLight,
+                          ),
+                          ...List.generate(6, (index) {
+                            final unitNum = index + 1;
+                            return _buildUnitFilterChip(
+                              unitNum: unitNum,
+                              label: isAmharic ? 'ክፍል $unitNum (Unit $unitNum)' : 'Unit $unitNum',
+                              isSelected: _selectedUnitForVideosTab == unitNum,
+                              isLight: isLight,
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+                  ],
                 ],
               ),
             ),
           ),
 
-          // Videos Stream / Future Builder with Unit Filtering
-          FutureBuilder<List<VideoModel>>(
-            future: VideoService.fetchVideos(
-              grade: _selectedGradeForVideosTab,
-              subject: _selectedSubjectForVideosTab == 'All'
-                  ? null
-                  : _selectedSubjectForVideosTab,
-              unit: _selectedUnitForVideosTab == 0 ? null : _selectedUnitForVideosTab,
-            ),
+          // Videos Stream / Future Builder with Unit Filtering (Only if grade selected)
+          if (_selectedGradeForVideosTab != null)
+            FutureBuilder<List<VideoModel>>(
+              future: VideoService.fetchVideos(
+                grade: _selectedGradeForVideosTab!,
+                subject: _selectedSubjectForVideosTab == 'All'
+                    ? null
+                    : _selectedSubjectForVideosTab,
+                unit: _selectedUnitForVideosTab == 0 ? null : _selectedUnitForVideosTab,
+              ),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const SliverFillRemaining(
