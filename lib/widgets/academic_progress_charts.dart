@@ -18,7 +18,6 @@ class AcademicProgressCharts extends StatefulWidget {
 
 class _AcademicProgressChartsState extends State<AcademicProgressCharts>
     with SingleTickerProviderStateMixin {
-  int _selectedChartTab = 0; // 0: Weekly Velocity, 1: Subject Mastery, 2: Quiz Trends
   late AnimationController _animController;
   late Animation<double> _chartAnimation;
 
@@ -27,21 +26,23 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
   final List<String> _weekDaysAm = const ['ሰኞ', 'ማክሰኞ', 'ረቡዕ', 'ሐሙስ', 'አርብ', 'ቅዳሜ', 'እሑድ'];
 
   final List<Map<String, dynamic>> _subjectScores = const [
-    {'name': 'Mathematics', 'amName': 'ሒሳብ', 'score': 0.92, 'color': Color(0xFF3B82F6), 'units': '5/6'},
-    {'name': 'Physics', 'amName': 'ፊዚክስ', 'score': 0.86, 'color': Color(0xFF8B5CF6), 'units': '4/5'},
-    {'name': 'Chemistry', 'amName': 'ኬሚስትሪ', 'score': 0.79, 'color': Color(0xFFEC4899), 'units': '3/4'},
-    {'name': 'Biology', 'amName': 'ባዮሎጂ', 'score': 0.88, 'color': Color(0xFF10B981), 'units': '4/5'},
-    {'name': 'Civics', 'amName': 'ስነ-ዜጋ', 'score': 0.94, 'color': Color(0xFFF59E0B), 'units': '5/5'},
-    {'name': 'Agriculture', 'amName': 'ግብርና', 'score': 0.82, 'color': Color(0xFF14B8A6), 'units': '3/4'},
-    {'name': 'ICT', 'amName': 'ኢንፎርሜሽን ቴክኖሎጂ', 'score': 0.90, 'color': Color(0xFF06B6D4), 'units': '4/4'},
+    {'name': 'Mathematics', 'amName': 'ሒሳብ', 'score': 0.92, 'color': Color(0xFF3B82F6), 'units': '5/6', 'rank': 'Master'},
+    {'name': 'Physics', 'amName': 'ፊዚክስ', 'score': 0.86, 'color': Color(0xFF8B5CF6), 'units': '4/5', 'rank': 'Scholar'},
+    {'name': 'Chemistry', 'amName': 'ኬሚስትሪ', 'score': 0.79, 'color': Color(0xFFEC4899), 'units': '3/4', 'rank': 'Adept'},
+    {'name': 'Biology', 'amName': 'ባዮሎጂ', 'score': 0.88, 'color': Color(0xFF10B981), 'units': '4/5', 'rank': 'Scholar'},
+    {'name': 'Civics', 'amName': 'ስነ-ዜጋ', 'score': 0.94, 'color': Color(0xFFF59E0B), 'units': '5/5', 'rank': 'Elite'},
+    {'name': 'Agriculture', 'amName': 'ግብርና', 'score': 0.82, 'color': Color(0xFF14B8A6), 'units': '3/4', 'rank': 'Adept'},
+    {'name': 'ICT', 'amName': 'ኢንፎርሜሽን ቴክኖሎጂ', 'score': 0.90, 'color': Color(0xFF06B6D4), 'units': '4/4', 'rank': 'Master'},
   ];
+
+  final List<double> _quizScores = const [72, 78, 84, 80, 89, 92, 96];
 
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1100),
     );
     _chartAnimation = CurvedAnimation(
       parent: _animController,
@@ -56,15 +57,6 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
     super.dispose();
   }
 
-  void _switchTab(int index) {
-    if (_selectedChartTab == index) return;
-    setState(() {
-      _selectedChartTab = index;
-    });
-    _animController.reset();
-    _animController.forward();
-  }
-
   @override
   Widget build(BuildContext context) {
     final bool isLight = !widget.isDarkMode;
@@ -75,247 +67,379 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
     final Color textColor = isLight ? const Color(0xFF0F172A) : Colors.white;
     final Color subColor = isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.25),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header with Badge & Switcher
-          Padding(
-            padding: const EdgeInsets.all(18.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0084FF).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.auto_graph_rounded,
-                            size: 20,
-                            color: Color(0xFF0084FF),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isAm ? 'የጥናት እና የውጤት ትንታኔ (Analytics)' : 'Academic Analytics Engine',
-                              style: TextStyle(
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w900,
-                                color: textColor,
-                              ),
-                            ),
-                            Text(
-                              isAm ? 'የቀጥታ የትምህርት አፈፃፀም ግስጋሴ' : 'Real-time performance metrics',
-                              style: TextStyle(fontSize: 11, color: subColor),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF10B981)),
-                          const SizedBox(width: 2),
-                          Text(
-                            isAm ? '88% ብቃት' : '88% Mastery',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF10B981),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Interactive Chart Mode Tabs
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
-                    borderRadius: BorderRadius.circular(12),
+    return AnimatedBuilder(
+      animation: _chartAnimation,
+      builder: (context, child) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ==========================================
+            // 1. STANDALONE SECTION: STUDY VELOCITY
+            // ==========================================
+            _buildSectionHeader(
+              title: isAm ? 'የጥናት ፍጥነት (Study Velocity)' : 'Study Velocity',
+              subtitle: isAm ? 'የሳምንታዊ ጥናት ሰዓታት እና የተከታታይነት ፍጥነት' : 'Weekly focus hours and persistence momentum',
+              icon: Icons.speed_rounded,
+              iconColor: const Color(0xFF0284C7),
+              badgeText: isAm ? 'ደረጃ 4 ፍጥነት' : 'Level 4 Velocity',
+              badgeColor: const Color(0xFF0284C7),
+              textColor: textColor,
+              subColor: subColor,
+              isLight: isLight,
+            ),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: borderColor, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.2),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
                   ),
-                  child: Row(
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // KPI Overview Row
+                  Row(
                     children: [
-                      _buildTabButton(
-                        title: isAm ? 'የጥናት ሰዓት' : 'Study Velocity',
-                        icon: Icons.timer_rounded,
-                        index: 0,
+                      _buildVelocityKpi(
+                        label: isAm ? 'ጠቅላላ ሰዓታት' : 'Total Hours',
+                        val: '29.8 hrs',
+                        sub: isAm ? '+4.2h በዚህ ሳምንት' : '+4.2h this week',
+                        icon: Icons.timelapse_rounded,
+                        color: const Color(0xFF0284C7),
                         isLight: isLight,
                       ),
-                      _buildTabButton(
-                        title: isAm ? 'የትምህርት ብቃት' : 'Subject Mastery',
-                        icon: Icons.bar_chart_rounded,
-                        index: 1,
+                      const SizedBox(width: 10),
+                      _buildVelocityKpi(
+                        label: isAm ? 'ዕለታዊ አማካይ' : 'Daily Average',
+                        val: '4.3 hrs/day',
+                        sub: isAm ? 'የተረጋጋ ፍጥነት' : 'Optimal pace',
+                        icon: Icons.trending_up_rounded,
+                        color: const Color(0xFF10B981),
                         isLight: isLight,
                       ),
-                      _buildTabButton(
-                        title: isAm ? 'የፈተና ውጤት' : 'Quiz Trends',
-                        icon: Icons.show_chart_rounded,
-                        index: 2,
+                      const SizedBox(width: 10),
+                      _buildVelocityKpi(
+                        label: isAm ? 'የጥናት ተከታታይ' : 'Study Streak',
+                        val: '7 Days',
+                        sub: isAm ? 'ምርጥ ሪከርድ' : 'Active streak',
+                        icon: Icons.local_fire_department_rounded,
+                        color: const Color(0xFFF59E0B),
                         isLight: isLight,
                       ),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+
+                  // Animated Bar Chart
+                  _buildStudyVelocityBarChart(isLight, isAm, textColor, subColor),
+
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 14),
+
+                  // Progressive Velocity Milestones
+                  _buildVelocityProgressiveSystem(isLight, isAm, textColor, subColor),
+                ],
+              ),
             ),
-          ),
 
-          const Divider(height: 1),
+            const SizedBox(height: 28),
 
-          // Main Chart Visualization Area
-          AnimatedBuilder(
-            animation: _chartAnimation,
-            builder: (context, child) {
-              return Padding(
-                padding: const EdgeInsets.all(18.0),
-                child: Column(
-                  children: [
-                    if (_selectedChartTab == 0)
-                      _buildStudyVelocityChart(isLight, isAm, textColor, subColor),
-                    if (_selectedChartTab == 1)
-                      _buildSubjectMasteryBars(isLight, isAm, textColor, subColor),
-                    if (_selectedChartTab == 2)
-                      _buildQuizTrendAreaChart(isLight, isAm, textColor, subColor),
-                  ],
-                ),
-              );
-            },
-          ),
-
-          const Divider(height: 1),
-
-          // Mini KPI Summary Cards
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                _buildKpiCard(
-                  title: isAm ? 'የተጠኑ ሰዓታት' : 'Study Time',
-                  value: '29.8 hrs',
-                  subtitle: isAm ? '+4.2 hrs በዚህ ሳምንት' : '+4.2 hrs this week',
-                  icon: Icons.access_time_filled_rounded,
-                  color: const Color(0xFF0084FF),
-                  isLight: isLight,
-                ),
-                const SizedBox(width: 10),
-                _buildKpiCard(
-                  title: isAm ? 'የተጠናቀቁ ምዕራፎች' : 'Units Done',
-                  value: '23 Units',
-                  subtitle: isAm ? 'ከ32 ምዕራፎች' : 'out of 32 units',
-                  icon: Icons.task_alt_rounded,
-                  color: const Color(0xFF10B981),
-                  isLight: isLight,
-                ),
-                const SizedBox(width: 10),
-                _buildKpiCard(
-                  title: isAm ? 'የጥናት ቅደም ተከተል' : 'Streak',
-                  value: '7 Days',
-                  subtitle: isAm ? 'ያልተቋረጠ ጥናት' : 'Personal Record',
-                  icon: Icons.local_fire_department_rounded,
-                  color: const Color(0xFFF59E0B),
-                  isLight: isLight,
-                ),
-              ],
+            // ==========================================
+            // 2. STANDALONE SECTION: SUBJECT MASTER
+            // ==========================================
+            _buildSectionHeader(
+              title: isAm ? 'የትምህርት ብቃት ማስተሪ (Subject Master)' : 'Subject Master',
+              subtitle: isAm ? 'በየክፍለ-ትምህርቱ የተመዘገበ የዕውቀት ደረጃ' : 'Curriculum competency & completion breakdown',
+              icon: Icons.stars_rounded,
+              iconColor: const Color(0xFF10B981),
+              badgeText: isAm ? 'የሊቅ ደረጃ (Scholar)' : 'Scholar Tier',
+              badgeColor: const Color(0xFF10B981),
+              textColor: textColor,
+              subColor: subColor,
+              isLight: isLight,
             ),
-          ),
-        ],
-      ),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: borderColor, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.2),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Highlight Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: isLight ? 0.08 : 0.15),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.workspace_premium_rounded, color: Color(0xFF10B981), size: 22),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isAm ? 'ከፍተኛ ውጤት፡ ሒሳብ እና ስነ-ዜጋ (94%)' : 'Peak Mastery: Civics & Mathematics (94%)',
+                                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF10B981)),
+                              ),
+                              Text(
+                                isAm ? '23 ከ32 ክፍሎች በተሳካ ሁኔታ ተጠናቀዋል' : '23 of 32 units fully completed with mastery',
+                                style: TextStyle(fontSize: 11, color: subColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Multi-Subject Bars
+                  _buildSubjectMasteryBars(isLight, isAm, textColor, subColor),
+
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 14),
+
+                  // Progressive Subject Mastery Tier System
+                  _buildSubjectProgressiveTiers(isLight, isAm, textColor, subColor),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 28),
+
+            // ==========================================
+            // 3. STANDALONE SECTION: QUIZ TRADE PROGRESSIVE SYSTEM
+            // ==========================================
+            _buildSectionHeader(
+              title: isAm ? 'የፈተና ንግድ እና ግስጋሴ (Quiz Trade)' : 'Quiz Trade Progressive System',
+              subtitle: isAm ? 'የፈተና ውጤት ግስጋሴ ከነጥብ እና ደረጃ ማስተዋወቂያ ጋር' : 'Quiz performance trajectory & credit progression',
+              icon: Icons.currency_exchange_rounded,
+              iconColor: const Color(0xFF8B5CF6),
+              badgeText: isAm ? '1,450 የጥናት ነጥቦች' : '1,450 Trade XP',
+              badgeColor: const Color(0xFF8B5CF6),
+              textColor: textColor,
+              subColor: subColor,
+              isLight: isLight,
+            ),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: borderColor, width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.2),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Trade Stats Row
+                  Row(
+                    children: [
+                      _buildTradeMetricCard(
+                        title: isAm ? 'የንግድ ክሬዲት' : 'Trade Credits',
+                        value: '1,450 XP',
+                        badge: isAm ? '+150 ዛሬ' : '+150 today',
+                        icon: Icons.toll_rounded,
+                        color: const Color(0xFF8B5CF6),
+                        isLight: isLight,
+                      ),
+                      const SizedBox(width: 10),
+                      _buildTradeMetricCard(
+                        title: isAm ? 'የማለፍ ምጣኔ' : 'Pass Rate',
+                        value: '92.4%',
+                        badge: isAm ? 'ከፍተኛ ብቃት' : 'Top Tier',
+                        icon: Icons.verified_rounded,
+                        color: const Color(0xFF10B981),
+                        isLight: isLight,
+                      ),
+                      const SizedBox(width: 10),
+                      _buildTradeMetricCard(
+                        title: isAm ? 'ከፍተኛ ውጤት' : 'Peak Score',
+                        value: '96%',
+                        badge: isAm ? 'Unit 5 Quiz' : 'Unit 5 Quiz',
+                        icon: Icons.military_tech_rounded,
+                        color: const Color(0xFFF59E0B),
+                        isLight: isLight,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Area Chart Curve
+                  _buildQuizTrendAreaChart(isLight, isAm, textColor, subColor),
+
+                  const SizedBox(height: 18),
+                  const Divider(height: 1),
+                  const SizedBox(height: 14),
+
+                  // Quiz Trade Progressive Milestone Levels
+                  _buildQuizTradeProgressiveBar(isLight, isAm, textColor, subColor),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildTabButton({
+  // Section Header Component
+  Widget _buildSectionHeader({
     required String title,
+    required String subtitle,
     required IconData icon,
-    required int index,
+    required Color iconColor,
+    required String badgeText,
+    required Color badgeColor,
+    required Color textColor,
+    required Color subColor,
     required bool isLight,
   }) {
-    final bool isSelected = _selectedChartTab == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _switchTab(index),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 8),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isSelected
-                ? (isLight ? Colors.white : const Color(0xFF1E293B))
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    )
-                  ]
-                : null,
+            color: iconColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Icon(icon, color: iconColor, size: 20),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                icon,
-                size: 14,
-                color: isSelected ? const Color(0xFF0084FF) : const Color(0xFF64748B),
-              ),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                    color: isSelected
-                        ? (isLight ? const Color(0xFF0F172A) : Colors.white)
-                        : const Color(0xFF64748B),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        color: textColor,
+                      ),
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: badgeColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      badgeText,
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        color: badgeColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 11, color: subColor),
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+
+  // Velocity KPI widget
+  Widget _buildVelocityKpi({
+    required String label,
+    required String val,
+    required String sub,
+    required IconData icon,
+    required Color color,
+    required bool isLight,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: isLight ? 0.07 : 0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(height: 5),
+            Text(
+              val,
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w900,
+                color: isLight ? const Color(0xFF0F172A) : Colors.white,
+              ),
+            ),
+            const SizedBox(height: 1),
+            Text(
+              label,
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              sub,
+              style: TextStyle(fontSize: 9, color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );
   }
 
   // 1. Weekly Study Velocity Bar Chart
-  Widget _buildStudyVelocityChart(bool isLight, bool isAm, Color textCol, Color subCol) {
+  Widget _buildStudyVelocityBarChart(bool isLight, bool isAm, Color textCol, Color subCol) {
     const double maxHours = 7.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,13 +453,13 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
             ),
             Text(
               isAm ? 'አማካይ፡ 4.3 ሰዓት/ቀን' : 'Avg: 4.3 hrs/day',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF0084FF)),
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF0284C7)),
             ),
           ],
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
         SizedBox(
-          height: 150,
+          height: 140,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -357,7 +481,7 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
-                          color: isHighest ? const Color(0xFF0084FF) : subCol,
+                          color: isHighest ? const Color(0xFF0284C7) : subCol,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -366,12 +490,12 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
                         child: Align(
                           alignment: Alignment.bottomCenter,
                           child: Container(
-                            height: 110 * heightRatio,
+                            height: 105 * heightRatio,
                             width: 22,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: isHighest
-                                    ? [const Color(0xFF0084FF), const Color(0xFF00D4FF)]
+                                    ? [const Color(0xFF0284C7), const Color(0xFF38BDF8)]
                                     : [
                                         const Color(0xFF3B82F6).withValues(alpha: 0.75),
                                         const Color(0xFF60A5FA).withValues(alpha: 0.85),
@@ -383,7 +507,7 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
                               boxShadow: isHighest
                                   ? [
                                       BoxShadow(
-                                        color: const Color(0xFF0084FF).withValues(alpha: 0.35),
+                                        color: const Color(0xFF0284C7).withValues(alpha: 0.35),
                                         blurRadius: 8,
                                         offset: const Offset(0, 3),
                                       )
@@ -414,6 +538,52 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
     );
   }
 
+  // Progressive Velocity System
+  Widget _buildVelocityProgressiveSystem(bool isLight, bool isAm, Color textCol, Color subCol) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              isAm ? 'የፍጥነት ደረጃ ግስጋሴ (Progressive Velocity)' : 'Progressive Velocity Milestones',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: textCol),
+            ),
+            Text(
+              '85% To Level 5',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF0284C7)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: 0.85 * _chartAnimation.value,
+            minHeight: 8,
+            backgroundColor: const Color(0xFF0284C7).withValues(alpha: 0.15),
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0284C7)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              isAm ? 'ደረጃ 4፡ ንቁ አጥኚ' : 'Level 4: Active Scholar',
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: subCol),
+            ),
+            Text(
+              isAm ? 'ደረጃ 5፡ የጥናት አርበኛ' : 'Level 5: Master Strategist',
+              style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF0284C7)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   // 2. Subject Mastery Bars
   Widget _buildSubjectMasteryBars(bool isLight, bool isAm, Color textCol, Color subCol) {
     return Column(
@@ -423,7 +593,7 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              isAm ? 'የትምህርቶች የብቃት ደረጃ' : 'Subject Competency Breakdown',
+              isAm ? 'የትምህርቶች የብቃት ዝርዝር' : 'Subject Competency Breakdown',
               style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: textCol),
             ),
             Text(
@@ -439,9 +609,10 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
           final Color col = s['color'] as Color;
           final String title = isAm ? (s['amName'] as String) : (s['name'] as String);
           final String units = s['units'] as String;
+          final String rank = s['rank'] as String;
 
           return Padding(
-            padding: const EdgeInsets.only(bottom: 10.0),
+            padding: const EdgeInsets.only(bottom: 12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -455,13 +626,25 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
                           height: 8,
                           decoration: BoxDecoration(color: col, shape: BoxShape.circle),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Text(
                           title,
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
                             color: textCol,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: col.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            rank,
+                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: col),
                           ),
                         ),
                       ],
@@ -469,14 +652,14 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
                     Row(
                       children: [
                         Text(
-                          '$units ምዕራፍ',
-                          style: TextStyle(fontSize: 10.5, color: subCol),
+                          '$units ${isAm ? "ክፍል" : "units"}',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: subCol),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           '$percent%',
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 12,
                             fontWeight: FontWeight.w900,
                             color: col,
                           ),
@@ -485,12 +668,12 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
                     ),
                   ],
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 6),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
                     value: score,
-                    minHeight: 6.5,
+                    minHeight: 7.5,
                     backgroundColor: col.withValues(alpha: isLight ? 0.15 : 0.25),
                     valueColor: AlwaysStoppedAnimation<Color>(col),
                   ),
@@ -503,9 +686,8 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
     );
   }
 
-  // 3. Quiz Trend Smooth Area Chart
-  Widget _buildQuizTrendAreaChart(bool isLight, bool isAm, Color textCol, Color subCol) {
-    final List<double> quizScores = [75, 80, 85, 82, 90, 88, 96];
+  // Progressive Subject Tiers
+  Widget _buildSubjectProgressiveTiers(bool isLight, bool isAm, Color textCol, Color subCol) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -513,7 +695,63 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              isAm ? 'የፈተና ውጤት ግስጋሴ (Accuracy Curve)' : 'Quiz Mastery & Accuracy Trend',
+              isAm ? 'የትምህርት ብቃት ደረጃዎች' : 'Curriculum Mastery Tier Progression',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: textCol),
+            ),
+            Text(
+              'Rank: Master',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF10B981)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildTierBadge('Adept', '70%+', const Color(0xFF64748B), true),
+            _buildTierBadge('Scholar', '80%+', const Color(0xFF0284C7), true),
+            _buildTierBadge('Master', '90%+', const Color(0xFF10B981), true),
+            _buildTierBadge('Elite', '95%+', const Color(0xFFF59E0B), false),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTierBadge(String label, String pct, Color color, bool achieved) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: achieved ? 0.12 : 0.05),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: achieved ? 0.35 : 0.15)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(achieved ? Icons.check_circle_rounded : Icons.lock_outline_rounded, size: 12, color: color),
+              const SizedBox(width: 4),
+              Text(label, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: color)),
+            ],
+          ),
+          Text(pct, style: TextStyle(fontSize: 9, color: color.withValues(alpha: 0.85))),
+        ],
+      ),
+    );
+  }
+
+  // 3. Quiz Trade Area Chart
+  Widget _buildQuizTrendAreaChart(bool isLight, bool isAm, Color textCol, Color subCol) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              isAm ? 'የፈተና ውጤቶች ግስጋሴ (Accuracy Curve)' : 'Quiz Mastery & Accuracy Trajectory',
               style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: textCol),
             ),
             Container(
@@ -535,18 +773,18 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
           width: double.infinity,
           child: CustomPaint(
             painter: _ChartJsAreaPainter(
-              scores: quizScores,
+              scores: _quizScores,
               animationProgress: _chartAnimation.value,
               isLight: isLight,
-              primaryColor: const Color(0xFF0084FF),
-              accentColor: const Color(0xFF00D4FF),
+              primaryColor: const Color(0xFF8B5CF6),
+              accentColor: const Color(0xFFC084FC),
             ),
           ),
         ),
         const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(quizScores.length, (i) {
+          children: List.generate(_quizScores.length, (i) {
             return Text(
               'Quiz ${i + 1}',
               style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: subCol),
@@ -557,10 +795,10 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
     );
   }
 
-  Widget _buildKpiCard({
+  Widget _buildTradeMetricCard({
     required String title,
     required String value,
-    required String subtitle,
+    required String badge,
     required IconData icon,
     required Color color,
     required bool isLight,
@@ -570,14 +808,14 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
           color: color.withValues(alpha: isLight ? 0.08 : 0.12),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, size: 16, color: color),
-            const SizedBox(height: 6),
+            const SizedBox(height: 5),
             Text(
               value,
               style: TextStyle(
@@ -586,19 +824,68 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts>
                 color: isLight ? const Color(0xFF0F172A) : Colors.white,
               ),
             ),
+            const SizedBox(height: 1),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 9.5,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              badge,
+              style: TextStyle(fontSize: 9, color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
       ),
+    );
+  }
+
+  // Quiz Trade Progressive Milestone Bar
+  Widget _buildQuizTradeProgressiveBar(bool isLight, bool isAm, Color textCol, Color subCol) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              isAm ? 'የፈተና ንግድ ስርዓት ደረጃ (Quiz Trade Rank)' : 'Quiz Trade Progressive System',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: textCol),
+            ),
+            Text(
+              'Level 7: Matric Ready',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF8B5CF6)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: 0.92 * _chartAnimation.value,
+            minHeight: 8,
+            backgroundColor: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              isAm ? '1,450 XP (የተከማቸ)' : '1,450 XP Accumulated',
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: subCol),
+            ),
+            Text(
+              isAm ? 'ቀጣይ ሽልማት በ1,600 XP' : 'Next unlock at 1,600 XP',
+              style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF8B5CF6)),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

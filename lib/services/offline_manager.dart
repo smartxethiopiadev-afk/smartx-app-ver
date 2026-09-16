@@ -6,6 +6,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/question_model.dart';
 import '../models/worksheet_model.dart';
+import '../models/video_model.dart';
 import 'device_service.dart';
 
 class OfflineMetadata {
@@ -453,6 +454,64 @@ class OfflineManager {
     } catch (e) {
       debugPrint('Connectivity check error: $e');
       return true;
+    }
+  }
+
+  /// Offline Video Storage and Retrieval
+  static Future<void> saveOfflineVideo(VideoModel video) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String jsonStr = jsonEncode(video.toJson());
+      await prefs.setString('offline_video_${video.id}', jsonStr);
+
+      final List<String> list = prefs.getStringList('offline_video_ids') ?? [];
+      if (!list.contains(video.id)) {
+        list.add(video.id);
+        await prefs.setStringList('offline_video_ids', list);
+      }
+      _notifyListeners();
+    } catch (e) {
+      debugPrint('Error saving offline video: $e');
+    }
+  }
+
+  static Future<bool> isOfflineVideoDownloaded(String videoId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> list = prefs.getStringList('offline_video_ids') ?? [];
+      return list.contains(videoId) && prefs.containsKey('offline_video_$videoId');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> removeOfflineVideo(String videoId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('offline_video_$videoId');
+      final List<String> list = prefs.getStringList('offline_video_ids') ?? [];
+      list.remove(videoId);
+      await prefs.setStringList('offline_video_ids', list);
+      _notifyListeners();
+    } catch (_) {}
+  }
+
+  static Future<List<VideoModel>> getOfflineVideos() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> ids = prefs.getStringList('offline_video_ids') ?? [];
+      final List<VideoModel> videos = [];
+      for (final id in ids) {
+        final str = prefs.getString('offline_video_$id');
+        if (str != null && str.isNotEmpty) {
+          try {
+            videos.add(VideoModel.fromJson(jsonDecode(str) as Map<String, dynamic>));
+          } catch (_) {}
+        }
+      }
+      return videos;
+    } catch (_) {
+      return [];
     }
   }
 

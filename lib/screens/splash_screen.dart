@@ -10,6 +10,9 @@ import '../config/app_config.dart';
 import '../services/offline_manager.dart';
 import 'home_screen.dart';
 import 'onboarding_screen.dart';
+import 'registration_screen.dart';
+import 'login_activation_screen.dart';
+import '../services/credential_auth_service.dart';
 import '../services/analytics_service.dart';
 import '../main.dart';
 
@@ -163,9 +166,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     }
 
     // 3. Non-blocking Background Network Check & Sync
+    bool isOnline = false;
     try {
       final connectivityResult = await Connectivity().checkConnectivity().timeout(const Duration(seconds: 2));
-      final bool isOnline = connectivityResult.isNotEmpty && !connectivityResult.contains(ConnectivityResult.none);
+      isOnline = connectivityResult.isNotEmpty && !connectivityResult.contains(ConnectivityResult.none);
 
       if (isOnline) {
         debugPrint('[Splash] Online connectivity detected. Executing background syncs...');
@@ -193,18 +197,27 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       debugPrint('[Splash] Non-blocking network check/sync warning: $netErr');
     }
 
+    final bool isAuth = await CredentialAuthService.isAuthenticated();
+    final bool hasRegistered = prefs?.getBool('has_registered') ?? false;
+
     if (!mounted) return;
 
     // 4. Navigate to destination after smooth splash timing
     _autoNavigateTimer?.cancel();
     _autoNavigateTimer = Timer(const Duration(milliseconds: 2100), () {
       if (!mounted) return;
-      if (hasSeenOnboarding) {
-        debugPrint('[Splash] Direct offline-first route -> HomeScreen');
+      if (isAuth) {
+        debugPrint('[Splash] Authenticated session -> HomeScreen');
         _navigateToHomeScreen();
+      } else if (!isOnline) {
+        debugPrint('[Splash] Offline launch -> LoginActivationScreen (Welcome Back)');
+        _navigateToLogin(isOffline: true);
+      } else if (!hasRegistered) {
+        debugPrint('[Splash] New user -> RegistrationScreen');
+        _navigateToRegistration();
       } else {
-        debugPrint('[Splash] Direct route -> OnboardingScreen');
-        _navigateToOnboarding();
+        debugPrint('[Splash] Registered user -> LoginActivationScreen');
+        _navigateToLogin(isOffline: false);
       }
     });
   }
@@ -219,6 +232,49 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           languageCode: widget.languageCode,
           onToggleTheme: widget.onToggleTheme,
           onToggleLanguage: widget.onToggleLanguage,
+        ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation.drive(CurveTween(curve: Curves.easeOutCubic)),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
+  }
+
+  void _navigateToRegistration() {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        settings: const RouteSettings(name: '/registration'),
+        pageBuilder: (context, animation, secondaryAnimation) => RegistrationScreen(
+          isDarkMode: widget.isDarkMode,
+          languageCode: widget.languageCode,
+          onToggleTheme: widget.onToggleTheme,
+          onToggleLanguage: widget.onToggleLanguage,
+        ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation.drive(CurveTween(curve: Curves.easeOutCubic)),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
+  }
+
+  void _navigateToLogin({bool isOffline = false}) {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        settings: const RouteSettings(name: '/login'),
+        pageBuilder: (context, animation, secondaryAnimation) => LoginActivationScreen(
+          isDarkMode: widget.isDarkMode,
+          languageCode: widget.languageCode,
+          isOfflineWelcomeBack: isOffline,
         ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:math' as math;
+import '../services/device_service.dart';
 import 'home_screen.dart';
 import 'login_activation_screen.dart';
 
@@ -151,6 +152,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       }
 
       // 2. Save locally in SharedPreferences
+      final currentDeviceId = await DeviceService.getDeviceId();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_registered', true);
       await prefs.setString('user_id', profileId);
@@ -159,6 +161,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       await prefs.setString('user_school', schoolName);
       await prefs.setString('user_gender', _selectedGender);
       await prefs.setString('user_grade', 'Grade $_selectedGrade');
+      await prefs.setString('smartx_verified_device_binding', currentDeviceId);
+      await prefs.setString('user_device_id', currentDeviceId);
 
       setState(() {
         _isLoading = false;

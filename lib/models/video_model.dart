@@ -3,6 +3,7 @@ class VideoModel {
   final int grade;
   final String subject;
   final int unitNumber;
+  final int partNumber;
   final String title;
   final String youtubeVideoId;
   final String? durationText;
@@ -14,6 +15,7 @@ class VideoModel {
     required this.grade,
     required this.subject,
     required this.unitNumber,
+    this.partNumber = 1,
     required this.title,
     required this.youtubeVideoId,
     this.durationText,
@@ -31,6 +33,9 @@ class VideoModel {
       unitNumber: json['unit_number'] is int
           ? json['unit_number']
           : int.tryParse(json['unit_number']?.toString() ?? '1') ?? 1,
+      partNumber: json['part_number'] is int
+          ? json['part_number']
+          : int.tryParse(json['part_number']?.toString() ?? '1') ?? 1,
       title: json['title']?.toString() ?? '',
       youtubeVideoId: json['youtube_video_id']?.toString() ?? '',
       durationText: json['duration_text']?.toString() ?? '15 mins',
@@ -49,6 +54,7 @@ class VideoModel {
       'grade': grade,
       'subject': subject,
       'unit_number': unitNumber,
+      'part_number': partNumber,
       'title': title,
       'youtube_video_id': youtubeVideoId,
       'duration_text': durationText,

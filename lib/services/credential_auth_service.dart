@@ -184,6 +184,76 @@ class CredentialAuthService {
     }
   }
 
+  /// Offline "Welcome Back" Authentication
+  /// Validates phone number and checks device ID matching
+  static Future<CredentialAuthResult> loginOfflineWelcomeBack({
+    required String fullName,
+    required String phoneNumber,
+  }) async {
+    final cleanPhone = phoneNumber.replaceAll(RegExp(r'\s+'), '').trim();
+    final cleanName = fullName.trim();
+    final currentDeviceId = await DeviceService.getDeviceId();
+
+    final prefs = await SharedPreferences.getInstance();
+    final String? savedPhone = prefs.getString(_keyPhone) ?? prefs.getString('user_phoneNumber');
+    final String? savedDeviceId = prefs.getString(_keyBoundDeviceId) ?? prefs.getString('user_device_id');
+    final bool hasRegistered = prefs.getBool('has_registered') ?? false;
+
+    // Check if phone matches and device ID matches (or first offline bind if registered)
+    bool matchesPhone = false;
+    if (savedPhone != null && savedPhone.isNotEmpty) {
+      final sNorm = savedPhone.replaceAll(RegExp(r'\D'), '');
+      final cNorm = cleanPhone.replaceAll(RegExp(r'\D'), '');
+      matchesPhone = (sNorm == cNorm) || sNorm.endsWith(cNorm) || cNorm.endsWith(sNorm);
+    }
+
+    if (matchesPhone || hasRegistered) {
+      // Device ID check
+      if (savedDeviceId != null && savedDeviceId.isNotEmpty && savedDeviceId != currentDeviceId) {
+        return CredentialAuthResult(
+          status: CredentialAuthStatus.deviceMismatchLocked,
+          message: 'ይህ ስልክ ቁጥር ከተለየ መሳሪያ ጋር ተቆራኝቷል። እባክዎ በትክክለኛው ስልክዎ ይጠቀሙ።',
+          studentName: cleanName,
+          phoneNumber: cleanPhone,
+        );
+      }
+
+      // Success! Auto-bind this device
+      await prefs.setBool(_keyIsAuth, true);
+      await prefs.setString(_keyFullName, cleanName.isNotEmpty ? cleanName : (prefs.getString(_keyFullName) ?? 'Student'));
+      await prefs.setString(_keyPhone, cleanPhone.isNotEmpty ? cleanPhone : (savedPhone ?? ''));
+      await prefs.setString(_keyBoundDeviceId, currentDeviceId);
+
+      return CredentialAuthResult(
+        status: CredentialAuthStatus.success,
+        message: 'እንኳን ደህና መጡ! ከመስመር ውጭ በተሳካ ሁኔታ ገብተዋል።',
+        studentName: cleanName,
+        phoneNumber: cleanPhone,
+      );
+    }
+
+    // Allow offline first-time entry if valid phone number
+    if (cleanPhone.length >= 9) {
+      await prefs.setBool(_keyIsAuth, true);
+      await prefs.setString(_keyFullName, cleanName.isNotEmpty ? cleanName : 'Student');
+      await prefs.setString(_keyPhone, cleanPhone);
+      await prefs.setString(_keyBoundDeviceId, currentDeviceId);
+      await prefs.setBool('has_registered', true);
+
+      return CredentialAuthResult(
+        status: CredentialAuthStatus.success,
+        message: 'እንኳን ደህና መጡ! መሳሪያዎ በተሳካ ሁኔታ ተመዝግቧል።',
+        studentName: cleanName,
+        phoneNumber: cleanPhone,
+      );
+    }
+
+    return const CredentialAuthResult(
+      status: CredentialAuthStatus.invalidCredentials,
+      message: 'እባክዎ ትክክለኛ ስም እና ስልክ ቁጥር ያስገቡ።',
+    );
+  }
+
   /// Checks if the current user has an active authenticated session
   static Future<bool> isAuthenticated() async {
     final prefs = await SharedPreferences.getInstance();

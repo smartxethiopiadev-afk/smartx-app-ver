@@ -144,13 +144,14 @@ CREATE TABLE IF NOT EXISTS public.question_options (
 );
 
 -- ---------------------------------------------------------------------
--- 8. VIDEOS TABLE (Masterclasses & Video Playlists)
+-- 8. VIDEOS TABLE (Masterclasses & Video Playlists with Part Numbers)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.videos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     grade INT NOT NULL,
     subject TEXT NOT NULL,
     unit_number INT NOT NULL,
+    part_number INT DEFAULT 1, -- Part division (e.g. Part 1, Part 2, Part 3)
     title TEXT NOT NULL,
     youtube_video_id TEXT NOT NULL,
     duration_text TEXT,
@@ -159,13 +160,26 @@ CREATE TABLE IF NOT EXISTS public.videos (
 );
 
 -- ---------------------------------------------------------------------
--- 9. PROFILES TABLE (Student Sync Data)
+-- 9. STUDENT REGISTRATIONS & OFFLINE-READY DEVICE PROFILES
 -- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.student_registrations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name TEXT NOT NULL,
+    phone_number TEXT NOT NULL UNIQUE,
+    school_name TEXT,
+    gender TEXT,
+    grade INTEGER NOT NULL,
+    device_id TEXT,
+    is_verified BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     phone_number TEXT UNIQUE,
     full_name TEXT,
     grade INTEGER,
+    device_id TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

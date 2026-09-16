@@ -629,84 +629,133 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildUnifiedSegmentedGradeSelectorForVideos(bool isLight) {
     final List<int> grades = [9, 10, 11, 12];
+    final bool isAmharic = widget.languageCode == 'am';
 
     return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: isLight ? const Color(0xFFEFF3F8) : const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(24.0),
-        border: Border.all(
-          color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-          width: 1.0,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(4.0),
-        child: Row(
-          children: grades.map((gradeNum) {
-            final bool isSelected = _selectedGradeForVideosTab == gradeNum;
-            final String title =
-                widget.languageCode == 'en' ? 'G-$gradeNum' : 'ክ-$gradeNum';
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: grades.map((gradeNum) {
+          final bool isSelected = _selectedGradeForVideosTab == gradeNum;
 
-            Color activeColor;
-            switch (gradeNum) {
-              case 9:
-                activeColor = const Color(0xFF3B82F6);
-                break;
-              case 10:
-                activeColor = const Color(0xFF10B981);
-                break;
-              case 11:
-                activeColor = const Color(0xFFEA580C);
-                break;
-              case 12:
-                activeColor = const Color(0xFF8B5CF6);
-                break;
-              default:
-                activeColor = const Color(0xFF3B82F6);
-            }
+          Color primaryColor;
+          Color secondaryColor;
+          IconData icon;
+          switch (gradeNum) {
+            case 9:
+              primaryColor = const Color(0xFF3B82F6);
+              secondaryColor = const Color(0xFF1D4ED8);
+              icon = Icons.school_rounded;
+              break;
+            case 10:
+              primaryColor = const Color(0xFF10B981);
+              secondaryColor = const Color(0xFF047857);
+              icon = Icons.auto_stories_rounded;
+              break;
+            case 11:
+              primaryColor = const Color(0xFFEA580C);
+              secondaryColor = const Color(0xFFC2410C);
+              icon = Icons.science_rounded;
+              break;
+            case 12:
+              primaryColor = const Color(0xFF8B5CF6);
+              secondaryColor = const Color(0xFF6D28D9);
+              icon = Icons.military_tech_rounded;
+              break;
+            default:
+              primaryColor = const Color(0xFF3B82F6);
+              secondaryColor = const Color(0xFF1D4ED8);
+              icon = Icons.school_rounded;
+          }
 
-            return Expanded(
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3.5),
               child: GestureDetector(
                 onTap: () {
                   setState(() {
                     _selectedGradeForVideosTab = gradeNum;
+                    _selectedUnitForVideosTab = 0; // reset to all units
                   });
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                   decoration: BoxDecoration(
-                    color: isSelected ? activeColor : Colors.transparent,
-                    borderRadius: BorderRadius.circular(20.0),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: activeColor.withValues(alpha: 0.2),
-                              blurRadius: 16.0,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
+                    gradient: isSelected
+                        ? LinearGradient(
+                            colors: [primaryColor, secondaryColor],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
                         : null,
-                  ),
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 13.0,
-                      fontWeight:
-                          isSelected ? FontWeight.w900 : FontWeight.w600,
+                    color: isSelected
+                        ? null
+                        : (isLight ? Colors.white : const Color(0xFF1E293B)),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
                       color: isSelected
-                          ? Colors.white
-                          : (isLight
-                              ? const Color(0xFF475569)
-                              : const Color(0xFF94A3B8)),
+                          ? primaryColor
+                          : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+                      width: isSelected ? 2.0 : 1.0,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isSelected
+                            ? primaryColor.withValues(alpha: 0.35)
+                            : Colors.black.withValues(alpha: isLight ? 0.03 : 0.15),
+                        blurRadius: isSelected ? 10 : 4,
+                        offset: Offset(0, isSelected ? 4 : 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.white.withValues(alpha: 0.22)
+                              : primaryColor.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          icon,
+                          size: 16,
+                          color: isSelected ? Colors.white : primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        isAmharic ? '$gradeNumኛ ክፍል' : 'Grade $gradeNum',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: isSelected
+                              ? Colors.white
+                              : (isLight ? const Color(0xFF0F172A) : Colors.white),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isAmharic ? 'ትምህርቶች' : 'Lessons',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected
+                              ? Colors.white.withValues(alpha: 0.88)
+                              : (isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            );
-          }).toList(),
-        ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -790,11 +839,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 16:9 Thumbnail with App Tutorial Badge
+                            // Thumbnail with 12% reduced height
                             ClipRRect(
                               borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
                               child: AspectRatio(
-                                aspectRatio: 16 / 9,
+                                aspectRatio: 16 / 7.92,
                                 child: Stack(
                                   fit: StackFit.expand,
                                   children: [
@@ -1407,6 +1456,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF8B5CF6),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: isLight ? 0.12 : 0.25),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              isAmharic ? 'ክፍልፋይ ${video.partNumber}' : 'Part ${video.partNumber}',
+                              style: const TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF10B981),
                               ),
                             ),
                           ),
@@ -3151,145 +3216,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-            // Academic Progressive Learning Tracker
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  isAmharic ? 'የመማር እና የጥናት ሂደት (Learning Progress)' : 'Academic Learning Progress',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    color: textColor,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0084FF).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    isAmharic ? 'ቀጣይነት ያለው' : 'Progressive',
-                    style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF0084FF)),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // Progress Metrics Overview Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: borderColor, width: 1.2),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0084FF).withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFF0084FF).withValues(alpha: 0.2)),
-                          ),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.quiz_rounded, color: Color(0xFF0084FF), size: 22),
-                              const SizedBox(height: 6),
-                              Text(
-                                '88%',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                isAmharic ? 'የፈተና ውጤት' : 'Quiz Mastery',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: subColor),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
-                          ),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.menu_book_rounded, color: Color(0xFF10B981), size: 22),
-                              const SizedBox(height: 6),
-                              Text(
-                                '18 Units',
-                                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: textColor),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                isAmharic ? 'የተጠናቀቁ ክፍሎች' : 'Completed',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: subColor),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.2)),
-                          ),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.local_fire_department_rounded, color: Color(0xFFF59E0B), size: 22),
-                              const SizedBox(height: 6),
-                              Text(
-                                '5 Days',
-                                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: textColor),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                isAmharic ? 'የጥናት ተከታታይ' : 'Study Streak',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: subColor),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Advanced Academic Analytics & Chart Analysis Engine
+            // Advanced Academic Analytics & Chart Analysis Engine (Separated Study Velocity, Subject Master, and Quiz Trade)
             AcademicProgressCharts(
               isDarkMode: widget.isDarkMode,
               languageCode: widget.languageCode,
               currentGrade: _selectedGradeForLibraryTab,
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // Active Subscriptions / Database Permissions Section
             Text(
@@ -3384,196 +3320,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
             const SizedBox(height: 24),
 
-            // Authentication & Upgrade Action Buttons
-            Text(
-              isAmharic ? 'የመለያ አማራጮች' : 'Account Actions',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-                color: textColor,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Button 1: Login Activation
-            GestureDetector(
-              onTap: () async {
-                final res = await LoginActivationScreen.push(
-                  context,
-                  isDarkMode: widget.isDarkMode,
-                  languageCode: widget.languageCode,
-                  preferredGrade: _selectedGradeForLibraryTab,
-                );
-                if (res == true) {
-                  _loadProfileData();
-                }
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0084FF), Color(0xFF0056B3)],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0084FF).withValues(alpha: 0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.key_rounded, color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isAmharic ? 'በይለፍ ቃል ግባ (Student Login)' : 'Student Login with Password',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            isAmharic ? 'ከአድሚኑ የተሰጠዎትን ስም፣ ስልክ እና የይለፍ ቃል ያስገቡ' : 'Sign in with name, phone, and password from Admin',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.85)),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.arrow_forward_ios_rounded, size: 15, color: Colors.white),
-                  ],
-                ),
-              ),
-            ),
-
-            // Button 2: Upgrade Registration
-            GestureDetector(
-              onTap: () {
-                UpgradeRegistrationScreen.push(
-                  context,
-                  isDarkMode: widget.isDarkMode,
-                  languageCode: widget.languageCode,
-                  initialGrade: _selectedGradeForLibraryTab,
-                );
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.5), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: isLight ? 0.03 : 0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.how_to_reg_rounded, color: Color(0xFF10B981), size: 20),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isAmharic ? 'መለያ በአድሚን አስከፍት (Register)' : 'Register for Access via Admin',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: textColor),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            isAmharic ? 'ስም እና ስልክዎን አስመዝግበው የይለፍ ቃል ያግኙ' : 'Send your details to Admin to get access password',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.arrow_forward_ios_rounded, size: 15, color: subColor),
-                  ],
-                ),
-              ),
-            ),
-
-            // Button 3: Direct Telegram Admin Chat
-            GestureDetector(
-              onTap: () async {
-                final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
-                if (await canLaunchUrl(telegramUri)) {
-                  await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
-                }
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF0088CC).withValues(alpha: 0.5), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: isLight ? 0.03 : 0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0088CC).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.send_rounded, color: Color(0xFF0088CC), size: 20),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isAmharic ? 'አድሚኑን በቴሌግራም ያግኙ (@EthioconceptcenterAcademy)' : 'Contact Admin on Telegram (@EthioconceptcenterAcademy)',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: textColor),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            isAmharic ? 'ለፈጣን ምላሽ እና መለያ ለማስከፈት' : 'Fast response for account activation',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subColor),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.arrow_forward_ios_rounded, size: 15, color: subColor),
-                  ],
-                ),
-              ),
-            ),
-
-            // Button 4: Logout / Reset Device
+            // Logout / Sign Out Button
             GestureDetector(
               onTap: () {
                 showDialog(

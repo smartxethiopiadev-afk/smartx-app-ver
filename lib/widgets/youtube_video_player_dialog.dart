@@ -4,6 +4,7 @@ import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/video_model.dart';
 import '../services/analytics_service.dart';
+import '../services/offline_manager.dart';
 
 class YouTubeVideoPlayerDialog extends StatefulWidget {
   final VideoModel video;
@@ -42,6 +43,65 @@ class YouTubeVideoPlayerDialog extends StatefulWidget {
 }
 
 class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
+  bool _isOfflineSaved = false;
+  bool _isSavingOffline = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOfflineStatus();
+  }
+
+  Future<void> _checkOfflineStatus() async {
+    final downloaded = await OfflineManager.isOfflineVideoDownloaded(widget.video.id);
+    if (mounted) {
+      setState(() {
+        _isOfflineSaved = downloaded;
+      });
+    }
+  }
+
+  Future<void> _toggleOfflineDownload() async {
+    setState(() {
+      _isSavingOffline = true;
+    });
+
+    if (_isOfflineSaved) {
+      await OfflineManager.removeOfflineVideo(widget.video.id);
+      if (mounted) {
+        setState(() {
+          _isOfflineSaved = false;
+          _isSavingOffline = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.languageCode == 'am'
+                ? 'ቪዲዮው ከመስመር ውጭ ዝርዝር ተሰርዟል'
+                : 'Video removed from offline library'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } else {
+      await OfflineManager.saveOfflineVideo(widget.video);
+      if (mounted) {
+        setState(() {
+          _isOfflineSaved = true;
+          _isSavingOffline = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.languageCode == 'am'
+                ? 'ቪዲዮው ከመስመር ውጭ ዝግጁ ሆኗል!'
+                : 'Video saved for offline learning!'),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isLight = !widget.isDarkMode;
@@ -52,11 +112,11 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
     final Color subColor =
         isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
 
-    // Responsive embed HTML for YouTube unlisted / embedded player
+    // Responsive embed HTML for YouTube unlisted / embedded player with smooth in-app integration (height reduced by 12%)
     final String youtubeEmbedHtml = '''
-      <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 16px; background-color: #000000; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+      <div style="position: relative; padding-bottom: 49.5%; height: 0; overflow: hidden; border-radius: 16px; background-color: #000000; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
         <iframe 
-          src="https://www.youtube-nocookie.com/embed/${widget.video.youtubeVideoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1" 
+          src="https://www.youtube.com/embed/${widget.video.youtubeVideoId}?autoplay=1&playsinline=1&enablejsapi=1&rel=0&modestbranding=1" 
           frameborder="0" 
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
           allowfullscreen
@@ -122,7 +182,7 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
                         ),
                       ),
                       Text(
-                        'Grade ${widget.video.grade} • ${widget.video.subject} • Unit ${widget.video.unitNumber}',
+                        'Grade ${widget.video.grade} • ${widget.video.subject} • Unit ${widget.video.unitNumber} • Part ${widget.video.partNumber}',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -172,7 +232,7 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
                         child: Text(
                           widget.video.title,
                           style: TextStyle(
-                            fontSize: 17,
+                            fontSize: 16.5,
                             fontWeight: FontWeight.w800,
                             color: textColor,
                             height: 1.35,
@@ -216,7 +276,7 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
 
                   const SizedBox(height: 14),
 
-                  // Subject & Grade tags
+                  // Subject, Grade, & Part tags
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -237,6 +297,11 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
                         isLight: isLight,
                       ),
                       _buildChip(
+                        label: 'Part ${widget.video.partNumber}',
+                        color: const Color(0xFFEC4899),
+                        isLight: isLight,
+                      ),
+                      _buildChip(
                         label: isAmharic ? 'የተረጋገጠ ይዘት' : 'Curriculum Verified',
                         color: const Color(0xFFF59E0B),
                         isLight: isLight,
@@ -244,7 +309,60 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
                     ],
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+
+                  // Download for Offline Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isSavingOffline ? null : _toggleOfflineDownload,
+                      icon: _isSavingOffline
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              _isOfflineSaved
+                                  ? Icons.cloud_done_rounded
+                                  : Icons.download_for_offline_rounded,
+                              size: 18,
+                              color: _isOfflineSaved
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFF0084FF),
+                            ),
+                      label: Text(
+                        _isOfflineSaved
+                            ? (isAmharic
+                                ? 'ከመስመር ውጭ ወርዷል (Downloaded)'
+                                : 'Available Offline')
+                            : (isAmharic
+                                ? 'ከመስመር ውጭ ለማየት አውርድ'
+                                : 'Download for Offline'),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: _isOfflineSaved
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFF0084FF),
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: _isOfflineSaved
+                              ? const Color(0xFF10B981)
+                              : const Color(0xFF0084FF).withValues(alpha: 0.5),
+                          width: 1.5,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
 
                   // In-App Learning Action: Telegram Discussion / Ask Tutor
                   SizedBox(
@@ -252,7 +370,7 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
                     child: ElevatedButton.icon(
                       onPressed: () async {
                         final msg = Uri.encodeComponent(
-                            'ሰላም ኢትዮ ኮንሴፕት ሴንተር፣ ስለ Grade ${widget.video.grade} ${widget.video.subject} Unit ${widget.video.unitNumber} (${widget.video.title}) ጥያቄ አለኝ።');
+                            'ሰላም ኢትዮ ኮንሴፕት ሴንተር፣ ስለ Grade ${widget.video.grade} ${widget.video.subject} Unit ${widget.video.unitNumber} Part ${widget.video.partNumber} (${widget.video.title}) ጥያቄ አለኝ።');
                         final uri = Uri.parse(
                             'https://t.me/EthioconceptcenterAcademy?text=$msg');
                         if (await canLaunchUrl(uri)) {
@@ -284,7 +402,7 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
                     ),
                   ),
 
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 20),
 
                   // Tips card
                   Container(
