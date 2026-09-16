@@ -1180,11 +1180,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                       : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
                                 ),
                                 boxShadow: isSelected
-                                    ? [
+                                    ? const [
                                         BoxShadow(
-                                          color: const Color(0x40EF4444),
+                                          color: Color(0x40EF4444),
                                           blurRadius: 6,
-                                          offset: const Offset(0, 2),
+                                          offset: Offset(0, 2),
                                         ),
                                       ]
                                     : null,
