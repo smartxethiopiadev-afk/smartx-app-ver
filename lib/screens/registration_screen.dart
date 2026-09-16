@@ -109,7 +109,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
       // 1. Attempt insert into 'student_registrations' or 'profiles' table
       bool insertSuccess = false;
-      dynamic lastError;
 
       try {
         await supabase.from('student_registrations').insert({
@@ -122,9 +121,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           'created_at': nowIso,
         }).timeout(const Duration(seconds: 10));
         insertSuccess = true;
-      } catch (e) {
-        lastError = e;
-      }
+      } catch (_) {}
 
       if (!insertSuccess) {
         try {
@@ -138,9 +135,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             'created_at': nowIso,
           }).timeout(const Duration(seconds: 10));
           insertSuccess = true;
-        } catch (e2) {
-          lastError = e2;
-        }
+        } catch (_) {}
       }
 
       if (!insertSuccess) {
@@ -152,9 +147,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             'grade': _selectedGrade,
           }).timeout(const Duration(seconds: 10));
           insertSuccess = true;
-        } catch (e3) {
-          lastError = e3;
-        }
+        } catch (_) {}
       }
 
       // 2. Save locally in SharedPreferences

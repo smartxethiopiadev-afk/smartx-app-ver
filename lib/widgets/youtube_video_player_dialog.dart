@@ -246,82 +246,42 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
 
                   const SizedBox(height: 20),
 
-                  // Action Buttons: Open in YouTube App & Telegram Discussion
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final uri = Uri.parse(
-                                'https://www.youtube.com/watch?v=${widget.video.youtubeVideoId}');
-                            if (await canLaunchUrl(uri)) {
-                              await launchUrl(uri,
-                                  mode: LaunchMode.externalApplication);
-                            }
-                          },
-                          icon: const Icon(
-                            Icons.open_in_new_rounded,
-                            size: 16,
-                            color: Color(0xFFEF4444),
-                          ),
-                          label: Text(
-                            isAmharic ? 'በዩቲዩብ ክፈት' : 'Open in YouTube',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                              color: textColor,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              color: isLight
-                                  ? const Color(0xFFE2E8F0)
-                                  : const Color(0xFF334155),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
+                  // In-App Learning Action: Telegram Discussion / Ask Tutor
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final msg = Uri.encodeComponent(
+                            'ሰላም ኢትዮ ኮንሴፕት ሴንተር፣ ስለ Grade ${widget.video.grade} ${widget.video.subject} Unit ${widget.video.unitNumber} (${widget.video.title}) ጥያቄ አለኝ።');
+                        final uri = Uri.parse(
+                            'https://t.me/EthioconceptcenterAcademy?text=$msg');
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      icon: const Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        isAmharic ? 'መምህራንን በቴሌግራም ጥያቄ ጠይቅ' : 'Ask Tutor on Telegram',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: Colors.white,
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            final msg = Uri.encodeComponent(
-                                'ሰላም ኢትዮ ኮንሴፕት ሴንተር፣ ስለ Grade ${widget.video.grade} ${widget.video.subject} Unit ${widget.video.unitNumber} (${widget.video.title}) ጥያቄ አለኝ።');
-                            final uri = Uri.parse(
-                                'https://t.me/EthioconceptcenterAcademy?text=$msg');
-                            if (await canLaunchUrl(uri)) {
-                              await launchUrl(uri,
-                                  mode: LaunchMode.externalApplication);
-                            }
-                          },
-                          icon: const Icon(
-                            Icons.chat_bubble_outline_rounded,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                          label: Text(
-                            isAmharic ? 'ጥያቄ ጠይቅ' : 'Ask Tutor',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13,
-                              color: Colors.white,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0284C7),
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                    ],
+                    ),
                   ),
 
                   const SizedBox(height: 22),

@@ -99,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String _libraryMode = 'qa'; // 'qa' or 'notes'
   String _deviceId = '';
   int _selectedGradeForVideosTab = 9;
+  int _selectedUnitForVideosTab = 0; // 0 for All Units, 1, 2, 3...
   String _selectedSubjectForVideosTab = 'All';
 
   // Dictionary for dynamic translation matching 'EN/አማርኛ'
@@ -740,6 +741,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       {'id': 'ICT', 'title': isAmharic ? 'ኢንፎርሜሽን ቴክኖሎጂ (ICT)' : 'ICT'},
     ]);
 
+    final VideoModel appOverviewVideo = VideoService.getAppOverviewVideo();
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: CustomScrollView(
@@ -747,93 +750,264 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Grade Selector
-                  _buildUnifiedSegmentedGradeSelectorForVideos(isLight),
-
-                  const SizedBox(height: 16),
-
-                  // Hero Banner for Video Hub
+                  // --- TOP FEATURED APP OVERVIEW VIDEO CARD ---
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: isLight
-                            ? [const Color(0xFFDC2626), const Color(0xFFEA580C)]
-                            : [const Color(0xFF991B1B), const Color(0xFFC2410C)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                      color: isLight ? Colors.white : const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: isLight
+                            ? const Color(0xFF0284C7).withValues(alpha: 0.3)
+                            : const Color(0xFF0284C7).withValues(alpha: 0.5),
+                        width: 1.2,
                       ),
-                      borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFDC2626).withValues(alpha: 0.25),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
+                          color: const Color(0xFF0284C7).withValues(alpha: isLight ? 0.08 : 0.2),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: Row(
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(18),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () {
+                          YouTubeVideoPlayerDialog.show(
+                            context,
+                            video: appOverviewVideo,
+                            isDarkMode: widget.isDarkMode,
+                            languageCode: widget.languageCode,
+                          );
+                        },
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 16:9 Thumbnail with App Tutorial Badge
+                            ClipRRect(
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
+                              child: AspectRatio(
+                                aspectRatio: 16 / 9,
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    Image.network(
+                                      appOverviewVideo.thumbnailUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        color: const Color(0xFF0F172A),
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.play_circle_fill_rounded,
+                                            size: 50,
+                                            color: Color(0xFFEF4444),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Colors.black.withValues(alpha: 0.1),
+                                            Colors.black.withValues(alpha: 0.65),
+                                          ],
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                        ),
+                                      ),
+                                    ),
+                                    // Play Button Center
+                                    Center(
+                                      child: Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFEF4444),
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.4),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.play_arrow_rounded,
+                                          color: Colors.white,
+                                          size: 28,
+                                        ),
+                                      ),
+                                    ),
+                                    // Tutorial Badge (Top Left)
+                                    Positioned(
+                                      top: 10,
+                                      left: 10,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF0284C7).withValues(alpha: 0.95),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.school_rounded, size: 12, color: Colors.white),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              isAmharic ? 'የመተግበሪያ ገለፃ' : 'APP TUTORIAL',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    // In-App Only Indicator (Bottom Right)
+                                    Positioned(
+                                      bottom: 8,
+                                      right: 10,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withValues(alpha: 0.75),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.touch_app_rounded, size: 12, color: Colors.white),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              isAmharic ? 'ለመመልከት ይጫኑ' : 'Tap to Play In-App',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // Title & Description
+                            Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isAmharic
+                                        ? 'የኢትዮ ኮንሴፕት ሴንተር መተግበሪያ አጠቃቀም ሙሉ ገለፃ'
+                                        : 'Ethio Concept Center App Master Overview & Guide',
+                                    style: TextStyle(
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: textColor,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    isAmharic
+                                        ? 'የክፍል ትምህርቶችን፣ ፈተናዎችን እና ማስታወሻዎችን በቀላሉ እንዴት እንደሚጠቀሙበት ያሳያል'
+                                        : 'Learn how to easily navigate curriculum units, quizzes, and offline packages',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: subColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Section Header: Grade Lessons
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.video_library_rounded, size: 16, color: Color(0xFFEF4444)),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isAmharic ? 'የክፍል ቪዲዮ ትምህርቶች (በ Unit የተከፋፈሉ)' : 'Curriculum Video Lessons (By Unit)',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w900,
+                          color: textColor,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Grade Selector (9, 10, 11, 12)
+                  _buildUnifiedSegmentedGradeSelectorForVideos(isLight),
+
+                  const SizedBox(height: 12),
+
+                  // Unit Filter Horizontal Pills
+                  SizedBox(
+                    height: 34,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.play_circle_filled_rounded,
-                            color: Colors.white,
-                            size: 32,
-                          ),
+                        _buildUnitFilterChip(
+                          unitNum: 0,
+                          label: isAmharic ? 'ሁሉም ክፍሎች (All)' : 'All Units',
+                          isSelected: _selectedUnitForVideosTab == 0,
+                          isLight: isLight,
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isAmharic
-                                    ? 'የስማርት ኤክስ ቪዲዮ ማስተርክላስ'
-                                    : 'Smart X Video Masterclasses',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                isAmharic
-                                    ? 'በምርጥ መምህራን የተዘጋጁ የስርዓተ-ትምህርት ማብራሪያዎች'
-                                    : 'Step-by-step concept walkthroughs & solved models',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.88),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        ...List.generate(6, (index) {
+                          final unitNum = index + 1;
+                          return _buildUnitFilterChip(
+                            unitNum: unitNum,
+                            label: isAmharic ? 'ክፍል $unitNum (Unit $unitNum)' : 'Unit $unitNum',
+                            isSelected: _selectedUnitForVideosTab == unitNum,
+                            isLight: isLight,
+                          );
+                        }),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
 
-                  // Subject Horizontal Filter Chips (Closer Spacing)
+                  // Subject Horizontal Filter Chips
                   SizedBox(
-                    height: 36,
+                    height: 34,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
                       itemCount: subjects.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 5),
+                      separatorBuilder: (_, __) => const SizedBox(width: 6),
                       itemBuilder: (context, index) {
                         final item = subjects[index];
                         final bool isSelected =
@@ -846,27 +1020,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 11, vertical: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? const Color(0xFFEF4444)
-                                  : (isLight
-                                      ? Colors.white
-                                      : const Color(0xFF1E293B)),
+                                  : (isLight ? Colors.white : const Color(0xFF1E293B)),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: isSelected
                                     ? const Color(0xFFEF4444)
-                                    : (isLight
-                                        ? const Color(0xFFE2E8F0)
-                                        : const Color(0xFF334155)),
+                                    : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
                               ),
                               boxShadow: isSelected
                                   ? [
                                       BoxShadow(
-                                        color: const Color(0xFFEF4444)
-                                            .withValues(alpha: 0.28),
+                                        color: const Color(0xFFEF4444).withValues(alpha: 0.25),
                                         blurRadius: 6,
                                         offset: const Offset(0, 2),
                                       ),
@@ -877,15 +1045,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               child: Text(
                                 item['title']!,
                                 style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w800
-                                      : FontWeight.w600,
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                                   color: isSelected
                                       ? Colors.white
-                                      : (isLight
-                                          ? const Color(0xFF475569)
-                                          : const Color(0xFF94A3B8)),
+                                      : (isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8)),
                                 ),
                               ),
                             ),
@@ -895,19 +1059,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                 ],
               ),
             ),
           ),
 
-          // Videos Stream / Future Builder
+          // Videos Stream / Future Builder with Unit Filtering
           FutureBuilder<List<VideoModel>>(
             future: VideoService.fetchVideos(
               grade: _selectedGradeForVideosTab,
               subject: _selectedSubjectForVideosTab == 'All'
                   ? null
                   : _selectedSubjectForVideosTab,
+              unit: _selectedUnitForVideosTab == 0 ? null : _selectedUnitForVideosTab,
             ),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -933,62 +1098,63 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(
                               color: const Color(0xFFEF4444).withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
-                              Icons.hourglass_top_rounded,
-                              size: 48,
+                              Icons.play_lesson_rounded,
+                              size: 40,
                               color: Color(0xFFEF4444),
                             ),
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 16),
                           Text(
                             isAmharic
-                                ? 'በቅርብ ቀን ይጠብቁ (Coming Soon)'
-                                : 'Coming Soon!',
+                                ? 'ለዚህ ክፍል እና Unit ቪዲዮ በቅርቡ ይጫናል'
+                                : 'Video lessons for this unit coming soon!',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.w900,
                               color: textColor,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 6),
                           Text(
                             isAmharic
-                                ? 'ለዚህ ክፍል እና ትምህርት የቪዲዮ ትምህርቶች በቅርቡ ወደ ዳታቤዝ ይጫናሉ። ፈጥነው እንዲለቀቁ በቴሌግራም አድሚኑን መጠየቅ ይችላሉ።'
-                                : 'Video lessons for this grade and subject will be uploaded soon. You can request this chapter from the Telegram admin.',
+                                ? 'በቴሌግራም አድሚኑን በማነጋገር የፈለጉትን ትምህርት መጠየቅ ይችላሉ።'
+                                : 'You can request this specific lesson directly from our academic team on Telegram.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 12.5,
                               color: subColor,
                               height: 1.4,
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 18),
                           ElevatedButton.icon(
                             onPressed: () async {
+                              final unitStr = _selectedUnitForVideosTab > 0 ? 'Unit $_selectedUnitForVideosTab' : '';
                               final msg = Uri.encodeComponent(
-                                  'ሰላም ኢትዮ ኮንሴፕት ሴንተር፣ Grade $_selectedGradeForVideosTab $_selectedSubjectForVideosTab ቪዲዮ እንዲጫንልኝ እፈልጋለሁ።');
+                                  'ሰላም ኢትዮ ኮንሴፕት ሴንተር፣ Grade $_selectedGradeForVideosTab $_selectedSubjectForVideosTab $unitStr ቪዲዮ እንዲጫንልኝ እፈልጋለሁ።');
                               final uri = Uri.parse('https://t.me/EthioconceptcenterAcademy?text=$msg');
                               if (await canLaunchUrl(uri)) {
                                 await launchUrl(uri, mode: LaunchMode.externalApplication);
                               }
                             },
-                            icon: const Icon(Icons.telegram_rounded, size: 20),
+                            icon: const Icon(Icons.telegram_rounded, size: 18),
                             label: Text(
                               isAmharic ? 'በቴሌግራም አድሚኑን ጠይቅ' : 'Request Lesson on Telegram',
-                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF0284C7),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                             ),
                           ),
@@ -1000,12 +1166,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               }
 
               return SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final video = videos[index];
-                      return _buildVideoCard(
+                      return _buildCompactVideoCard(
                         video: video,
                         isLight: isLight,
                         isAmharic: isAmharic,
@@ -1021,14 +1187,60 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
 
           const SliverToBoxAdapter(
-            child: SizedBox(height: 40),
+            child: SizedBox(height: 36),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildVideoCard({
+  Widget _buildUnitFilterChip({
+    required int unitNum,
+    required String label,
+    required bool isSelected,
+    required bool isLight,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedUnitForVideosTab = unitNum;
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? const Color(0xFF0284C7)
+                : (isLight ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFF0284C7)
+                  : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected
+                    ? Colors.white
+                    : (isLight ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Compact, refined in-app video card (Strictly stays inside Mobile Application)
+  Widget _buildCompactVideoCard({
     required VideoModel video,
     required bool isLight,
     required bool isAmharic,
@@ -1041,31 +1253,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             subject: video.subject);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: isLight ? Colors.white : const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: !isUnlocked
               ? const Color(0xFFF59E0B).withValues(alpha: 0.35)
               : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
-          width: !isUnlocked ? 1.5 : 1.0,
+          width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: isLight
-                ? const Color(0xFF0F1B2B).withValues(alpha: 0.04)
-                : Colors.black.withValues(alpha: 0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: isLight ? 0.03 : 0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(14),
           onTap: () {
             if (!isUnlocked) {
               LockedUnitDialog.show(
@@ -1089,322 +1299,190 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               );
             }
           },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 16:9 Thumbnail Area with YouTube style overlay
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Video Thumbnail
-                      Image.network(
-                        video.thumbnailUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: const Color(0xFF0F172A),
-                          child: Center(
-                            child: Icon(
-                              !isUnlocked
-                                  ? Icons.lock_rounded
-                                  : Icons.play_circle_fill_rounded,
-                              size: 48,
-                              color: !isUnlocked
-                                  ? const Color(0xFFF59E0B)
-                                  : const Color(0xFFEF4444),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Compact 16:9 Thumbnail
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: SizedBox(
+                    width: 110,
+                    height: 72,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          video.thumbnailUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: const Color(0xFF0F172A),
+                            child: Center(
+                              child: Icon(
+                                !isUnlocked ? Icons.lock_rounded : Icons.play_circle_fill_rounded,
+                                size: 28,
+                                color: !isUnlocked ? const Color(0xFFF59E0B) : const Color(0xFFEF4444),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-
-                      // Gradient overlay for contrast
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.black.withValues(alpha: 0.15),
-                              Colors.black.withValues(alpha: 0.7),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
+                        Container(
+                          color: Colors.black.withValues(alpha: 0.25),
                         ),
-                      ),
-
-                      // Center Play / Lock Icon Button
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: !isUnlocked
-                                ? const Color(0xFFD97706)
-                                : const Color(0xFFEF4444),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.45),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            !isUnlocked
-                                ? Icons.lock_rounded
-                                : Icons.play_arrow_rounded,
-                            color: Colors.white,
-                            size: 26,
-                          ),
-                        ),
-                      ),
-
-                      // Duration Badge (Bottom Right)
-                      if (video.durationText != null)
-                        Positioned(
-                          bottom: 10,
-                          right: 10,
+                        Center(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.8),
-                              borderRadius: BorderRadius.circular(6),
+                              color: !isUnlocked
+                                  ? const Color(0xFFD97706)
+                                  : const Color(0xFFEF4444),
+                              shape: BoxShape.circle,
                             ),
-                            child: Text(
-                              video.durationText!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                              ),
+                            child: Icon(
+                              !isUnlocked ? Icons.lock_rounded : Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 16,
                             ),
                           ),
                         ),
-
-                      // Top Left Badge: Free vs Locked
-                      Positioned(
-                        top: 10,
-                        left: 10,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: !isUnlocked
-                                ? const Color(0xFFD97706).withValues(alpha: 0.95)
-                                : (isUnitFree
-                                    ? const Color(0xFF10B981).withValues(alpha: 0.95)
-                                    : const Color(0xFF0284C7).withValues(alpha: 0.9)),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                !isUnlocked
-                                    ? Icons.lock_rounded
-                                    : (isUnitFree
-                                        ? Icons.check_circle_rounded
-                                        : Icons.lock_open_rounded),
-                                size: 12,
-                                color: Colors.white,
+                        if (video.durationText != null)
+                          Positioned(
+                            bottom: 3,
+                            right: 4,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.75),
+                                borderRadius: BorderRadius.circular(4),
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                !isUnlocked
-                                    ? (isAmharic ? 'የተቆለፈ • ክፍል ${video.unitNumber}' : 'LOCKED • UNIT ${video.unitNumber}')
-                                    : (isUnitFree
-                                        ? (isAmharic ? 'ነጻ ትምህርት' : 'FREE LESSON')
-                                        : 'UNLOCKED HD'),
+                              child: Text(
+                                video.durationText!,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w800,
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                            ],
+                            ),
                           ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                // Video Meta details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0284C7).withValues(alpha: isLight ? 0.12 : 0.25),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'G-${video.grade} • ${video.subject}',
+                              style: const TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0284C7),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B5CF6).withValues(alpha: isLight ? 0.12 : 0.25),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'Unit ${video.unitNumber}',
+                              style: const TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF8B5CF6),
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          if (!isUnlocked)
+                            const Icon(Icons.lock_rounded, size: 13, color: Color(0xFFD97706))
+                          else
+                            const Icon(Icons.play_circle_filled_rounded, size: 14, color: Color(0xFF10B981)),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        video.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: textColor,
+                          height: 1.25,
                         ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Text(
+                            !isUnlocked
+                                ? (isAmharic ? 'የተቆለፈ • ለመክፈት ይጫኑ' : 'Locked • Tap to unlock')
+                                : (isAmharic ? 'በመተግበሪያው ያጫውቱ' : 'Watch In-App'),
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: !isUnlocked ? const Color(0xFFD97706) : const Color(0xFF10B981),
+                            ),
+                          ),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () async {
+                              final msg = Uri.encodeComponent(
+                                  'ሰላም ኢትዮ ኮንሴፕት ሴንተር፣ ስለ Grade ${video.grade} ${video.subject} Unit ${video.unitNumber} (${video.title}) ጥያቄ አለኝ።');
+                              final uri = Uri.parse('https://t.me/EthioconceptcenterAcademy?text=$msg');
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0284C7).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.telegram_rounded, size: 12, color: Color(0xFF0284C7)),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    isAmharic ? 'ጥያቄ' : 'Ask',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF0284C7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              ),
-
-              // Video Meta Info & Actions
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Tags row
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF3B82F6).withValues(
-                                alpha: isLight ? 0.12 : 0.22),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'Grade ${video.grade}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF3B82F6),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(
-                                alpha: isLight ? 0.12 : 0.22),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            video.subject,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF10B981),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8B5CF6).withValues(
-                                alpha: isLight ? 0.12 : 0.22),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'Unit ${video.unitNumber}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF8B5CF6),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    // Title
-                    Text(
-                      video.title,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: textColor,
-                        height: 1.35,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // Action buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              if (!isUnlocked) {
-                                LockedUnitDialog.show(
-                                  context,
-                                  grade: video.grade,
-                                  subject: video.subject,
-                                  unitNumber: video.unitNumber,
-                                  unitTitle: video.title,
-                                  languageCode: widget.languageCode,
-                                  isDarkMode: widget.isDarkMode,
-                                  onUnlocked: () {
-                                    setState(() {});
-                                  },
-                                );
-                              } else {
-                                YouTubeVideoPlayerDialog.show(
-                                  context,
-                                  video: video,
-                                  isDarkMode: widget.isDarkMode,
-                                  languageCode: widget.languageCode,
-                                );
-                              }
-                            },
-                            icon: Icon(
-                              !isUnlocked
-                                  ? Icons.lock_open_rounded
-                                  : Icons.play_arrow_rounded,
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                            label: Text(
-                              !isUnlocked
-                                  ? (isAmharic ? 'በቴሌግራም ክፈት' : 'Unlock on Telegram')
-                                  : (isAmharic ? 'ቪዲዮውን ይመልከቱ' : 'Watch Lesson'),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13,
-                                color: Colors.white,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: !isUnlocked
-                                  ? const Color(0xFFD97706)
-                                  : const Color(0xFFEF4444),
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          tooltip: isAmharic ? 'ጥያቄ ጠይቅ' : 'Ask Tutor',
-                          onPressed: () async {
-                            final msg = Uri.encodeComponent(
-                                'ሰላም ኢትዮ ኮንሴፕት ሴንተር፣ ስለ Grade ${video.grade} ${video.subject} Unit ${video.unitNumber} (${video.title}) ጥያቄ አለኝ።');
-                            final uri = Uri.parse(
-                                'https://t.me/EthioconceptcenterAcademy?text=$msg');
-                            if (await canLaunchUrl(uri)) {
-                              await launchUrl(uri,
-                                  mode: LaunchMode.externalApplication);
-                            }
-                          },
-                          icon: const Icon(
-                            Icons.telegram_rounded,
-                            color: Color(0xFF0284C7),
-                            size: 24,
-                          ),
-                          style: IconButton.styleFrom(
-                            backgroundColor: const Color(0xFF0284C7)
-                                .withValues(alpha: isLight ? 0.1 : 0.2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -49,7 +49,6 @@ class _ActivationCodeDialogState extends State<ActivationCodeDialog> {
   final _phoneController = TextEditingController();
   final _codeController = TextEditingController();
 
-  String _deviceId = '';
   bool _isLoading = true;
   bool _isSubmitting = false;
   String? _errorMessage;
@@ -70,7 +69,6 @@ class _ActivationCodeDialogState extends State<ActivationCodeDialog> {
 
   Future<void> _loadInitialData() async {
     final prefs = await SharedPreferences.getInstance();
-    final hardwareId = await DeviceService.getDeviceId();
 
     final name = prefs.getString('user_fullName') ??
         prefs.getString('user_name') ??
@@ -84,7 +82,6 @@ class _ActivationCodeDialogState extends State<ActivationCodeDialog> {
 
     if (mounted) {
       setState(() {
-        _deviceId = hardwareId;
         _isLoading = false;
       });
     }

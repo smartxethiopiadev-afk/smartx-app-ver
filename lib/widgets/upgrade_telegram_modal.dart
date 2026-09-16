@@ -64,7 +64,6 @@ class UpgradeTelegramModal extends StatefulWidget {
 class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
   String _studentName = '';
   String _studentPhone = '';
-  String _deviceId = '';
   bool _isLoading = true;
   bool _isVerifying = false;
   int _selectedPackageIndex = 1; // Default to Grade / Stream pack (Index 1)
@@ -95,7 +94,6 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
 
   Future<void> _loadStudentInfo() async {
     final prefs = await SharedPreferences.getInstance();
-    final hardwareId = await DeviceService.getDeviceId();
 
     final name = prefs.getString('user_fullName') ??
         prefs.getString('user_name') ??
@@ -111,7 +109,6 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
       setState(() {
         _studentName = name.isNotEmpty ? name : 'Smart X Student';
         _studentPhone = phone;
-        _deviceId = hardwareId;
         _isLoading = false;
       });
     }

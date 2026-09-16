@@ -46,7 +46,6 @@ class UpgradeRegistrationScreen extends StatefulWidget {
 class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
   late int _selectedGrade;
   late String _selectedSubject;
-  String _deviceId = '...';
   String _studentName = '';
   String _studentPhone = '';
   int _selectedTierIndex = 1; // 0: Single Subject, 1: Full Grade, 2: Matric
@@ -71,18 +70,16 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
     super.initState();
     _selectedGrade = widget.initialGrade;
     _selectedSubject = widget.initialSubject ?? 'Physics';
-    _loadDeviceAndProfile();
+    _loadProfile();
   }
 
-  Future<void> _loadDeviceAndProfile() async {
-    final devId = await DeviceService.getDeviceId();
+  Future<void> _loadProfile() async {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_fullName') ?? prefs.getString('user_name') ?? '';
     final phone = prefs.getString('user_phoneNumber') ?? prefs.getString('phone_number') ?? '';
 
     if (mounted) {
       setState(() {
-        _deviceId = devId;
         _studentName = name;
         _studentPhone = phone;
         _nameController.text = name;
