@@ -342,7 +342,7 @@ class _SmartXAcademyAppState extends State<SmartXAcademyApp> {
       onToggleTheme: toggleTheme,
       onToggleLanguage: toggleLanguage,
       child: MaterialApp(
-        title: 'Smart X ET',
+        title: 'Ethio Concept Center',
         debugShowCheckedModeBanner: false,
         
         // Modern palette for light & dark modes

@@ -103,8 +103,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Dictionary for dynamic translation matching 'EN/አማርኛ'
   final Map<String, Map<String, String>> _localizedValues = {
     'en': {
-      'title': 'Smart X Ethiopian',
-      'tutorial_desc': 'Watch tutorial: Getting started with the Smart X Ethiopian',
+      'title': 'Ethio Concept Center',
+      'tutorial_desc': 'Watch tutorial: Getting started with Ethio Concept Center',
       'explore_title': 'Explore Your Learning Path',
       'explore_sub': 'Select your grade to access courses and resources.',
       'g9_title': 'Grade 9',
@@ -138,8 +138,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'pdf_page_label': 'Page',
     },
     'am': {
-      'title': 'ስማርት ኤክስ ኢትዮጵያ',
-      'tutorial_desc': 'የማጠናከሪያ ቪዲዮ: በስማርት ኤክስ ኢትዮጵያ መተግበሪያ እንዴት እንደሚጀመር።',
+      'title': 'ኢትዮ ኮንሴፕት ሴንተር',
+      'tutorial_desc': 'የማጠናከሪያ ቪዲዮ: በኢትዮ ኮንሴፕት ሴንተር መተግበሪያ እንዴት እንደሚጀመር።',
       'explore_title': 'የመማር መንገድዎን ያስሱ',
       'explore_sub': 'ኮርሶችን እና ሀብቶችን ለማግኘት ክፍልዎን ይምረጡ።',
       'g9_title': 'ክፍል 9',
@@ -363,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   Text(
                     _isLoggedIn
                         ? (_userName.trim().isEmpty ? "Unknown Student" : _userName)
-                        : "Smart X Ethiopia",
+                        : "Ethio Concept Center",
                     style: const TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 16,
@@ -374,7 +374,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   Text(
                     _isLoggedIn
                         ? (_userPhoneNumber.trim().isEmpty ? "+251992480372" : _userPhoneNumber)
-                        : "Your Premium Learning Partner",
+                        : "Excellence in Ethiopian Education",
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -535,56 +535,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
         ],
-      ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0088CC).withValues(alpha: 0.35),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: FloatingActionButton.extended(
-          onPressed: () async {
-            final Uri telegramUri = Uri.parse('https://t.me/smartxsupport');
-            if (await canLaunchUrl(telegramUri)) {
-              await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
-            } else {
-              _showTelegramContactDialog();
-            }
-          },
-          backgroundColor: const Color(0xFF0088CC),
-          elevation: 0,
-          icon: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-              Positioned(
-                right: -4,
-                top: -4,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF10B981),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.add, size: 9, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          label: Text(
-            widget.languageCode == 'am' ? 'ቴሌግራም አግኙን' : 'Telegram Admin',
-            style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 12,
-              color: Colors.white,
-            ),
-          ),
-        ),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -773,9 +723,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       {'id': 'Physics', 'title': isAmharic ? 'ፊዚክስ' : 'Physics'},
       {'id': 'Chemistry', 'title': isAmharic ? 'ኬሚስትሪ' : 'Chemistry'},
       {'id': 'Biology', 'title': isAmharic ? 'ስነ-ህይወት' : 'Biology'},
-      {'id': 'English', 'title': isAmharic ? 'እንግሊዝኛ' : 'English'},
-      {'id': 'Economics', 'title': isAmharic ? 'ኢኮኖሚክስ' : 'Economics'},
     ];
+
+    if (_selectedGradeForVideosTab == 9 || _selectedGradeForVideosTab == 10) {
+      subjects.add({'id': 'Civics', 'title': isAmharic ? 'የዜግነት ትምህርት' : 'Civics'});
+    }
+    if (_selectedGradeForVideosTab == 11 || _selectedGradeForVideosTab == 12) {
+      subjects.add({'id': 'Agriculture', 'title': isAmharic ? 'ግብርና' : 'Agriculture'});
+    }
+
+    subjects.addAll([
+      {'id': 'Geography', 'title': isAmharic ? 'ጂኦግራፊ' : 'Geography'},
+      {'id': 'History', 'title': isAmharic ? 'ታሪክ' : 'History'},
+      {'id': 'Economics', 'title': isAmharic ? 'ኢኮኖሚክስ' : 'Economics'},
+      {'id': 'ICT', 'title': isAmharic ? 'ኢንፎርሜሽን ቴክኖሎጂ (ICT)' : 'ICT'},
+    ]);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -1566,6 +1528,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'lightBg': const Color(0xFFFFF7ED),
         'illustration': const ChemistryFlaskWidget(),
       },
+    ];
+
+    if (_selectedGradeForLibraryTab == 9 || _selectedGradeForLibraryTab == 10) {
+      allSubjects.add({
+        'id': 'Civics',
+        'amTitle': 'የዜግነት ትምህርት',
+        'enTitle': 'Civics',
+        'color': const Color(0xFF1E88E5),
+        'lightBg': const Color(0xFFEFF6FF),
+        'illustration': const CivicsGavelWidget(),
+      });
+    }
+
+    if (_selectedGradeForLibraryTab == 11 || _selectedGradeForLibraryTab == 12) {
+      allSubjects.add({
+        'id': 'Agriculture',
+        'amTitle': 'ግብርና',
+        'enTitle': 'Agriculture',
+        'color': const Color(0xFF16A34A),
+        'lightBg': const Color(0xFFF0FDF4),
+        'illustration': const AgricultureSproutWidget(),
+      });
+    }
+
+    allSubjects.addAll([
       {
         'id': 'Geography',
         'amTitle': 'ጂኦግራፊ',
@@ -1591,14 +1578,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         'illustration': const EconomicsChartWidget(),
       },
       {
-        'id': 'English',
-        'amTitle': 'እንግሊዝኛ',
-        'enTitle': 'English',
-        'color': const Color(0xFF6366F1),
-        'lightBg': const Color(0xFFEEF2FF),
-        'illustration': const DraftingGeometryWidget(),
+        'id': 'ICT',
+        'amTitle': 'ኢንፎርሜሽን ቴክኖሎጂ (ICT)',
+        'enTitle': 'ICT',
+        'color': const Color(0xFF0284C7),
+        'lightBg': const Color(0xFFF0F9FF),
+        'illustration': const IctComputerWidget(),
       },
-    ];
+    ]);
 
     return Container(
       width: double.infinity,
@@ -1910,7 +1897,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildHomeScreenContent(bool isLight) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 20.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 10.0, 16.0, 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

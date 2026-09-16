@@ -29,8 +29,8 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
       'descEn': 'Connect and share summaries and matric preparation strategies with students nationwide.',
       'descAm': 'አጠቃላይ ማጠቃለያዎችን እና የማትሪክ ዝግጅቶችን በሀገር አቀፍ ደረጃ ካሉ ተማሪዎች ጋር ይጋሩ።',
       'accentColor': Color(0xFF0084FF),
-      'tagEn': 'SMART X LEARNING',
-      'tagAm': 'ስማርት ኤክስ ትምህርት',
+      'tagEn': 'ETHIO CONCEPT CENTER',
+      'tagAm': 'ኢትዮ ኮንሴፕት ሴንተር',
     },
     {
       'assetPath': 'assets/images/student_tablet.png',
@@ -84,10 +84,10 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
           carouselController: _carouselController,
           itemCount: _slidesData.length,
           options: CarouselOptions(
-            height: 165.0,
+            height: 125.0,
             autoPlay: true,
             autoPlayInterval: const Duration(seconds: 4),
-            autoPlayAnimationDuration: const Duration(milliseconds: 800),
+            autoPlayAnimationDuration: const Duration(milliseconds: 700),
             autoPlayCurve: Curves.easeInOutCubic,
             enlargeCenterPage: false,
             viewportFraction: 1.0,
@@ -104,19 +104,19 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
             final Color accentColor = slide['accentColor']!;
 
             return Container(
-              margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 2.0),
+              margin: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 1.0),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24.0),
+                borderRadius: BorderRadius.circular(16.0),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isLight ? 0.08 : 0.35),
-                    blurRadius: 12.0,
-                    offset: const Offset(0, 6),
+                    color: Colors.black.withValues(alpha: isLight ? 0.06 : 0.25),
+                    blurRadius: 8.0,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(24.0),
+                borderRadius: BorderRadius.circular(16.0),
                 child: Stack(
                   children: [
                     // Slide Image background
@@ -126,7 +126,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => Container(
                           color: isLight ? const Color(0xFFEDF2F7) : const Color(0xFF1E293B),
-                          child: Icon(Icons.school_rounded, size: 48, color: accentColor.withValues(alpha: 0.5)),
+                          child: Icon(Icons.school_rounded, size: 40, color: accentColor.withValues(alpha: 0.5)),
                         ),
                       ),
                     ),
@@ -139,8 +139,8 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.black.withValues(alpha: 0.1),
-                              Colors.black.withValues(alpha: 0.35),
-                              Colors.black.withValues(alpha: 0.8),
+                              Colors.black.withValues(alpha: 0.4),
+                              Colors.black.withValues(alpha: 0.82),
                             ],
                           ),
                         ),
@@ -148,25 +148,25 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                     ),
                     // Text details and badge info overlay
                     Positioned(
-                      left: 16,
-                      bottom: 12,
-                      right: 16,
+                      left: 14,
+                      bottom: 10,
+                      right: 14,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
-                              color: accentColor.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
+                              color: accentColor.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(6),
                               border: Border.all(color: accentColor, width: 1),
                             ),
                             child: Text(
                               widget.languageCode == 'en' 
-                                  ? (slide['tagEn'] ?? 'SMART X LEARNING') 
-                                  : (slide['tagAm'] ?? 'ስማርት ኤክስ ትምህርት'),
-                              style: TextStyle(
+                                  ? (slide['tagEn'] ?? 'ETHIO CONCEPT CENTER') 
+                                  : (slide['tagAm'] ?? 'ኢትዮ ኮንሴፕት ሴንተር'),
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 8.0,
                                 fontWeight: FontWeight.w900,
@@ -174,26 +174,26 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 3),
                           Text(
                             title,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 15.5,
-                              fontWeight: FontWeight.w900,
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w800,
                               letterSpacing: -0.2,
                             ),
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 2),
                           Text(
                             desc,
-                            maxLines: 2,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.85),
                               fontSize: 10.0,
-                              height: 1.25,
-                              fontWeight: FontWeight.w600,
+                              height: 1.2,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -205,7 +205,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
             );
           },
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         // Dots Indicator for slide selection
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -217,13 +217,13 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
               onTap: () => _carouselController.animateToPage(index),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
-                width: isActive ? 18.0 : 7.0,
-                height: 7.0,
-                margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                width: isActive ? 16.0 : 6.0,
+                height: 5.0,
+                margin: const EdgeInsets.symmetric(horizontal: 3.0),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4.0),
+                  borderRadius: BorderRadius.circular(3.0),
                   color: isActive
-                      ? const Color(0xFFFF6D00)
+                      ? (isLight ? const Color(0xFF0284C7) : const Color(0xFF38BDF8))
                       : (isLight ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
                 ),
               ),

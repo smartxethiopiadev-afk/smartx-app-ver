@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// A clean, modern education technology vector logo for Smart X Ethiopian:
-/// - Hexagonal/squircle midnight navy shield
-/// - Bright clean white center circle badge
-/// - Prominent big electric cyan 'X' mark
+/// A clean, modern education technology vector logo for Ethio Concept Center (ECC):
+/// - Academic squircle badge with bright royal blue and emerald accents
+/// - Clean center emblem with graduation cap & book motif
 /// - Ethiopian flag tricolor crest (Green, Yellow, Red)
-/// - Crisp branding typography: Smart X Ethiopian
+/// - Crisp branding typography: Ethio Concept Center
 class AppVectorLogo extends StatelessWidget {
   final double size;
   final bool showGlow;
@@ -37,13 +36,9 @@ class AppVectorLogo extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF00E5FF).withValues(alpha: 0.32),
-                    blurRadius: size * 0.36,
-                    spreadRadius: size * 0.04,
-                  ),
-                  BoxShadow(
-                    color: const Color(0xFF6366F1).withValues(alpha: 0.25),
-                    blurRadius: size * 0.22,
+                    color: const Color(0xFF0284C7).withValues(alpha: 0.20),
+                    blurRadius: size * 0.30,
+                    spreadRadius: size * 0.02,
                   ),
                 ],
               ),
@@ -73,47 +68,31 @@ class AppVectorLogo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         emblem,
-        SizedBox(height: size * 0.16),
+        SizedBox(height: size * 0.14),
         Wrap(
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
           spacing: 6,
           children: [
             Text(
-              'Smart',
+              'Ethio Concept',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: size * 0.26,
+                fontSize: size * 0.22,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.2,
-                color: Colors.white,
-              ),
-            ),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [Color(0xFF00F0FF), Color(0xFF38BDF8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ).createShader(bounds),
-              child: Text(
-                'X',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: size * 0.30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.5,
-                  color: Colors.white,
-                ),
+                color: const Color(0xFF0F172A),
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF009A44), Color(0xFFD97706), Color(0xFFEF3340)],
+                  colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
                 ),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                'Ethiopian',
+                'Center',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: size * 0.18,
                   fontWeight: FontWeight.w900,
@@ -131,8 +110,8 @@ class AppVectorLogo extends StatelessWidget {
             style: GoogleFonts.plusJakartaSans(
               fontSize: size * 0.10,
               fontWeight: FontWeight.w600,
-              letterSpacing: 2.5,
-              color: const Color(0xFF94A3B8).withValues(alpha: 0.85),
+              letterSpacing: 2.0,
+              color: const Color(0xFF64748B),
             ),
           ),
         ],
@@ -148,7 +127,7 @@ class _EduSmartXPainter extends CustomPainter {
     final double h = size.height;
     final Offset center = Offset(w / 2, h / 2);
 
-    // 1. Dark Midnight Blue Shield Canvas
+    // 1. Royal Blue & Sapphire Academic Squircle
     final RRect squircle = RRect.fromRectAndRadius(
       Rect.fromLTWH(w * 0.05, h * 0.05, w * 0.90, h * 0.90),
       Radius.circular(w * 0.22),
@@ -159,26 +138,26 @@ class _EduSmartXPainter extends CustomPainter {
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFF0D1B2A),
-          Color(0xFF1B263B),
-          Color(0xFF0F172A),
+          Color(0xFF0284C7),
+          Color(0xFF0369A1),
+          Color(0xFF075985),
         ],
       ).createShader(Rect.fromLTWH(0, 0, w, h));
     canvas.drawRRect(squircle, hexFill);
 
-    // Shield Border Stroke with Neon Cyan to Indigo
+    // Shield Border Stroke
     final Paint hexStroke = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color(0xFF00F0FF),
           Color(0xFF38BDF8),
+          Color(0xFF0284C7),
           Color(0xFF6366F1),
         ],
       ).createShader(Rect.fromLTWH(0, 0, w, h))
       ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.032
+      ..strokeWidth = w * 0.030
       ..strokeCap = StrokeCap.round;
     canvas.drawRRect(squircle, hexStroke);
 
@@ -215,11 +194,9 @@ class _EduSmartXPainter extends CustomPainter {
       circleCenter,
       circleRadius + w * 0.02,
       Paint()
-        ..shader = const LinearGradient(
-          colors: [Color(0xFF00F0FF), Color(0xFF38BDF8)],
-        ).createShader(Rect.fromLTWH(0, 0, w, h))
+        ..color = const Color(0xFF38BDF8)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = w * 0.02,
+        ..strokeWidth = w * 0.018,
     );
 
     // White Circle Fill
@@ -229,31 +206,25 @@ class _EduSmartXPainter extends CustomPainter {
       Paint()..color = Colors.white,
     );
 
-    // 4. PROMINENT BIG 'X' MARK INSIDE THE WHITE CIRCLE
-    final Paint xPaint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFF00B4FF), Color(0xFF3B82F6), Color(0xFF6366F1)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(Rect.fromLTWH(0, 0, w, h))
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.11 // Prominent & Big!
-      ..strokeCap = StrokeCap.round;
+    // 4. Academic ECC Star / Open Book Motif
+    final Paint bookPaint = Paint()
+      ..color = const Color(0xFF0284C7)
+      ..style = PaintingStyle.fill;
 
-    final double xSize = circleRadius * 0.68;
-    canvas.drawLine(
-      Offset(circleCenter.dx - xSize, circleCenter.dy - xSize * 0.9),
-      Offset(circleCenter.dx + xSize, circleCenter.dy + xSize * 0.9),
-      xPaint,
-    );
-    canvas.drawLine(
-      Offset(circleCenter.dx + xSize, circleCenter.dy - xSize * 0.9),
-      Offset(circleCenter.dx - xSize, circleCenter.dy + xSize * 0.9),
-      xPaint,
-    );
+    // Draw book pages
+    final Path bookPath = Path()
+      ..moveTo(circleCenter.dx, circleCenter.dy - circleRadius * 0.35)
+      ..quadraticBezierTo(circleCenter.dx - circleRadius * 0.35, circleCenter.dy - circleRadius * 0.45, circleCenter.dx - circleRadius * 0.65, circleCenter.dy - circleRadius * 0.30)
+      ..lineTo(circleCenter.dx - circleRadius * 0.65, circleCenter.dy + circleRadius * 0.35)
+      ..quadraticBezierTo(circleCenter.dx - circleRadius * 0.35, circleCenter.dy + circleRadius * 0.20, circleCenter.dx, circleCenter.dy + circleRadius * 0.35)
+      ..quadraticBezierTo(circleCenter.dx + circleRadius * 0.35, circleCenter.dy + circleRadius * 0.20, circleCenter.dx + circleRadius * 0.65, circleCenter.dy + circleRadius * 0.35)
+      ..lineTo(circleCenter.dx + circleRadius * 0.65, circleCenter.dy - circleRadius * 0.30)
+      ..quadraticBezierTo(circleCenter.dx + circleRadius * 0.35, circleCenter.dy - circleRadius * 0.45, circleCenter.dx, circleCenter.dy - circleRadius * 0.35)
+      ..close();
+    canvas.drawPath(bookPath, bookPaint);
 
-    // Center Gold Sparkle Point
-    canvas.drawCircle(circleCenter, w * 0.035, Paint()..color = const Color(0xFFFFD100));
+    // Center Gold Star of Knowledge
+    canvas.drawCircle(circleCenter, w * 0.032, Paint()..color = const Color(0xFFFFD100));
 
     // 5. Bottom Ethiopian Accent Underline
     final Path underline = Path()

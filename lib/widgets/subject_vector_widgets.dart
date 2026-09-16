@@ -664,4 +664,105 @@ class EnglishBookPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+// 11. ICT / Information Technology Computer Vector Widget
+class IctComputerWidget extends StatelessWidget {
+  const IctComputerWidget({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      width: 48,
+      child: CustomPaint(
+        painter: IctComputerPainter(),
+      ),
+    );
+  }
+}
+
+class IctComputerPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+
+    // Monitor outline
+    final Paint monitorPaint = Paint()
+      ..color = const Color(0xFF0284C7)
+      ..style = PaintingStyle.fill;
+
+    final RRect screenBorder = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.15, h * 0.18, w * 0.70, h * 0.48),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(screenBorder, monitorPaint);
+
+    // Inner screen display
+    final Paint innerScreenPaint = Paint()
+      ..color = const Color(0xFF0F172A)
+      ..style = PaintingStyle.fill;
+
+    final RRect innerScreen = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.19, h * 0.22, w * 0.62, h * 0.40),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(innerScreen, innerScreenPaint);
+
+    // Code symbols < / > or terminal line on screen
+    final Paint codePaint = Paint()
+      ..color = const Color(0xFF38BDF8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+
+    // Left angle bracket <
+    final Path codePath = Path()
+      ..moveTo(w * 0.38, h * 0.32)
+      ..lineTo(w * 0.32, h * 0.40)
+      ..lineTo(w * 0.38, h * 0.48);
+    canvas.drawPath(codePath, codePaint);
+
+    // Slash /
+    canvas.drawLine(
+      Offset(w * 0.46, h * 0.49),
+      Offset(w * 0.54, h * 0.31),
+      Paint()
+        ..color = const Color(0xFF34D399)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Right angle bracket >
+    final Path codePathRight = Path()
+      ..moveTo(w * 0.62, h * 0.32)
+      ..lineTo(w * 0.68, h * 0.40)
+      ..lineTo(w * 0.62, h * 0.48);
+    canvas.drawPath(codePathRight, Paint()
+      ..color = const Color(0xFF38BDF8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round,
+    );
+
+    // Monitor stand and base
+    final Paint standPaint = Paint()
+      ..color = const Color(0xFF64748B)
+      ..style = PaintingStyle.fill;
+
+    // Stand neck
+    canvas.drawRect(Rect.fromLTWH(w * 0.45, h * 0.66, w * 0.10, h * 0.10), standPaint);
+
+    // Stand base
+    final RRect baseRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.30, h * 0.76, w * 0.40, h * 0.06),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(baseRect, standPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+
 

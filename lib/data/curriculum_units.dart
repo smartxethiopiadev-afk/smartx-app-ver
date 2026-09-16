@@ -1750,8 +1750,424 @@ class CurriculumUnits {
         }
         return [];
 
+      case 'Civics':
+      case 'Civic':
+        if (grade == 9) {
+          return [
+            {
+              'id': 'civ_g9_u1',
+              'grade': 9,
+              'enUnit': 'Unit 1: Building a Democratic System',
+              'amUnit': 'ክፍል 1: የዲሞክራሲ ስርዓት ግንባታ',
+              'enDesc': 'Principles of democracy, constitutional supremacy, democratic participation and governance.',
+              'amDesc': 'የዲሞክራሲ መሰረታዊ መርሆች፣ የህገ-መንግስት የበላይነት እና የህዝብ ተሳትፎ።',
+            },
+            {
+              'id': 'civ_g9_u2',
+              'grade': 9,
+              'enUnit': 'Unit 2: Rule of Law',
+              'amUnit': 'ክፍል 2: የህግ የበላይነት',
+              'enDesc': 'Constitution as supreme law, equality before the law, and corruption prevention.',
+              'amDesc': 'ህገ-መንግስት የበላይ ህግ መሆኑ፣ በህግ ፊት እኩል መሆን እና የሙስና መከላከያ።',
+            },
+            {
+              'id': 'civ_g9_u3',
+              'grade': 9,
+              'enUnit': 'Unit 3: Equality',
+              'amUnit': 'ክፍል 3: እኩልነት',
+              'enDesc': 'Gender equality, equal access to resources, and inclusive social development.',
+              'amDesc': 'የጾታ እኩልነት፣ የሀብት እኩል ተጠቃሚነት እና ሁሉን አቀፍ ልማት።',
+            },
+            {
+              'id': 'civ_g9_u4',
+              'grade': 9,
+              'enUnit': 'Unit 4: Justice',
+              'amUnit': 'ክፍል 4: ፍትህ',
+              'enDesc': 'Distributive, procedural, and corrective justice in judicial administration.',
+              'amDesc': 'አከፋፋይ፣ ስርዓታዊ እና አራሚ ፍትህ በህግ አስተዳደር ውስጥ።',
+            },
+            {
+              'id': 'civ_g9_u5',
+              'grade': 9,
+              'enUnit': 'Unit 5: Patriotism',
+              'amUnit': 'ክፍል 5: ሀገር ወዳድነት',
+              'enDesc': 'National heritage preservation, civic pride, national symbols and unity.',
+              'amDesc': 'የታሪክና ባህል ቅርሶችን መጠበቅ፣ ብሔራዊ ኩራት እና የጋራ አንድነት።',
+            },
+            {
+              'id': 'civ_g9_u6',
+              'grade': 9,
+              'enUnit': 'Unit 6: Responsibility & Self-Reliance',
+              'amUnit': 'ክፍል 6: ሀላፊነት እና በራስ መተማመን',
+              'enDesc': 'Fulfilling civic duties, accountability, hard work, and ethical decision making.',
+              'amDesc': 'የዜግነት ግዴታዎችን መወጣት፣ ተጠያቂነት፣ ታታሪነት እና በራስ መተማመን።',
+            },
+          ];
+        } else if (grade == 10) {
+          return [
+            {
+              'id': 'civ_g10_u1',
+              'grade': 10,
+              'enUnit': 'Unit 1: Democratic System in Ethiopia',
+              'amUnit': 'ክፍል 1: በኢትዮጵያ የዲሞክራሲ ስርዓት',
+              'enDesc': 'Federal state structure, separation of powers, and civic involvement in nation-building.',
+              'amDesc': 'የፌዴራል የመንግስት መዋቅር፣ የስልጣን ክፍፍል እና የህዝብ ተሳትፎ።',
+            },
+            {
+              'id': 'civ_g10_u2',
+              'grade': 10,
+              'enUnit': 'Unit 2: Rule of Law & Constitutionalism',
+              'amUnit': 'ክፍል 2: የህግ የበላይነት እና ህገ-መንግስታዊነት',
+              'enDesc': 'Judicial independence, constitutional limits, and anti-corruption culture.',
+              'amDesc': 'የዳኝነት ነፃነት፣ የመንግስት ስልጣን ገደቦች እና የሙስና መከላከያ ባህል።',
+            },
+            {
+              'id': 'civ_g10_u3',
+              'grade': 10,
+              'enUnit': 'Unit 3: Human and Democratic Rights',
+              'amUnit': 'ክፍል 3: የሰብአዊ እና የዲሞክራሲያዊ መብቶች',
+              'enDesc': 'Universal declaration of human rights, Ethiopian constitutional protections.',
+              'amDesc': 'አለም አቀፍ የሰብአዊ መብቶች ድንጋጌ እና የኢትዮጵያ ህገ-መንግስት ዋስትናዎች።',
+            },
+            {
+              'id': 'civ_g10_u4',
+              'grade': 10,
+              'enUnit': 'Unit 4: Social Justice and Equity',
+              'amUnit': 'ክፍል 4: ማህበራዊ ፍትህ እና ፍትሃዊነት',
+              'enDesc': 'Affirmative action, protection of vulnerable groups, and fair distribution of wealth.',
+              'amDesc': 'ልዩ ድጋፍ፣ የተጎዱ የህብረተሰብ ክፍሎች ጥበቃ እና ፍትሃዊ የሀብት ስርጭት።',
+            },
+            {
+              'id': 'civ_g10_u5',
+              'grade': 10,
+              'enUnit': 'Unit 5: Civic Integrity and Ethical Leadership',
+              'amUnit': 'ክፍል 5: የዜግነት ታማኝነት እና ስነ-ምግባር',
+              'enDesc': 'Combating social evils, professional ethics, national development contributions.',
+              'amDesc': 'ጎጂ ልማዶችን መዋጋት፣ የስራ ስነ-ምግባር እና ለሀገር ልማት አስተዋፅዖ ማድረግ።',
+            },
+          ];
+        }
+        return [];
+
+      case 'Agriculture':
+        if (grade == 11) {
+          return [
+            {
+              'id': 'agr_g11_u1',
+              'grade': 11,
+              'enUnit': 'Unit 1: Introduction to Agriculture in Ethiopia',
+              'amUnit': 'ክፍል 1: የግብርና መግቢያ በኢትዮጵያ',
+              'enDesc': 'Role of agriculture in national economy, agro-ecological zones, and development policies.',
+              'amDesc': 'የግብርና ሚና በሀገራዊ ኢኮኖሚ፣ የአየር ንብረት ቀጠናዎች እና የልማት ፖሊሲዎች።',
+            },
+            {
+              'id': 'agr_g11_u2',
+              'grade': 11,
+              'enUnit': 'Unit 2: Soil and Water Conservation',
+              'amUnit': 'ክፍል 2: የአፈርና የውሃ ጥበቃ',
+              'enDesc': 'Soil classification, erosion control mechanisms, terracing, and watershed management.',
+              'amDesc': 'የአፈር አይነቶች፣ የአፈር መሸርሸር መከላከያ፣ እርከን ስራ እና የተፋሰስ ልማት።',
+            },
+            {
+              'id': 'agr_g11_u3',
+              'grade': 11,
+              'enUnit': 'Unit 3: Crop Production and Agronomy',
+              'amUnit': 'ክፍል 3: የሰብል ምርት እና ሳይንስ',
+              'enDesc': 'Seed preparation, cereal and pulse production, crop rotation, and harvesting methods.',
+              'amDesc': 'የዘር ዝግጅት፣ የጥራጥሬና የእህል ምርት፣ የሰብል ማፈራረቅ እና አሰባሰብ።',
+            },
+            {
+              'id': 'agr_g11_u4',
+              'grade': 11,
+              'enUnit': 'Unit 4: Animal Husbandry & Livestock Management',
+              'amUnit': 'ክፍል 4: የእንስሳት እርባታ እና እንክብካቤ',
+              'enDesc': 'Cattle, sheep, goat, and poultry breeds, animal nutrition, disease prevention.',
+              'amDesc': 'የከብት፣ የበግ፣ የፍየል እና የዶሮ ዝርያዎች፣ የእንስሳት መኖ እና በሽታ መከላከያ።',
+            },
+            {
+              'id': 'agr_g11_u5',
+              'grade': 11,
+              'enUnit': 'Unit 5: Agricultural Economics & Farm Business',
+              'amUnit': 'ክፍል 5: የግብርና ኢኮኖሚክስ እና አስተዳደር',
+              'enDesc': 'Farm budgeting, cost-benefit analysis, cooperatives, and rural credit systems.',
+              'amDesc': 'የእርሻ በጀት ዝግጅት፣ የትርፍ-ኪሳራ ትንተና፣ ህብረት ስራ ማህበራት እና ብድር።',
+            },
+            {
+              'id': 'agr_g11_u6',
+              'grade': 11,
+              'enUnit': 'Unit 6: Modern Agricultural Technologies & Irrigation',
+              'amUnit': 'ክፍል 6: ዘመናዊ የግብርና ቴክኖሎጂ እና መስኖ',
+              'enDesc': 'Drip and sprinkler irrigation, mechanization, greenhouse farming, and bio-fertilizers.',
+              'amDesc': 'የጠብታና የመርጫ መስኖ፣ የእርሻ ማሽነሪዎች፣ የግሪንሀውስ ቴክኖሎጂ እና የተፈጥሮ ማዳበሪያ።',
+            },
+          ];
+        } else if (grade == 12) {
+          return [
+            {
+              'id': 'agr_g12_u1',
+              'grade': 12,
+              'enUnit': 'Unit 1: Plant Protection & Integrated Pest Management',
+              'amUnit': 'ክፍል 1: የእፅዋት ጥበቃ እና የተባይ ቁጥጥር',
+              'enDesc': 'Weed management, fungal diseases, insect pests, and organic biological controls.',
+              'amDesc': 'የአረም ቁጥጥር፣ የፈንገስ በሽታዎች፣ የተባይ መከላከያ እና የተፈጥሮ ዘዴዎች።',
+            },
+            {
+              'id': 'agr_g12_u2',
+              'grade': 12,
+              'enUnit': 'Unit 2: Sustainable Farming Systems & Agroecology',
+              'amUnit': 'ክፍል 2: ዘላቂ የእርሻ ስርዓት እና አግሮኢኮሎጂ',
+              'enDesc': 'Agroforestry practices, permaculture, soil fertility regeneration, and organic farming.',
+              'amDesc': 'የደን ግብርና፣ ፐርማካልቸር፣ የአፈር ለምነት ማደስ እና ኦርጋኒክ እርሻ።',
+            },
+            {
+              'id': 'agr_g12_u3',
+              'grade': 12,
+              'enUnit': 'Unit 3: Post-Harvest Handling & Food Security',
+              'amUnit': 'ክፍል 3: ከምርት በኋላ አያያዝ እና የምግብ ዋስትና',
+              'enDesc': 'Storage silos, cold chain preservation, reducing post-harvest losses, grain drying.',
+              'amDesc': 'የእህል ጎተራዎች፣ የቀዝቃዛ ማከማቻ፣ የምርት ብክነትን መቀነስ እና ማድረቅ።',
+            },
+            {
+              'id': 'agr_g12_u4',
+              'grade': 12,
+              'enUnit': 'Unit 4: Commercial Dairy & Poultry Production',
+              'amUnit': 'ክፍል 4: የወተት እና የዶሮ እርባታ ንግድ',
+              'enDesc': 'Modern milking hygiene, egg production systems, hatchery management, meat processing.',
+              'amDesc': 'ዘመናዊ የወተት ንፅህና፣ የእንቁላል ምርት፣ የጫጩት ማስፈልፈል እና ስጋ ማቀነባበር።',
+            },
+            {
+              'id': 'agr_g12_u5',
+              'grade': 12,
+              'enUnit': 'Unit 5: Agribusiness Marketing and Value Chains',
+              'amUnit': 'ክፍል 5: የግብርና ምርቶች ግብይት እና እሴት ጭማሪ',
+              'enDesc': 'Coffee, sesame, and horticulture export markets, ECX trading, value addition.',
+              'amDesc': 'የቡና፣ የሰሊጥ እና የአትክልት ፍራፍሬ ኤክስፖርት፣ የኢትዮጵያ ምርት ገበያ (ECX)።',
+            },
+            {
+              'id': 'agr_g12_u6',
+              'grade': 12,
+              'enUnit': 'Unit 6: Climate Change Adaptation in Agriculture',
+              'amUnit': 'ክፍል 6: የአየር ንብረት ለውጥ መላመድ በግብርና',
+              'enDesc': 'Drought-tolerant varieties, rainwater harvesting, carbon sequestration in farmland.',
+              'amDesc': 'ድርቅን የሚቋቋሙ ዘሮች፣ የዝናብ ውሃ አሰባሰብ እና የአካባቢ ጥበቃ እርምጃዎች።',
+            },
+          ];
+        }
+        return [];
+
+      case 'ICT':
+      case 'Information Technology':
+      case 'IT':
+        if (grade == 9) {
+          return [
+            {
+              'id': 'ict_g9_u1',
+              'grade': 9,
+              'enUnit': 'Unit 1: Introduction to ICT',
+              'amUnit': 'ክፍል 1: የአይሲቲ መግቢያ',
+              'enDesc': 'Fundamentals of ICT, role in modern society, education, and digital literacy.',
+              'amDesc': 'የአይሲቲ መሰረተ-ሃሳቦች፣ በህብረተሰብ እና በትምህርት ውስጥ ያለው ሚና።',
+            },
+            {
+              'id': 'ict_g9_u2',
+              'grade': 9,
+              'enUnit': 'Unit 2: Computer Hardware Systems',
+              'amUnit': 'ክፍል 2: የኮምፒውተር ሀርድዌር ስርዓት',
+              'enDesc': 'CPU architecture, input/output devices, secondary storage, and system buses.',
+              'amDesc': 'የሲፒዩ አሰራር፣ የግቤት/ውፅኤት መሳሪያዎች፣ ማከማቻ እና ሲስተም ባስ።',
+            },
+            {
+              'id': 'ict_g9_u3',
+              'grade': 9,
+              'enUnit': 'Unit 3: Computer Software & Operating Systems',
+              'amUnit': 'ክፍል 3: የኮምፒውተር ሶፍትዌር እና ኦፕሬቲንግ ሲስተም',
+              'enDesc': 'System vs application software, Windows/Linux management, file directories.',
+              'amDesc': 'የሲስተም እና አፕሊኬሽን ሶፍትዌሮች፣ የፋይል አያያዝ እና ኦፕሬቲንግ ሲስተም።',
+            },
+            {
+              'id': 'ict_g9_u4',
+              'grade': 9,
+              'enUnit': 'Unit 4: Word Processing & Document Design',
+              'amUnit': 'ክፍል 4: የጽሑፍ ማቀናበሪያ እና ሰነድ ዝግጅት',
+              'enDesc': 'Text formatting, styles, tables, headers, footers, citation tools, and PDF export.',
+              'amDesc': 'የጽሑፍ ቅርጽ፣ ሠንጠረዦች፣ ራስጌና ግርጌ፣ እና ሰነድ ወደ ፒዲኤፍ መቀየር።',
+            },
+            {
+              'id': 'ict_g9_u5',
+              'grade': 9,
+              'enUnit': 'Unit 5: Electronic Spreadsheets & Calculations',
+              'amUnit': 'ክፍል 5: የስሌት ሠንጠረዥ እና የመረጃ አደረጃጀት',
+              'enDesc': 'Cell references, mathematical formulas (SUM, AVERAGE, IF), charts, data sorting.',
+              'amDesc': 'የሴል ስሌቶች፣ የሂሳብ ቀመሮች (SUM፣ IF)፣ ቻርቶች እና ዳታ መደርደር።',
+            },
+            {
+              'id': 'ict_g9_u6',
+              'grade': 9,
+              'enUnit': 'Unit 6: Internet, Web Navigation and Email Safety',
+              'amUnit': 'ክፍል 6: የኢንተርኔት አጠቃቀም እና የኢሜይል ደህንነት',
+              'enDesc': 'Search engines, URL structure, email protocols, online ethics, avoiding spam.',
+              'amDesc': 'የፍለጋ ሞተሮች፣ ድረ-ገጾች፣ የኢሜይል አጠቃቀም እና የኦንላይን ደህንነት።',
+            },
+          ];
+        } else if (grade == 10) {
+          return [
+            {
+              'id': 'ict_g10_u1',
+              'grade': 10,
+              'enUnit': 'Unit 1: Computer Networks and Communications',
+              'amUnit': 'ክፍል 1: የኮምፒውተር ኔትወርኮች እና ግንኙነት',
+              'enDesc': 'LAN, WAN, MAN, network topologies, transmission media, routers, and switches.',
+              'amDesc': 'የኔትወርክ አይነቶች (LAN/WAN)፣ ቶፖሎጂዎች፣ ራውተሮች እና ማገናኛ ኬብሎች።',
+            },
+            {
+              'id': 'ict_g10_u2',
+              'grade': 10,
+              'enUnit': 'Unit 2: Presentation Graphics & Multimedia Design',
+              'amUnit': 'ክፍል 2: የገላጭ ስላይድ ዝግጅት እና መልቲሚዲያ',
+              'enDesc': 'Master slides, transitions, multimedia embedding, timing, professional layouts.',
+              'amDesc': 'የስላይድ ዝግጅት፣ ምስልና ድምጽ ማካተት፣ እና ፕሮፌሽናል ገላጭ አቀራረቦች።',
+            },
+            {
+              'id': 'ict_g10_u3',
+              'grade': 10,
+              'enUnit': 'Unit 3: Database Management Fundamentals',
+              'amUnit': 'ክፍል 3: የዳታቤዝ አያያዝ መሰረተ-ሃሳቦች',
+              'enDesc': 'Tables, primary keys, foreign keys, simple query creation, data forms.',
+              'amDesc': 'የዳታቤዝ ሠንጠረዦች፣ ፕራይመሪ ኪይ፣ ፎርሞች እና ቀላል የመረጃ ፍለጋዎች።',
+            },
+            {
+              'id': 'ict_g10_u4',
+              'grade': 10,
+              'enUnit': 'Unit 4: Web Authoring and HTML/CSS Basics',
+              'amUnit': 'ክፍል 4: የድረ-ገጽ ንድፍ እና ኤችቲኤምኤል/ሲኤስኤስ',
+              'enDesc': 'HTML5 tags, page structure, hyperlinks, image embedding, basic CSS styling.',
+              'amDesc': 'የኤችቲኤምኤል ታጎች፣ የድረ-ገጽ አወቃቀር፣ ማያያዣዎች እና የቀለም ቅንብር።',
+            },
+            {
+              'id': 'ict_g10_u5',
+              'grade': 10,
+              'enUnit': 'Unit 5: Computer Security, Privacy and Ethics',
+              'amUnit': 'ክፍል 5: የኮምፒውተር ደህንነት፣ ግላዊነት እና ስነ-ምግባር',
+              'enDesc': 'Malware types (viruses, worms, trojans), firewalls, copyright, digital piracy.',
+              'amDesc': 'የቫይረስ አይነቶች፣ ፋየርዎል፣ የቅጂ መብት እና የዲጂታል ህጎች።',
+            },
+            {
+              'id': 'ict_g10_u6',
+              'grade': 10,
+              'enUnit': 'Unit 6: Algorithm Design and Problem Solving',
+              'amUnit': 'ክፍል 6: የአልጎሪዝም ንድፍ እና ችግር አፈታት',
+              'enDesc': 'Flowcharts, pseudocode, sequence, selection, iteration, logic building.',
+              'amDesc': 'ፍሎውቻርት፣ ሱዶኮድ፣ ቅደም ተከተል፣ ምርጫ እና የሂሳብ አመክንዮ።',
+            },
+          ];
+        } else if (grade == 11) {
+          return [
+            {
+              'id': 'ict_g11_u1',
+              'grade': 11,
+              'enUnit': 'Unit 1: Information Systems and Organizations',
+              'amUnit': 'ክፍል 1: የኢንፎርሜሽን ሲስተሞች በድርጅት ውስጥ',
+              'enDesc': 'MIS, TPS, DSS systems, system development lifecycle (SDLC), feasibility study.',
+              'amDesc': 'የኢንፎርሜሽን ሲስተም አይነቶች፣ የሶፍትዌር ልማት ዑደት (SDLC) እና ጥናት።',
+            },
+            {
+              'id': 'ict_g11_u2',
+              'grade': 11,
+              'enUnit': 'Unit 2: Relational Database Systems & SQL Queries',
+              'amUnit': 'ክፍል 2: ተዛማጅ ዳታቤዝ እና የኤስኪውኤል ትዕዛዛት',
+              'enDesc': 'ER-diagrams, normalization (1NF, 2NF, 3NF), SQL SELECT, INSERT, UPDATE, DELETE.',
+              'amDesc': 'የኢአር ዲያግራም፣ ኖርማላይዜሽን፣ እና የኤስኪውኤል (SQL) ዳታ አያያዝ ትዕዛዛት።',
+            },
+            {
+              'id': 'ict_g11_u3',
+              'grade': 11,
+              'enUnit': 'Unit 3: Computer Programming Fundamentals (Python/C++)',
+              'amUnit': 'ክፍል 3: የኮምፒውተር ፕሮግራሚንግ መሰረቶች',
+              'enDesc': 'Variables, data types, conditional statements, loops, functions, and arrays.',
+              'amDesc': 'ተለዋዋጮች (Variables)፣ ሉፖች፣ ፈንክሽኖች እና አሬይ በፕሮግራሚንግ።',
+            },
+            {
+              'id': 'ict_g11_u4',
+              'grade': 11,
+              'enUnit': 'Unit 4: Web Application Development with JavaScript',
+              'amUnit': 'ክፍል 4: የድረ-ገጽ መተግበሪያዎች ግንባታ',
+              'enDesc': 'DOM manipulation, event handling, interactive forms, responsive web design.',
+              'amDesc': 'የጃቫስክሪፕት መሰረቶች፣ የድረ-ገጽ ተለዋዋጭነት እና ምላሽ ሰጪ ንድፍ።',
+            },
+            {
+              'id': 'ict_g11_u5',
+              'grade': 11,
+              'enUnit': 'Unit 5: Network Architecture and Protocols',
+              'amUnit': 'ክፍል 5: የኔትወርክ አወቃቀር እና ፕሮቶኮሎች',
+              'enDesc': 'OSI 7-layer model, TCP/IP protocol suite, IP addressing, subnetting, DNS, DHCP.',
+              'amDesc': 'የኦኤስአይ 7 እርከኖች፣ TCP/IP፣ አይፒ አድራሻ እና የኔትወርክ ፕሮቶኮሎች።',
+            },
+            {
+              'id': 'ict_g11_u6',
+              'grade': 11,
+              'enUnit': 'Unit 6: Emerging Technologies: AI & Cloud Computing',
+              'amUnit': 'ክፍል 6: አዳዲስ ቴክኖሎጂዎች፡ አርቴፊሻል ኢንተለጀንስ እና ክላውድ',
+              'enDesc': 'Machine learning, IoT sensors, cloud storage models (SaaS, PaaS, IaaS), ethics of AI.',
+              'amDesc': 'ማሽን ለርኒንግ፣ አይኦቲ፣ የክላውድ አገልግሎቶች እና የአይአይ ስነ-ምግባር።',
+            },
+          ];
+        } else if (grade == 12) {
+          return [
+            {
+              'id': 'ict_g12_u1',
+              'grade': 12,
+              'enUnit': 'Unit 1: Object-Oriented Programming (OOP)',
+              'amUnit': 'ክፍል 1: ኦብጀክት-ተኮር ፕሮግራሚንግ',
+              'enDesc': 'Classes, objects, encapsulation, inheritance, polymorphism, abstraction.',
+              'amDesc': 'ክላሶች፣ ኦብጀክቶች፣ ውርስ (Inheritance) እና ፖሊሞርፊዝም በፕሮግራሚንግ።',
+            },
+            {
+              'id': 'ict_g12_u2',
+              'grade': 12,
+              'enUnit': 'Unit 2: Advanced Web Technologies and REST APIs',
+              'amUnit': 'ክፍል 2: የላቁ የድረ-ገጽ ቴክኖሎጂዎች እና ኤፒአይ',
+              'enDesc': 'Client-server architecture, JSON data exchange, RESTful API endpoints, backend basics.',
+              'amDesc': 'የክላይንት-ሰርቨር አሰራር፣ የጄሰን (JSON) ልውውጥ እና የኤፒአይ አጠቃቀም።',
+            },
+            {
+              'id': 'ict_g12_u3',
+              'grade': 12,
+              'enUnit': 'Unit 3: Data Analytics and Visualization',
+              'amUnit': 'ክፍል 3: የመረጃ ትንተና እና ምስላዊ አቀራረብ',
+              'enDesc': 'Big data concepts, data cleaning, statistical charting, predictive models.',
+              'amDesc': 'ቢግ ዳታ፣ የመረጃ ማጣራት፣ ስታቲስቲካዊ ገላጮች እና የውጤት ትንተና።',
+            },
+            {
+              'id': 'ict_g12_u4',
+              'grade': 12,
+              'enUnit': 'Unit 4: Cyber Security and Cryptography',
+              'amUnit': 'ክፍል 4: የሳይበር ደህንነት እና ምስጠራ',
+              'enDesc': 'Symmetric/asymmetric encryption, hashing, digital signatures, ethical hacking.',
+              'amDesc': 'የመረጃ ምስጠራ (Encryption)፣ ዲጂታል ፊርማ እና የሳይበር ጥቃት መከላከያ።',
+            },
+            {
+              'id': 'ict_g12_u5',
+              'grade': 12,
+              'enUnit': 'Unit 5: Mobile Application Concepts',
+              'amUnit': 'ክፍል 5: የሞባይል መተግበሪያዎች ግንባታ ፅንሰ-ሀሳቦች',
+              'enDesc': 'Mobile OS ecosystems, native vs cross-platform apps, UI/UX mobile design.',
+              'amDesc': 'የሞባይል ኦፕሬቲንግ ሲስተሞች፣ ክሮስ-ፕላትፎርም መተግበሪያዎች እና የተጠቃሚ ምቾት።',
+            },
+            {
+              'id': 'ict_g12_u6',
+              'grade': 12,
+              'enUnit': 'Unit 6: ICT Project Management and Professional Ethics',
+              'amUnit': 'ክፍል 6: የአይሲቲ ፕሮጀክት አመራር እና የስራ ስነ-ምግባር',
+              'enDesc': 'Agile vs Waterfall, project planning, software testing, IT professional code of conduct.',
+              'amDesc': 'የፕሮጀክት እቅድ ዝግጅት፣ ሶፍትዌር መፈተሽ እና የባለሙያ የስራ ስነ-ምግባር።',
+            },
+          ];
+        }
+        return [];
+
       default:
         return [];
     }
   }
 }
+

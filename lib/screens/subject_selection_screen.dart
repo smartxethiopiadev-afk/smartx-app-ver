@@ -58,7 +58,7 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
 
   // Define subjects with Amharic & English representation plus custom vector graphics
   List<Map<String, dynamic>> _getSubjects() {
-    final allSubjects = [
+    final List<Map<String, dynamic>> subjects = [
       {
         'id': 'Mathematics',
         'amTitle': 'ሂሳብ',
@@ -87,6 +87,32 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
         'color': const Color(0xFFEF6C00),
         'illustration': const ChemistryFlaskWidget(),
       },
+    ];
+
+    // Civics for Grade 9 and 10
+    if (_selectedGrade == 9 || _selectedGrade == 10) {
+      subjects.add({
+        'id': 'Civics',
+        'amTitle': 'የዜግነት ትምህርት',
+        'enTitle': 'Civics',
+        'color': const Color(0xFF1E88E5),
+        'illustration': const CivicsGavelWidget(),
+      });
+    }
+
+    // Agriculture for Grade 11 and 12
+    if (_selectedGrade == 11 || _selectedGrade == 12) {
+      subjects.add({
+        'id': 'Agriculture',
+        'amTitle': 'ግብርና',
+        'enTitle': 'Agriculture',
+        'color': const Color(0xFF16A34A),
+        'illustration': const AgricultureSproutWidget(),
+      });
+    }
+
+    // Common Social / Natural subjects
+    subjects.addAll([
       {
         'id': 'Geography',
         'amTitle': 'ጂኦግራፊ',
@@ -108,10 +134,17 @@ class _SubjectSelectionScreenState extends State<SubjectSelectionScreen> {
         'color': const Color(0xFF0F766E),
         'illustration': const EconomicsChartWidget(),
       },
-    ];
+      // ICT for all Grades 9-12
+      {
+        'id': 'ICT',
+        'amTitle': 'ኢንፎርሜሽን ቴክኖሎጂ (ICT)',
+        'enTitle': 'ICT',
+        'color': const Color(0xFF0284C7),
+        'illustration': const IctComputerWidget(),
+      },
+    ]);
 
-    // Civics, English, and Agriculture are excluded for all Grade 9-12 views
-    return allSubjects;
+    return subjects;
   }
 
   void _navigateToUnitSelectionScreen(Map<String, dynamic> subject, AppStateProvider appState) {

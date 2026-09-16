@@ -257,172 +257,159 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF080E1E), // Dark rich navy blue base
+      backgroundColor: Colors.white,
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.light,
-          systemNavigationBarColor: Color(0xFF080E1E),
-          systemNavigationBarIconBrightness: Brightness.light,
+          statusBarIconBrightness: Brightness.dark,
+          systemNavigationBarColor: Colors.white,
+          systemNavigationBarIconBrightness: Brightness.dark,
         ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Layer 1: Animated Abstract Geometric & Light Effects Canvas
-            AnimatedBuilder(
-              animation: _ambientController,
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: _GeometricAbstractPainter(
-                    animationProgress: _ambientController.value,
-                  ),
-                  size: Size.infinite,
-                );
-              },
-            ),
+        child: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Spacer(flex: 10),
 
-            // Layer 2: Subtle Ambient Center Glow Vignette
-            Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment.center,
-                      radius: 0.85,
-                      colors: [
-                        const Color(0xFF0EA5E9).withValues(alpha: 0.08),
-                        Colors.transparent,
-                        const Color(0xFF080E1E).withValues(alpha: 0.65),
-                      ],
-                      stops: const [0.0, 0.55, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // Layer 3: Central Brand Identity Typography
-            SafeArea(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Spacer(flex: 12),
-
-                    // Central App Name Message: "Smart X Ethiopian"
-                    SlideTransition(
-                      position: _titleSlideAnimation,
-                      child: FadeTransition(
-                        opacity: _titleFadeAnimation,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Main Title typography
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Text(
-                                  'Smart ',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.4,
-                                    color: Colors.white,
-                                    shadows: [
-                                      Shadow(
-                                        color: const Color(0xFF00BFFF).withValues(alpha: 0.3),
-                                        blurRadius: 20,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                ShaderMask(
-                                  shaderCallback: (bounds) => const LinearGradient(
-                                    colors: [Color(0xFF00F0FF), Color(0xFF0099FF)],
+                // Central App Logo & Title: "Ethio Concept Center"
+                SlideTransition(
+                  position: _titleSlideAnimation,
+                  child: FadeTransition(
+                    opacity: _titleFadeAnimation,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // App Icon Badge
+                        Container(
+                          width: 110,
+                          height: 110,
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0284C7).withValues(alpha: 0.15),
+                                blurRadius: 30,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/images/smart_x_logo.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                decoration: const BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
-                                  ).createShader(bounds),
-                                  child: Text(
-                                    'X',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 38,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 0.5,
-                                      color: Colors.white,
-                                      shadows: [
-                                        Shadow(
-                                          color: const Color(0xFF00D2FF).withValues(alpha: 0.6),
-                                          blurRadius: 20,
-                                          offset: const Offset(0, 0),
-                                        ),
-                                      ],
-                                    ),
                                   ),
+                                  shape: BoxShape.circle,
                                 ),
-                                Text(
-                                  ' Ethiopian',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.4,
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.school_rounded,
                                     color: Colors.white,
-                                    shadows: [
-                                      Shadow(
-                                        color: const Color(0xFF00BFFF).withValues(alpha: 0.3),
-                                        blurRadius: 20,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
+                                    size: 54,
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
+                          ),
+                        ),
 
-                            const SizedBox(height: 12),
+                        const SizedBox(height: 24),
 
-                            // Platform Subtitle Message
+                        // Main Title typography: Ethio Concept Center
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
                             Text(
-                              'INTELLIGENT LEARNING PLATFORM',
+                              'Ethio Concept ',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 3.5,
-                                color: const Color(0xFF94A3B8).withValues(alpha: 0.85),
+                                fontSize: 30,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Center',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.5,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ),
 
-                    const SizedBox(height: 38),
+                        const SizedBox(height: 10),
 
-                    // Understated Minimal Teal Blue Loading Spinner
-                    FadeTransition(
-                      opacity: _spinnerFadeAnimation,
-                      child: Container(
-                        width: 24,
-                        height: 24,
-                        padding: const EdgeInsets.all(2),
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          strokeCap: StrokeCap.round,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00D2FF)),
+                        // Platform Subtitle Message (Amharic & English)
+                        Text(
+                          'የኢትዮጵያ ሁለተኛ ደረጃ የትምህርት መድረክ',
+                          style: GoogleFonts.notoSansEthiopic(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                            color: const Color(0xFF0284C7),
+                          ),
                         ),
-                      ),
-                    ),
 
-                    const Spacer(flex: 14),
-                    const SizedBox(height: 22),
-                  ],
+                        const SizedBox(height: 4),
+
+                        Text(
+                          'GRADES 9 - 12 LEARNING PLATFORM',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 2.5,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+
+                const SizedBox(height: 38),
+
+                // Understated Minimal Teal Blue Loading Spinner
+                FadeTransition(
+                  opacity: _spinnerFadeAnimation,
+                  child: Container(
+                    width: 26,
+                    height: 26,
+                    padding: const EdgeInsets.all(2),
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      strokeCap: StrokeCap.round,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0284C7)),
+                    ),
+                  ),
+                ),
+
+                const Spacer(flex: 12),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
