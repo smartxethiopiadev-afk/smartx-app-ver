@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/credential_auth_service.dart';
-import 'payment_screen.dart';
 
 class LoginActivationScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -246,8 +246,8 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
               const SizedBox(height: 6),
               Text(
                 isAm
-                    ? 'ክፍያ ከፈጸሙ በኋላ የተሰጦትን ስልክ ቁጥር እና የይለፍ ቃል ያስገቡ።'
-                    : 'Enter the registered phone number and password provided by Smart X Admin after payment.',
+                    ? 'በቴሌግራም የተሰጦትን ስልክ ቁጥር እና የይለፍ ቃል ያስገቡ።'
+                    : 'Enter the registered phone number and password provided by Ethio Concept Center Admin.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12.5, color: textSecondary, height: 1.4),
               ),
@@ -437,7 +437,7 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
 
               const SizedBox(height: 24),
 
-              // Don't have credentials yet? Go to Payment Screen
+              // Don't have credentials yet? Contact Telegram Channel
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -448,7 +448,7 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                 child: Column(
                   children: [
                     Text(
-                      isAm ? 'እስካሁን ክፍያ አልፈጸሙም?' : "Haven't paid yet?",
+                      isAm ? 'የይለፍ ቃል የሎትም?' : "Don't have a password yet?",
                       style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
@@ -458,30 +458,27 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                     const SizedBox(height: 4),
                     Text(
                       isAm
-                          ? 'የቴሌብር እና የኢትዮጵያ ንግድ ባንክ ሂሳቦችን ለማየትና ክፍያ ለመፈጸም ይጫኑ።'
-                          : 'View verified Telebirr & CBE bank accounts to complete your transfer.',
+                          ? 'የቴሌግራም ቻናላችንን በመቀላቀል ወይም አድሚኑን በማነጋገር ፈጣን የይለፍ ቃል ያግኙ።'
+                          : 'Join our Telegram channel or contact Admin to get instant access credentials.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 11.5, color: textSecondary),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
-                      onPressed: () {
-                        PaymentScreen.push(
-                          context,
-                          isDarkMode: widget.isDarkMode,
-                          languageCode: widget.languageCode,
-                          grade: widget.preferredGrade,
-                          subject: widget.preferredSubject,
-                        );
+                      onPressed: () async {
+                        final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
+                        if (await canLaunchUrl(telegramUri)) {
+                          await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
+                        }
                       },
-                      icon: const Icon(Icons.account_balance_wallet_rounded, size: 18),
+                      icon: const Icon(Icons.send_rounded, size: 18),
                       label: Text(
-                        isAm ? 'የባንክ ሂሳቦች እና የክፍያ ገጽ' : 'View Bank Accounts & Pay',
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                        isAm ? 'ቴሌግራም ቻናል ተቀላቀል (@EthioconceptcenterAcademy)' : 'Join Telegram Channel',
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF0084FF),
-                        side: const BorderSide(color: Color(0xFF0084FF)),
+                        foregroundColor: const Color(0xFF0088CC),
+                        side: const BorderSide(color: Color(0xFF0088CC)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),

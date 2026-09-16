@@ -114,21 +114,18 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
     }
 
     final String message =
-        'ሰላም Smart X Admin, በመተግበሪያው ላይ መመዝገብ እና መለያ መክፈት እፈልጋለሁ:\n'
+        'ሰላም Ethio Concept Center Admin, በመተግበሪያው ላይ መመዝገብ እና መለያ መክፈት እፈልጋለሁ:\n'
         '• የተመረጠው ፓኬጅ: $tierName\n'
         '• የተማሪ ስም: $name\n'
         '• ስልክ ቁጥር: $phone\n'
         '• Device ID: $_deviceId\n'
         'እባክዎ የይለፍ ቃል (Password) ይስጡኝ።';
 
-    final Uri telegramUri = Uri.parse('https://t.me/smartxsupport?text=${Uri.encodeComponent(message)}');
-    final Uri fallbackAdminUri = Uri.parse('https://t.me/HabIT_Dev?text=${Uri.encodeComponent(message)}');
+    final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy?text=${Uri.encodeComponent(message)}');
 
     try {
       if (await canLaunchUrl(telegramUri)) {
         await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
-      } else if (await canLaunchUrl(fallbackAdminUri)) {
-        await launchUrl(fallbackAdminUri, mode: LaunchMode.externalApplication);
       } else {
         await launchUrl(telegramUri, mode: LaunchMode.platformDefault);
       }
@@ -137,7 +134,7 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
         Clipboard.setData(ClipboardData(text: message));
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('የምዝገባ መረጃው ተቀድቷል! ቴሌግራም ላይ @smartxsupport ይላኩ።'),
+            content: Text('የምዝገባ መረጃው ተቀድቷል! ቴሌግራም ላይ @EthioconceptcenterAcademy ይላኩ።'),
             backgroundColor: Color(0xFF0088CC),
           ),
         );

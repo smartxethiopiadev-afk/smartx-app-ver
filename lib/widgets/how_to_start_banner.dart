@@ -218,7 +218,7 @@ class HowToStartBanner extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () async {
                         Navigator.of(ctx).pop();
-                        final Uri telegramUri = Uri.parse('https://t.me/smartxsupport');
+                        final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
                         if (await canLaunchUrl(telegramUri)) {
                           await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
                         }

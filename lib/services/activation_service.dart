@@ -93,8 +93,8 @@ class ActivationService {
           status: ActivationStatus.invalidCode,
           isSuccess: false,
           message: isAmharic
-              ? 'የተሳሳተ የማግበሪያ ኮድ። እባክዎ በትክክል ያረጋግጡ ወይም አስተዳዳሪውን በቴሌግራም ያነጋግሩ (@HabIT_Dev)'
-              : 'Invalid activation code. Please verify your code or contact Smart X Admin on Telegram (@HabIT_Dev).',
+              ? 'የተሳሳተ የማግበሪያ ኮድ። እባክዎ በትክክል ያረጋግጡ ወይም አስተዳዳሪውን በቴሌግራም ያነጋግሩ (@EthioconceptcenterAcademy)'
+              : 'Invalid activation code. Please verify your code or contact Ethio Concept Center Admin on Telegram (@EthioconceptcenterAcademy).',
         );
       }
 

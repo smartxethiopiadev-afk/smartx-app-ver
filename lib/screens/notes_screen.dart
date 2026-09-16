@@ -61,7 +61,7 @@ class _NotesScreenState extends State<NotesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  static const String _telegramChannelUrl = 'https://t.me/SmartX_Discussion';
+  static const String _telegramChannelUrl = 'https://t.me/EthioconceptcenterAcademy';
 
   @override
   void initState() {
@@ -524,7 +524,7 @@ class _NotesScreenState extends State<NotesScreen> {
     final shareContent = '📚 ${widget.subjectId.toUpperCase()} Grade ${widget.grade} — Unit ${widget.unitNumber}\n'
         '$title\n\n'
         '${cleanText.length > 300 ? cleanText.substring(0, 300) + '...' : cleanText}\n\n'
-        'Study with Smart X Ethiopian App!\n'
+        'Study with Ethio Concept Center App!\n'
         'Telegram: $_telegramChannelUrl';
 
     Share.share(shareContent, subject: title);

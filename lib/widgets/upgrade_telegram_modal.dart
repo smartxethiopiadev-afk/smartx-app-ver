@@ -134,46 +134,37 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
         ? _studentName
         : (_nameController.text.trim().isNotEmpty
             ? _nameController.text.trim()
-            : 'Smart X Student');
+            : 'Ethio Concept Student');
     final String cleanDeviceId = _deviceId.isNotEmpty ? _deviceId : 'DEV_ID_PENDING';
 
     final String selectedPkgTitle = _selectedPackage.title;
 
-    // Standardized pre-filled message format requested:
-    // "Hello Smart X Admin, I want to unlock: [Selected Package Name]. Student Name: [Name], Phone: [Phone Number], Device ID: [Device Hardware ID]"
     final String message =
-        "Hello Smart X Admin, I want to unlock: $selectedPkgTitle. Student Name: $cleanName, Phone: $cleanPhone, Device ID: $cleanDeviceId";
+        "Hello Ethio Concept Center Admin, I want to unlock: $selectedPkgTitle. Student Name: $cleanName, Phone: $cleanPhone, Device ID: $cleanDeviceId";
 
     final encodedMsg = Uri.encodeComponent(message);
-    final Uri directTelegramUri = Uri.parse("https://t.me/HabIT_Dev?text=$encodedMsg");
-    final Uri groupUri = Uri.parse("https://t.me/SmartX_Discussion?text=$encodedMsg");
+    final Uri directTelegramUri = Uri.parse("https://t.me/EthioconceptcenterAcademy?text=$encodedMsg");
 
     try {
       if (await canLaunchUrl(directTelegramUri)) {
         await launchUrl(directTelegramUri, mode: LaunchMode.externalApplication);
-      } else if (await canLaunchUrl(groupUri)) {
-        await launchUrl(groupUri, mode: LaunchMode.externalApplication);
       } else {
         await launchUrl(directTelegramUri, mode: LaunchMode.platformDefault);
       }
     } catch (_) {
-      try {
-        await launchUrl(groupUri, mode: LaunchMode.platformDefault);
-      } catch (e) {
-        if (!mounted) return;
-        Clipboard.setData(ClipboardData(text: message));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.languageCode == 'am'
-                  ? 'የቴሌግራም መልእክት ተቀድቷል! ቴሌግራም ላይ ይለጥፉት (@HabIT_Dev)'
-                  : 'Message copied to clipboard! Paste it to @HabIT_Dev on Telegram.',
-            ),
-            backgroundColor: const Color(0xFF0084FF),
-            behavior: SnackBarBehavior.floating,
+      if (!mounted) return;
+      Clipboard.setData(ClipboardData(text: message));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.languageCode == 'am'
+                ? 'የቴሌግራም መልእክት ተቀድቷል! ቴሌግራም ላይ ይለጥፉት (@EthioconceptcenterAcademy)'
+                : 'Message copied to clipboard! Paste it to @EthioconceptcenterAcademy on Telegram.',
           ),
-        );
-      }
+          backgroundColor: const Color(0xFF0084FF),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -242,8 +233,8 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
         SnackBar(
           content: Text(
             widget.languageCode == 'am'
-                ? 'ምንም ንቁ ክፍያ አልተገኘም። በቴሌግራም አስተዳዳሪውን ያነጋግሩ (@HabIT_Dev)'
-                : 'No active subscription found. Please contact admin on Telegram (@HabIT_Dev)',
+                ? 'ምንም ንቁ ክፍያ አልተገኘም። በቴሌግራም አስተዳዳሪውን ያነጋግሩ (@EthioconceptcenterAcademy)'
+                : 'No active subscription found. Please contact admin on Telegram (@EthioconceptcenterAcademy)',
           ),
           backgroundColor: Colors.orangeAccent,
           action: SnackBarAction(

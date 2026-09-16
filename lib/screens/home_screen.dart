@@ -971,8 +971,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ElevatedButton.icon(
                             onPressed: () async {
                               final msg = Uri.encodeComponent(
-                                  'ሰላም ስማርት ኤክስ፣ Grade $_selectedGradeForVideosTab $_selectedSubjectForVideosTab ቪዲዮ እንዲጫንልኝ እፈልጋለሁ።');
-                              final uri = Uri.parse('https://t.me/SmartX_Discussion?text=$msg');
+                                  'ሰላም ኢትዮ ኮንሴፕት ሴንተር፣ Grade $_selectedGradeForVideosTab $_selectedSubjectForVideosTab ቪዲዮ እንዲጫንልኝ እፈልጋለሁ።');
+                              final uri = Uri.parse('https://t.me/EthioconceptcenterAcademy?text=$msg');
                               if (await canLaunchUrl(uri)) {
                                 await launchUrl(uri, mode: LaunchMode.externalApplication);
                               }
@@ -1377,9 +1377,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           tooltip: isAmharic ? 'ጥያቄ ጠይቅ' : 'Ask Tutor',
                           onPressed: () async {
                             final msg = Uri.encodeComponent(
-                                'ሰላም ስማርት ኤክስ፣ ስለ Grade ${video.grade} ${video.subject} Unit ${video.unitNumber} (${video.title}) ጥያቄ አለኝ።');
+                                'ሰላም ኢትዮ ኮንሴፕት ሴንተር፣ ስለ Grade ${video.grade} ${video.subject} Unit ${video.unitNumber} (${video.title}) ጥያቄ አለኝ።');
                             final uri = Uri.parse(
-                                'https://t.me/SmartX_Discussion?text=$msg');
+                                'https://t.me/EthioconceptcenterAcademy?text=$msg');
                             if (await canLaunchUrl(uri)) {
                               await launchUrl(uri,
                                   mode: LaunchMode.externalApplication);
@@ -3089,6 +3089,208 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
             const SizedBox(height: 20),
 
+            // Academic Progressive Learning Tracker
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  isAmharic ? 'የመማር እና የጥናት ሂደት (Learning Progress)' : 'Academic Learning Progress',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: textColor,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0084FF).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isAmharic ? 'ቀጣይነት ያለው' : 'Progressive',
+                    style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF0084FF)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Progress Metrics Overview Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: borderColor, width: 1.2),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0084FF).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFF0084FF).withValues(alpha: 0.2)),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.quiz_rounded, color: Color(0xFF0084FF), size: 22),
+                              const SizedBox(height: 6),
+                              Text(
+                                '88%',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: textColor),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isAmharic ? 'የፈተና ውጤት' : 'Quiz Mastery',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: subColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.2)),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.menu_book_rounded, color: Color(0xFF10B981), size: 22),
+                              const SizedBox(height: 6),
+                              Text(
+                                '18 Units',
+                                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: textColor),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isAmharic ? 'የተጠናቀቁ ክፍሎች' : 'Completed',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: subColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.2)),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.local_fire_department_rounded, color: Color(0xFFF59E0B), size: 22),
+                              const SizedBox(height: 6),
+                              Text(
+                                '5 Days',
+                                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: textColor),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isAmharic ? 'የጥናት ተከታታይ' : 'Study Streak',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: subColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+                  const SizedBox(height: 14),
+
+                  // Subject-wise Progressive Completion Bars
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isAmharic ? 'የትምህርቶች ሂደት (Grade $_selectedGradeForLibraryTab):' : 'Subject Progress (Grade $_selectedGradeForLibraryTab):',
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: textColor),
+                      ),
+                      Text(
+                        isAmharic ? 'አማካይ 78%' : 'Avg 78%',
+                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, color: Color(0xFF0084FF)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Subject Progress Item Helper
+                  _buildSubjectProgressBar(
+                    title: 'Physics',
+                    progress: 0.85,
+                    color: const Color(0xFF0084FF),
+                    isLight: isLight,
+                    textColor: textColor,
+                    subColor: subColor,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSubjectProgressBar(
+                    title: 'Biology',
+                    progress: 0.70,
+                    color: const Color(0xFF10B981),
+                    isLight: isLight,
+                    textColor: textColor,
+                    subColor: subColor,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSubjectProgressBar(
+                    title: 'Chemistry',
+                    progress: 0.60,
+                    color: const Color(0xFFEC4899),
+                    isLight: isLight,
+                    textColor: textColor,
+                    subColor: subColor,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSubjectProgressBar(
+                    title: 'Mathematics',
+                    progress: 0.90,
+                    color: const Color(0xFF8B5CF6),
+                    isLight: isLight,
+                    textColor: textColor,
+                    subColor: subColor,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSubjectProgressBar(
+                    title: (_selectedGradeForLibraryTab <= 10) ? 'Civics' : 'Agriculture',
+                    progress: 0.75,
+                    color: const Color(0xFFF59E0B),
+                    isLight: isLight,
+                    textColor: textColor,
+                    subColor: subColor,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildSubjectProgressBar(
+                    title: 'ICT (Information Tech)',
+                    progress: 0.80,
+                    color: const Color(0xFF06B6D4),
+                    isLight: isLight,
+                    textColor: textColor,
+                    subColor: subColor,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
             // Active Subscriptions / Database Permissions Section
             Text(
               isAmharic ? 'የተፈቀዱ የትምህርት ክፍሎች' : 'Active Content Access',
@@ -3318,7 +3520,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             // Button 3: Direct Telegram Admin Chat
             GestureDetector(
               onTap: () async {
-                final Uri telegramUri = Uri.parse('https://t.me/SmartX_Tutor');
+                final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
                 if (await canLaunchUrl(telegramUri)) {
                   await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
                 }
@@ -3354,7 +3556,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isAmharic ? 'አድሚኑን በቴሌግራም ያግኙ (@SmartX_Tutor)' : 'Contact Admin on Telegram',
+                            isAmharic ? 'አድሚኑን በቴሌግራም ያግኙ (@EthioconceptcenterAcademy)' : 'Contact Admin on Telegram (@EthioconceptcenterAcademy)',
                             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: textColor),
                           ),
                           const SizedBox(height: 2),
@@ -3444,6 +3646,53 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSubjectProgressBar({
+    required String title,
+    required double progress,
+    required Color color,
+    required bool isLight,
+    required Color textColor,
+    required Color subColor,
+  }) {
+    final int percentInt = (progress * 100).toInt();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+              ),
+            ),
+            Text(
+              '$percentInt%',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 7,
+            backgroundColor: color.withValues(alpha: isLight ? 0.15 : 0.25),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+      ],
     );
   }
 
@@ -3649,8 +3898,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       Icon(Icons.alternate_email_rounded, color: Color(0xFF0088CC), size: 18),
                       SizedBox(width: 8),
                       Text(
-                        '@smartxsupport',
-                        style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFF0088CC)),
+                        '@EthioconceptcenterAcademy',
+                        style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5, color: Color(0xFF0088CC)),
                       ),
                     ],
                   ),
@@ -3681,7 +3930,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ElevatedButton.icon(
             onPressed: () async {
               Navigator.of(ctx).pop();
-              final Uri telegramUri = Uri.parse('https://t.me/smartxsupport');
+              final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
               if (await canLaunchUrl(telegramUri)) {
                 await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
               }
@@ -3717,8 +3966,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
           content: Text(
             widget.languageCode == 'en' 
-                ? 'Are you sure you want to log out of your Smart X ET student profile? Your local study stats will remain saved.'
-                : 'ከስማርት ኤክስ መለያዎ መውጣት እርግጠኛ ነዎት? የዚህ መሣሪያ የጥናት ሂደትዎ አይጠፋም።',
+                ? 'Are you sure you want to log out of your Ethio Concept Center student profile? Your local study stats will remain saved.'
+                : 'ከኢትዮ ኮንሴፕት ሴንተር መለያዎ መውጣት እርግጠኛ ነዎት? የዚህ መሣሪያ የጥናት ሂደትዎ አይጠፋም።',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           actions: [
@@ -4254,10 +4503,10 @@ class HelpSupportScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10.0),
             
-            // Community Card (@SmartX_Discussion)
+            // Community Card (@EthioconceptcenterAcademy)
             InkWell(
               onTap: () async {
-                final uri = Uri.parse('https://t.me/SmartX_Discussion');
+                final uri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
                 if (await canLaunchUrl(uri)) {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }
@@ -4294,18 +4543,18 @@ class HelpSupportScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'SmartX Discussion',
+                            'Ethio Concept Center Academy',
                             style: TextStyle(
-                              fontSize: 16.0,
+                              fontSize: 14.5,
                               fontWeight: FontWeight.w900,
                               color: textColor,
                             ),
                           ),
                           const SizedBox(height: 2.0),
                           const Text(
-                            '@SmartX_Discussion',
+                            '@EthioconceptcenterAcademy',
                             style: TextStyle(
-                              fontSize: 13.0,
+                              fontSize: 12.0,
                               color: Color(0xFF0088CC),
                               fontWeight: FontWeight.w700,
                             ),

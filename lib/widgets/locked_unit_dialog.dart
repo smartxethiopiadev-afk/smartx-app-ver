@@ -51,15 +51,12 @@ class LockedUnitDialog extends StatelessWidget {
 
   Future<void> _contactTelegramAdmin(BuildContext context) async {
     final String inquiry =
-        'ሰላም Smart X Admin, የ Grade $grade $subject ክፍል $unitNumber መለያ (Name, Phone, Password) ለማስከፈት ፈልጌ ነበር።';
-    final Uri telegramUri = Uri.parse('https://t.me/smartxsupport?text=${Uri.encodeComponent(inquiry)}');
-    final Uri fallbackAdminUri = Uri.parse('https://t.me/HabIT_Dev?text=${Uri.encodeComponent(inquiry)}');
+        'ሰላም Ethio Concept Center Admin, የ Grade $grade $subject ክፍል $unitNumber መለያ (Name, Phone, Password) ለማስከፈት ፈልጌ ነበር።';
+    final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy?text=${Uri.encodeComponent(inquiry)}');
 
     try {
       if (await canLaunchUrl(telegramUri)) {
         await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
-      } else if (await canLaunchUrl(fallbackAdminUri)) {
-        await launchUrl(fallbackAdminUri, mode: LaunchMode.externalApplication);
       } else {
         await launchUrl(telegramUri, mode: LaunchMode.platformDefault);
       }
@@ -67,7 +64,7 @@ class LockedUnitDialog extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('ቴሌግራም ላይ @smartxsupport ወይም @HabIT_Dev ያነጋግሩ'),
+            content: Text('ቴሌግራም ላይ @EthioconceptcenterAcademy ያነጋግሩ'),
             backgroundColor: Color(0xFF0088CC),
           ),
         );

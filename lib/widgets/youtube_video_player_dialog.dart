@@ -290,9 +290,9 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
                         child: ElevatedButton.icon(
                           onPressed: () async {
                             final msg = Uri.encodeComponent(
-                                'ሰላም ስማርት ኤክስ፣ ስለ Grade ${widget.video.grade} ${widget.video.subject} Unit ${widget.video.unitNumber} (${widget.video.title}) ጥያቄ አለኝ።');
+                                'ሰላም ኢትዮ ኮንሴፕት ሴንተር፣ ስለ Grade ${widget.video.grade} ${widget.video.subject} Unit ${widget.video.unitNumber} (${widget.video.title}) ጥያቄ አለኝ።');
                             final uri = Uri.parse(
-                                'https://t.me/SmartX_Discussion?text=$msg');
+                                'https://t.me/EthioconceptcenterAcademy?text=$msg');
                             if (await canLaunchUrl(uri)) {
                               await launchUrl(uri,
                                   mode: LaunchMode.externalApplication);
