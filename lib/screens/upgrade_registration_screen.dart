@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../services/device_service.dart';
 import 'login_activation_screen.dart';
 
 class UpgradeRegistrationScreen extends StatefulWidget {

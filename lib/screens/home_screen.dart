@@ -24,7 +24,6 @@ import '../services/subscription_service.dart';
 import '../services/device_service.dart';
 import '../services/credential_auth_service.dart';
 import '../widgets/academic_progress_charts.dart';
-import 'package:flutter/services.dart';
 import '../main.dart';
 import '../services/analytics_service.dart';
 
@@ -3650,52 +3649,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildSubjectProgressBar({
-    required String title,
-    required double progress,
-    required Color color,
-    required bool isLight,
-    required Color textColor,
-    required Color subColor,
-  }) {
-    final int percentInt = (progress * 100).toInt();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: textColor,
-              ),
-            ),
-            Text(
-              '$percentInt%',
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 5),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 7,
-            backgroundColor: color.withValues(alpha: isLight ? 0.15 : 0.25),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-          ),
-        ),
-      ],
-    );
-  }
+
 
 
 
@@ -3838,120 +3792,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  void _showTelegramContactDialog() {
-    final bool isLight = !widget.isDarkMode;
-    final bool isAm = widget.languageCode == 'am';
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: isLight ? Colors.white : const Color(0xFF1E293B),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0088CC),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                isAm ? 'የቴሌግራም አስተዳዳሪ አግኙን' : 'Telegram Admin Support',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                  color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              isAm
-                  ? 'ለማንኛውም ጥያቄ፣ የክፍያ ማረጋገጫ ወይም መለያ ለማስከፈት የቴሌግራም አስተዳዳሪውን ያነጋግሩ።'
-                  : 'For any questions, payment verification, or account activation, contact admin directly.',
-              style: TextStyle(
-                fontSize: 13,
-                color: isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8),
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0088CC).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF0088CC).withValues(alpha: 0.3)),
-              ),
-              child: const Column(
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.alternate_email_rounded, color: Color(0xFF0088CC), size: 18),
-                      SizedBox(width: 8),
-                      Text(
-                        '@EthioconceptcenterAcademy',
-                        style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5, color: Color(0xFF0088CC)),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(Icons.phone_rounded, color: Color(0xFF10B981), size: 18),
-                      SizedBox(width: 8),
-                      Text(
-                        '0978254242',
-                        style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFF10B981)),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              isAm ? 'ዝጋ' : 'Close',
-              style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.grey),
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
-              if (await canLaunchUrl(telegramUri)) {
-                await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0088CC),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 0,
-            ),
-            icon: const Icon(Icons.send_rounded, size: 16),
-            label: Text(
-              isAm ? 'ቴሌግራም ክፈት' : 'Open Telegram',
-              style: const TextStyle(fontWeight: FontWeight.w900),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showLogOutConfirmationDialog() {
     showDialog(
