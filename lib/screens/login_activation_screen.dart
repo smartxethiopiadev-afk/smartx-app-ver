@@ -486,6 +486,26 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                   ],
                 ),
               ),
+
+              const SizedBox(height: 16),
+
+              // Register as New Student Link
+              Center(
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  icon: const Icon(Icons.person_add_rounded, size: 18, color: Color(0xFF0084FF)),
+                  label: Text(
+                    isAm ? 'አዲስ ተማሪ ነዎት? ይመዝገቡ' : 'New student? Register Here',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0084FF),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

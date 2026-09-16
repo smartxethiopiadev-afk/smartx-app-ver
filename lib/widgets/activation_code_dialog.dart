@@ -422,7 +422,7 @@ class _ActivationCodeDialogState extends State<ActivationCodeDialog> {
                   ),
                   const SizedBox(height: 14),
 
-                  // Device ID Info Card
+                  // Single Device Protection Status
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     decoration: BoxDecoration(
@@ -432,14 +432,13 @@ class _ActivationCodeDialogState extends State<ActivationCodeDialog> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.phonelink_lock_rounded, size: 16, color: Color(0xFF0084FF)),
+                        const Icon(Icons.security_rounded, size: 16, color: Color(0xFF10B981)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Device ID: ${_deviceId.isNotEmpty ? _deviceId : "Pending"}',
+                            isAm ? 'ደህንነቱ የተጠበቀ የመሣሪያ ማረጋገጫ' : 'Automated Secure Single-Device Authentication',
                             style: TextStyle(
                               fontSize: 11,
-                              fontFamily: 'monospace',
                               fontWeight: FontWeight.w700,
                               color: textSecondary,
                             ),

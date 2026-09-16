@@ -135,12 +135,10 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
         : (_nameController.text.trim().isNotEmpty
             ? _nameController.text.trim()
             : 'Ethio Concept Student');
-    final String cleanDeviceId = _deviceId.isNotEmpty ? _deviceId : 'DEV_ID_PENDING';
-
     final String selectedPkgTitle = _selectedPackage.title;
 
     final String message =
-        "Hello Ethio Concept Center Admin, I want to unlock: $selectedPkgTitle. Student Name: $cleanName, Phone: $cleanPhone, Device ID: $cleanDeviceId";
+        "ሰላም ኢትዮ ኮንሴፕት ሴንተር አድሚን፣ $selectedPkgTitle መክፈት እፈልጋለሁ። የተማሪ ስም: $cleanName፣ ስልክ ቁጥር: $cleanPhone። እባክዎ የይለፍ ቃል (Password) ይስጡኝ።";
 
     final encodedMsg = Uri.encodeComponent(message);
     final Uri directTelegramUri = Uri.parse("https://t.me/EthioconceptcenterAcademy?text=$encodedMsg");
@@ -653,7 +651,7 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
 
                   const SizedBox(height: 8),
 
-                  // Hardware Device Fingerprint Card (Anti-Account Sharing Information)
+                  // Automated Single Device Protection Badge
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -663,46 +661,33 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.phonelink_lock_rounded, color: Color(0xFF0084FF), size: 20),
+                        const Icon(Icons.verified_user_rounded, color: Color(0xFF10B981), size: 22),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                isAm ? 'የስልክ መለያ ቁጥር (Hardware Device ID)' : 'Hardware Device Fingerprint',
+                                isAm ? 'ደህንነቱ የተጠበቀ የመሣሪያ ማረጋገጫ' : 'Automated Single-Device Security',
                                 style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 1),
-                              Text(
-                                _deviceId.isNotEmpty ? _deviceId : 'Identifying...',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontFamily: 'monospace',
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w800,
                                   color: textPrimary,
                                 ),
-                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isAm
+                                    ? 'መግቢያው በራስ-ሰር ከአንድ ስልክ ጋር ብቻ ይተሳሰራል (Device ID በራስ-ሰር ይያዛል)'
+                                    : 'Login is securely bound to this device automatically upon activation',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: textSecondary,
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.copy_rounded, size: 18, color: Color(0xFF0084FF)),
-                          tooltip: 'Copy Device ID',
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: _deviceId));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(isAm ? 'የስልክ መለያ ተቀድቷል' : 'Device ID copied!'),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                          },
                         ),
                       ],
                     ),

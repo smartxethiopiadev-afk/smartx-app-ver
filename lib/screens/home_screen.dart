@@ -23,6 +23,7 @@ import '../widgets/locked_unit_dialog.dart';
 import '../services/subscription_service.dart';
 import '../services/device_service.dart';
 import '../services/credential_auth_service.dart';
+import '../widgets/academic_progress_charts.dart';
 import 'package:flutter/services.dart';
 import '../main.dart';
 import '../services/analytics_service.dart';
@@ -3007,8 +3008,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   const Divider(height: 1),
                   const SizedBox(height: 14),
 
-                  // Single-Device Hardware Binding Card
+                  // Single-Device Automated Security Badge
                   Container(
+                    width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
                       color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
@@ -3017,67 +3019,52 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
                       ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.phonelink_lock_rounded, size: 16, color: Color(0xFF0084FF)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                isAmharic ? 'የስልክ መለያ ቁልፍ (Device ID - ለአንድ ስልክ ብቻ)' : 'Bound Hardware Device ID (Single-Device)',
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.shield_rounded, size: 20, color: Color(0xFF10B981)),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isAmharic ? 'የመለያ ደህንነት እና ጥበቃ' : 'Device Security Status',
                                 style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
                                   color: isLight ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
                                 ),
                               ),
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                if (_deviceId.isNotEmpty) {
-                                  Clipboard.setData(ClipboardData(text: _deviceId));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(isAmharic ? 'የስልክ መለያ ኮፒ ተደርጓል!' : 'Device ID copied!'),
-                                      backgroundColor: const Color(0xFF10B981),
-                                      behavior: SnackBarBehavior.floating,
-                                      duration: const Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF0084FF).withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.copy_rounded, size: 12, color: Color(0xFF0084FF)),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      isAmharic ? 'ኮፒ' : 'Copy',
-                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0084FF)),
-                                    ),
-                                  ],
+                              const SizedBox(height: 2),
+                              Text(
+                                isAmharic
+                                    ? 'ይህ መለያ በዚህ ስልክ ላይ በደህንነት የተጠበቀ ነው (Single-Device Protection)'
+                                    : 'Account securely bound to this device (Single-Device Protection Active)',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: subColor,
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _deviceId.isNotEmpty ? _deviceId : 'DEV_CHECKING...',
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: subColor,
-                            letterSpacing: 0.5,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            isAmharic ? 'ንቁ' : 'Active',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF10B981)),
                           ),
                         ),
                       ],
@@ -3212,81 +3199,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Divider(height: 1),
-                  const SizedBox(height: 14),
-
-                  // Subject-wise Progressive Completion Bars
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        isAmharic ? 'የትምህርቶች ሂደት (Grade $_selectedGradeForLibraryTab):' : 'Subject Progress (Grade $_selectedGradeForLibraryTab):',
-                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: textColor),
-                      ),
-                      Text(
-                        isAmharic ? 'አማካይ 78%' : 'Avg 78%',
-                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, color: Color(0xFF0084FF)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Subject Progress Item Helper
-                  _buildSubjectProgressBar(
-                    title: 'Physics',
-                    progress: 0.85,
-                    color: const Color(0xFF0084FF),
-                    isLight: isLight,
-                    textColor: textColor,
-                    subColor: subColor,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildSubjectProgressBar(
-                    title: 'Biology',
-                    progress: 0.70,
-                    color: const Color(0xFF10B981),
-                    isLight: isLight,
-                    textColor: textColor,
-                    subColor: subColor,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildSubjectProgressBar(
-                    title: 'Chemistry',
-                    progress: 0.60,
-                    color: const Color(0xFFEC4899),
-                    isLight: isLight,
-                    textColor: textColor,
-                    subColor: subColor,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildSubjectProgressBar(
-                    title: 'Mathematics',
-                    progress: 0.90,
-                    color: const Color(0xFF8B5CF6),
-                    isLight: isLight,
-                    textColor: textColor,
-                    subColor: subColor,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildSubjectProgressBar(
-                    title: (_selectedGradeForLibraryTab <= 10) ? 'Civics' : 'Agriculture',
-                    progress: 0.75,
-                    color: const Color(0xFFF59E0B),
-                    isLight: isLight,
-                    textColor: textColor,
-                    subColor: subColor,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildSubjectProgressBar(
-                    title: 'ICT (Information Tech)',
-                    progress: 0.80,
-                    color: const Color(0xFF06B6D4),
-                    isLight: isLight,
-                    textColor: textColor,
-                    subColor: subColor,
-                  ),
                 ],
               ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Advanced Academic Analytics & Chart Analysis Engine
+            AcademicProgressCharts(
+              isDarkMode: widget.isDarkMode,
+              languageCode: widget.languageCode,
+              currentGrade: _selectedGradeForLibraryTab,
             ),
 
             const SizedBox(height: 20),

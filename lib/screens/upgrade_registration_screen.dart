@@ -118,7 +118,6 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
         '• የተመረጠው ፓኬጅ: $tierName\n'
         '• የተማሪ ስም: $name\n'
         '• ስልክ ቁጥር: $phone\n'
-        '• Device ID: $_deviceId\n'
         'እባክዎ የይለፍ ቃል (Password) ይስጡኝ።';
 
     final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy?text=${Uri.encodeComponent(message)}');
@@ -438,7 +437,7 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
 
             const SizedBox(height: 14),
 
-            // Device Hardware ID Badge
+            // Automated Single-Device Security Badge
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -450,35 +449,29 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.fingerprint_rounded, size: 20, color: Color(0xFF64748B)),
-                  const SizedBox(width: 8),
+                  const Icon(Icons.shield_rounded, size: 22, color: Color(0xFF10B981)),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isAm ? 'የስልክ መለያ ቁጥር (Device ID)' : 'Phone Hardware ID',
-                          style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
-                        ),
-                        Text(
-                          _deviceId,
+                          isAm ? 'የመለያ ደህንነት እና ጥበቃ' : 'Automated Device Security',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
                             color: isLight ? const Color(0xFF0F172A) : Colors.white,
                           ),
                         ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isAm
+                              ? 'መለያው በራስ-ሰር ከአንድ ስልክ ጋር ብቻ ይተሳሰራል (Device ID በራስ-ሰር ይያዛል)'
+                              : 'Account is automatically bound to 1 device upon first login.',
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                        ),
                       ],
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.copy_rounded, size: 16),
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: _deviceId));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Device ID copied!')),
-                      );
-                    },
                   ),
                 ],
               ),

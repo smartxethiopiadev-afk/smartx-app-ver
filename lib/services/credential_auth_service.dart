@@ -61,17 +61,17 @@ class CredentialAuthService {
     try {
       final supabase = Supabase.instance.client;
 
-      // 1. Query student_credentials table
+      // 1. Query student_credentials table (supports allowed_subjects, package_id, grade)
       final response = await supabase
           .from('student_credentials')
-          .select('id, full_name, phone_number, password, package_id, device_id, is_active')
+          .select('id, full_name, phone_number, password, package_id, allowed_subjects, grade, device_id, is_active')
           .eq('phone_number', cleanPhone)
           .maybeSingle();
 
       if (response == null) {
         return const CredentialAuthResult(
           status: CredentialAuthStatus.invalidCredentials,
-          message: 'No student account found with this phone number. Please check credentials or contact admin.',
+          message: 'ምንም ተማሪ በዚህ ስልክ ቁጥር አልተገኘም። እባክዎ ስልክ ቁጥርዎን ያረጋግጡ ወይም አስተዳዳሪውን ያነጋግሩ።',
         );
       }
 
@@ -79,7 +79,7 @@ class CredentialAuthService {
       if (dbPassword != cleanPass) {
         return const CredentialAuthResult(
           status: CredentialAuthStatus.invalidCredentials,
-          message: 'Incorrect password. Please verify the password provided by admin.',
+          message: 'የገቡት የይለፍ ቃል የተሳሳተ ነው። እባክዎ በአስተዳዳሪ የተሰጦትን የይለፍ ቃል በትክክል ያስገቡ።',
         );
       }
 
@@ -87,28 +87,29 @@ class CredentialAuthService {
       if (!isActive) {
         return const CredentialAuthResult(
           status: CredentialAuthStatus.inactiveAccount,
-          message: 'This account is currently deactivated. Please contact admin.',
+          message: 'ይህ መለያ በአሁኑ ጊዜ አገልግሎቱ ተቋርጧል። እባክዎ አስተዳዳሪውን ያነጋግሩ።',
         );
       }
 
       final String? registeredDeviceId = response['device_id'] as String?;
       final String packageId = response['package_id'] as String? ?? 'pkg_grade_$grade';
+      final dynamic rawSubjects = response['allowed_subjects'];
       final String studentName = response['full_name'] as String? ?? cleanName;
 
-      // 2. Single-Device Binding Enforcement
+      // 2. Single-Device Automated Binding & Anti-Sharing Enforcement
       if (registeredDeviceId == null || registeredDeviceId.trim().isEmpty) {
-        // First login: Lock account to current hardware device ID
+        // First login on this device: Bind hardware device in background
         await supabase
             .from('student_credentials')
             .update({'device_id': currentDeviceId})
             .eq('phone_number', cleanPhone);
 
-        debugPrint('[CredentialAuthService] Bound device $currentDeviceId to account $cleanPhone');
+        debugPrint('[CredentialAuthService] Automatically bound device to account $cleanPhone');
       } else if (registeredDeviceId != currentDeviceId) {
-        // Anti-Account Sharing: Device Mismatch
+        // Device Mismatch (Account active on another device) - Keep Device ID completely secret
         return CredentialAuthResult(
           status: CredentialAuthStatus.deviceMismatchLocked,
-          message: 'This account is already registered on another phone ($registeredDeviceId). Account sharing is strictly restricted.',
+          message: 'ይህ መለያ አስቀድሞ በሌላ ስልክ ላይ ገብቷል። መለያ ማጋራት በጥብቅ የተከለከለ ነው። ስልክ ከቀየሩ አስተዳዳሪውን ያነጋግሩ።',
           studentName: studentName,
           phoneNumber: cleanPhone,
         );
@@ -122,10 +123,8 @@ class CredentialAuthService {
       await prefs.setString(_keyActivePackage, packageId);
       await prefs.setString(_keyBoundDeviceId, currentDeviceId);
 
-      // 4. Unlock the package(s) locally via SubscriptionService strictly based on DB package_id.
-      // E.g., 'pkg_g9_physics' unlocks ONLY Grade 9 Physics.
-      // 'pkg_grade_9' unlocks all subjects of Grade 9.
-      // Supports comma-separated packages e.g. 'pkg_g9_physics,pkg_g9_chemistry'.
+      // 4. Dynamic Multi-Course/Subject Unlock (Password never changes when admin adds subjects)
+      // Unlock all packages from packageId
       for (final pkg in packageId.split(',')) {
         final trimmed = pkg.trim();
         if (trimmed.isNotEmpty) {
@@ -133,15 +132,34 @@ class CredentialAuthService {
         }
       }
 
+      // Unlock all subjects from allowed_subjects array or string if provided
+      if (rawSubjects is List) {
+        for (final sub in rawSubjects) {
+          final sName = sub.toString().toLowerCase().trim();
+          if (sName.isNotEmpty) {
+            await SubscriptionService.unlockPackage('pkg_g${grade}_$sName');
+            await SubscriptionService.unlockPackage(sName);
+          }
+        }
+      } else if (rawSubjects is String && rawSubjects.isNotEmpty) {
+        for (final sub in rawSubjects.split(',')) {
+          final sName = sub.toLowerCase().trim();
+          if (sName.isNotEmpty) {
+            await SubscriptionService.unlockPackage('pkg_g${grade}_$sName');
+            await SubscriptionService.unlockPackage(sName);
+          }
+        }
+      }
+
       return CredentialAuthResult(
         status: CredentialAuthStatus.success,
-        message: 'Login successful! Lifetime access unlocked on this device.',
+        message: 'በተሳካ ሁኔታ ገብተዋል! የተፈቀዱ የትምህርት ክፍሎች በሙሉ ተከፍተዋል።',
         packageId: packageId,
         studentName: studentName,
         phoneNumber: cleanPhone,
       );
     } catch (e) {
-      debugPrint('[CredentialAuthService] Online verification failed: $e');
+      debugPrint('[CredentialAuthService] Verification server error: $e');
 
       // Offline fallback: Check if this user previously logged in on this exact device
       final prefs = await SharedPreferences.getInstance();
@@ -152,16 +170,16 @@ class CredentialAuthService {
       if (wasAuth && savedPhone == cleanPhone && savedBoundDevice == currentDeviceId) {
         return CredentialAuthResult(
           status: CredentialAuthStatus.success,
-          message: 'Offline session validated on your registered device.',
+          message: 'የቀድሞው ክፍለ-ጊዜዎ በዚህ ስልክ ላይ በተሳካ ሁኔታ ተረጋግጧል።',
           packageId: prefs.getString(_keyActivePackage) ?? 'pkg_grade_$grade',
           studentName: prefs.getString(_keyFullName) ?? cleanName,
           phoneNumber: cleanPhone,
         );
       }
 
-      return CredentialAuthResult(
+      return const CredentialAuthResult(
         status: CredentialAuthStatus.networkError,
-        message: 'Could not connect to verification server. Please check your internet connection and try again: $e',
+        message: 'ከአገልጋዩ ጋር መገናኘት አልተቻለም። እባክዎ የኢንተርኔት ግንኙነትዎን ያረጋግጡና እንደገና ይሞክሩ።',
       );
     }
   }
