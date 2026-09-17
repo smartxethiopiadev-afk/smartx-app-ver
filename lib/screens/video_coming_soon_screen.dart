@@ -24,7 +24,7 @@ class VideoComingSoonScreen extends StatelessWidget {
     final String msg = Uri.encodeComponent(
       'ሰላም Smart Learn Ethiopia, Grade $grade $subject Unit $unitNumber የቪዲዮ ትምህርት መቼ እንደሚለቀቅ ለማወቅ እና ቻናሉን ለመቀላቀል ፈልጌ ነው።',
     );
-    final Uri telegramUri = Uri.parse('https://t.me/SmartX_Discussion');
+    final Uri telegramUri = Uri.parse('https://t.me/SmartX_Discussion?text=$msg');
     try {
       if (await canLaunchUrl(telegramUri)) {
         await launchUrl(telegramUri, mode: LaunchMode.externalApplication);

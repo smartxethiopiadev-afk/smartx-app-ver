@@ -524,7 +524,7 @@ class _NotesScreenState extends State<NotesScreen> {
     final shareContent = '📚 ${widget.subjectId.toUpperCase()} Grade ${widget.grade} — Unit ${widget.unitNumber}\n'
         '$title\n\n'
         '${cleanText.length > 300 ? cleanText.substring(0, 300) + '...' : cleanText}\n\n'
-        'Study with Ethio Concept Center App!\n'
+        'Study with Smart Learn Ethiopia App!\n'
         'Telegram: $_telegramChannelUrl';
 
     Share.share(shareContent, subject: title);
@@ -793,6 +793,17 @@ class _NotesScreenState extends State<NotesScreen> {
             ),
             tooltip: "Bookmark",
             onPressed: _toggleBookmark,
+          ),
+
+          // 3. Share
+          IconButton(
+            icon: Icon(
+              Icons.share_outlined,
+              size: 21,
+              color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
+            ),
+            tooltip: "Share",
+            onPressed: _shareNote,
           ),
           const SizedBox(width: 8),
         ],

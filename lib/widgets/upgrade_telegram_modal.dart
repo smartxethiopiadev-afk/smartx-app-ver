@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/package_model.dart';
 import '../services/subscription_service.dart';
-import '../services/device_service.dart';
 import '../services/activation_service.dart';
 
 class UpgradeTelegramModal extends StatefulWidget {
@@ -221,15 +220,14 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
           ),
         );
       }
-    } else if (result.status == DeviceBindingStatus.mismatch) {
-      _showDeviceMismatchDialog(result.registeredDeviceId ?? 'Other Device');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            widget.languageCode == 'am'
-                ? 'ምንም ንቁ ክፍያ አልተገኘም። በቴሌግራም አስተዳዳሪውን ያነጋግሩ (@smart_x_help)'
-                : 'No active subscription found. Please contact admin on Telegram (@smart_x_help)',
+            result.message ??
+                (widget.languageCode == 'am'
+                    ? 'ምንም ንቁ ክፍያ አልተገኘም። በቴሌግራም አስተዳዳሪውን ያነጋግሩ (@smart_x_help)'
+                    : 'No active subscription found. Please contact admin on Telegram (@smart_x_help)'),
           ),
           backgroundColor: Colors.orangeAccent,
           action: SnackBarAction(
@@ -327,84 +325,7 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
     }
   }
 
-  void _showDeviceMismatchDialog(String registeredDeviceId) {
-    final bool isAm = widget.languageCode == 'am';
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: widget.isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        icon: const Icon(Icons.phonelink_lock_rounded, color: Colors.redAccent, size: 48),
-        title: Text(
-          isAm ? 'አካውንቱ በሌላ ስልክ ላይ ተመዝግቧል!' : 'Account Bound to Another Device!',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: 16,
-            color: widget.isDarkMode ? Colors.white : const Color(0xFF0F172A),
-          ),
-          textAlign: TextAlign.center,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              isAm
-                  ? 'ይህ አካውንት አስቀድሞ በሌላ ስልክ ($registeredDeviceId) ላይ ነቅቷል። እያንዳንዱ ፓኬጅ ለአንድ ስልክ ብቻ ነው የሚፈቀደው።'
-                  : 'This account is already active on another device ($registeredDeviceId). Each subscription is valid for one phone only.',
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.45,
-                color: widget.isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF475569),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.redAccent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline_rounded, color: Colors.redAccent, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      isAm
-                          ? 'ስልክ ከቀየሩ ወይም ከጠፋብዎ በአስተዳዳሪው በኩል ማዘዋወር ይችላሉ።'
-                          : 'If you changed your phone, contact admin to reset the device binding.',
-                      style: const TextStyle(fontSize: 11.5, color: Colors.redAccent, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(isAm ? 'ዝጋ' : 'Close'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              _launchTelegram();
-            },
-            icon: const Icon(Icons.send_rounded, size: 16),
-            label: Text(isAm ? 'አስተዳዳሪውን ያነጋግሩ' : 'Contact Admin'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0084FF),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {

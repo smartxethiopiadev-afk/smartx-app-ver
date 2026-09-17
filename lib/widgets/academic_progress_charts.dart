@@ -162,7 +162,7 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
             children: [
               _buildStatCard(
                 label: isAm ? 'የልምምድ ፈተና (Trade Quiz)' : 'Trade Quiz Count',
-                value: '$_tradeQuizCompleted Solved',
+                value: '${_completedQuizzes > 0 ? _completedQuizzes : _tradeQuizCompleted} Solved',
                 icon: Icons.quiz_rounded,
                 color: const Color(0xFF10B981),
                 isLight: isLight,

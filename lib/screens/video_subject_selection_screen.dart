@@ -232,9 +232,8 @@ class VideoSubjectSelectionScreen extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (context) => VideoUnitSelectionScreen(
                             grade: grade,
-                            subjectId: sub['id'],
-                            subjectTitle: title,
-                            themeColor: subjectColor,
+                            subject: sub['id'] ?? title,
+                            subjectColor: subjectColor,
                             isDarkMode: isDarkMode,
                             languageCode: languageCode,
                           ),

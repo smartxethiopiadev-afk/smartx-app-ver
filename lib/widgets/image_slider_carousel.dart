@@ -174,7 +174,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                               fontSize: 15.0,
                               fontWeight: FontWeight.w900,
                               shadows: [
-                                Shadow(color: Colors.black82, blurRadius: 4),
+                                Shadow(color: Colors.black87, blurRadius: 4),
                               ],
                             ),
                           ),
