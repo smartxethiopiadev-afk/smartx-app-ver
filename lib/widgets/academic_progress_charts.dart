@@ -24,6 +24,11 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
   String _registeredGrade = '12';
   String _fullName = '';
 
+  // Progressive Metrics stored in SharedPreferences
+  double _velocityStudyRate = 14.5; // Questions answered per 10 mins
+  int _masterQuizScore = 88; // Master quiz score percentage
+  int _tradeQuizCompleted = 12; // Practice/Trade Quizzes completed
+
   @override
   void initState() {
     super.initState();
@@ -44,11 +49,18 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
       }
     }
 
+    final double savedVelocity = prefs.getDouble('velocity_study_rate') ?? (count > 0 ? (count * 4.2) : 12.0);
+    final int savedMasterScore = prefs.getInt('master_quiz_score') ?? maxScore;
+    final int savedTradeQuiz = prefs.getInt('trade_quiz_completed') ?? count;
+
     setState(() {
       _completedQuizzes = count;
       _highestScore = maxScore;
       _registeredGrade = prefs.getString('user_grade') ?? '${widget.currentGrade}';
-      _fullName = prefs.getString('user_fullName') ?? prefs.getString('user_name') ?? 'ተማሪ';
+      _fullName = prefs.getString('user_fullName') ?? prefs.getString('user_name') ?? 'Student';
+      _velocityStudyRate = savedVelocity;
+      _masterQuizScore = savedMasterScore;
+      _tradeQuizCompleted = savedTradeQuiz;
     });
   }
 
@@ -100,7 +112,7 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isAm ? 'የጥናት ውጤት ማጠቃለያ' : 'Study Progress Summary',
+                      isAm ? 'የጥናት እና ፈተና ውጤት ማጠቃለያ' : 'Progressive Study & Quiz Metrics',
                       style: GoogleFonts.notoSansEthiopic(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
@@ -108,7 +120,7 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
                       ),
                     ),
                     Text(
-                      isAm ? 'የእርስዎን የትምህርት እንቅስቃሴ በስልክዎ ያንብቡ' : 'Track your local learning achievements',
+                      isAm ? 'የእርስዎን የትምህርት እንቅስቃሴ በስልክዎ ያንብቡ (SharedPreferences Data)' : 'Track local velocity, master & trade quiz stats',
                       style: GoogleFonts.notoSansEthiopic(
                         fontSize: 11.5,
                         color: subColor,
@@ -120,12 +132,38 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
             ],
           ),
           const SizedBox(height: 18),
+
+          // Stat Cards Grid
           Row(
             children: [
               _buildStatCard(
-                label: isAm ? 'የተጠናቀቁ ፈተናዎች' : 'Completed Quizzes',
-                value: '$_completedQuizzes',
-                icon: Icons.assignment_turned_in_rounded,
+                label: isAm ? 'የጥናት ፍጥነት (Velocity)' : 'Velocity Study',
+                value: '${_velocityStudyRate.toStringAsFixed(1)} q/10m',
+                icon: Icons.speed_rounded,
+                color: const Color(0xFF0284C7),
+                isLight: isLight,
+                textColor: textColor,
+                subColor: subColor,
+              ),
+              const SizedBox(width: 12),
+              _buildStatCard(
+                label: isAm ? 'ማስተር ፈተና (Master Quiz)' : 'Master Quiz Score',
+                value: _masterQuizScore > 0 ? '$_masterQuizScore%' : 'N/A',
+                icon: Icons.military_tech_rounded,
+                color: const Color(0xFFF59E0B),
+                isLight: isLight,
+                textColor: textColor,
+                subColor: subColor,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _buildStatCard(
+                label: isAm ? 'የልምምድ ፈተና (Trade Quiz)' : 'Trade Quiz Count',
+                value: '$_tradeQuizCompleted Solved',
+                icon: Icons.quiz_rounded,
                 color: const Color(0xFF10B981),
                 isLight: isLight,
                 textColor: textColor,
@@ -133,10 +171,10 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
               ),
               const SizedBox(width: 12),
               _buildStatCard(
-                label: isAm ? 'ከፍተኛ ውጤት' : 'Highest Score',
+                label: isAm ? 'ከፍተኛ ውጤት' : 'Highest Quiz Score',
                 value: _highestScore > 0 ? '$_highestScore%' : 'N/A',
                 icon: Icons.workspace_premium_rounded,
-                color: const Color(0xFFF59E0B),
+                color: const Color(0xFF8B5CF6),
                 isLight: isLight,
                 textColor: textColor,
                 subColor: subColor,
@@ -150,7 +188,7 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
                 label: isAm ? 'የተመዘገቡበት ክፍል' : 'Registered Grade',
                 value: 'Grade $_registeredGrade',
                 icon: Icons.school_rounded,
-                color: const Color(0xFF0284C7),
+                color: const Color(0xFFEC4899),
                 isLight: isLight,
                 textColor: textColor,
                 subColor: subColor,
@@ -160,7 +198,7 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
                 label: isAm ? 'የተማሪ ስም' : 'Student Name',
                 value: _fullName,
                 icon: Icons.person_rounded,
-                color: const Color(0xFF8B5CF6),
+                color: const Color(0xFF06B6D4),
                 isLight: isLight,
                 textColor: textColor,
                 subColor: subColor,
@@ -199,26 +237,27 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
                 Expanded(
                   child: Text(
                     label,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.notoSansEthiopic(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: subColor,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 16,
+              style: TextStyle(
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
                 color: textColor,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

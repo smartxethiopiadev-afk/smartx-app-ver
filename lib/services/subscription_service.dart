@@ -3,6 +3,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'device_service.dart';
 
+class DeviceBindingResult {
+  final bool isAllowed;
+  final String? message;
+  const DeviceBindingResult({required this.isAllowed, this.message});
+}
+
 class SubscriptionService {
   static const String _unlockedKey = 'smartx_unlocked_packages';
   static Set<String> _unlockedPackages = {};
@@ -213,5 +219,76 @@ class SubscriptionService {
     }
 
     return false;
+  }
+
+  static Future<DeviceBindingResult> syncWithSupabaseAndVerifyDevice(
+    String phoneNumber, {
+    String? packageId,
+  }) async {
+    final cleanPhone = phoneNumber.replaceAll(RegExp(r'\s+'), '').trim();
+    if (cleanPhone.isEmpty) {
+      return const DeviceBindingResult(
+        isAllowed: false,
+        message: 'ስልክ ቁጥር ባዶ መሆን አይችልም። / Phone number cannot be empty.',
+      );
+    }
+
+    try {
+      final supabase = Supabase.instance.client;
+      final currentDeviceId = await DeviceService.getDeviceId();
+
+      final res = await supabase
+          .from('students')
+          .select()
+          .eq('phone_number', cleanPhone)
+          .maybeSingle();
+
+      if (res != null) {
+        final String? registeredDeviceId = res['device_id'] as String?;
+        if (registeredDeviceId != null &&
+            registeredDeviceId.isNotEmpty &&
+            registeredDeviceId != currentDeviceId) {
+          return const DeviceBindingResult(
+            isAllowed: false,
+            message: 'ይህ ስልክ ቁጥር በሌላ መሳሪያ ላይ የተመዘገበ ነው። / Device mismatch.',
+          );
+        }
+
+        final List<dynamic>? rawPkgs = res['unlocked_packages'] as List<dynamic>?;
+        final List<String> pkgs = rawPkgs != null
+            ? rawPkgs.map((e) => e.toString()).toList()
+            : [];
+
+        if (packageId != null && !pkgs.contains(packageId)) {
+          pkgs.add(packageId);
+          await supabase.from('students').update({
+            'unlocked_packages': pkgs,
+            'device_id': currentDeviceId,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          }).eq('phone_number', cleanPhone);
+        }
+
+        await setUnlockedPackages(pkgs);
+        return const DeviceBindingResult(isAllowed: true);
+      } else {
+        final List<String> pkgs = packageId != null ? [packageId] : ['all_grades'];
+        await supabase.from('students').insert({
+          'full_name': 'Student',
+          'phone_number': cleanPhone,
+          'grade': 12,
+          'device_id': currentDeviceId,
+          'is_active': true,
+          'unlocked_packages': pkgs,
+        });
+        await setUnlockedPackages(pkgs);
+        return const DeviceBindingResult(isAllowed: true);
+      }
+    } catch (e) {
+      debugPrint('[SubscriptionService] syncWithSupabaseAndVerifyDevice error: $e');
+      if (packageId != null) {
+        await unlockPackage(packageId);
+      }
+      return const DeviceBindingResult(isAllowed: true);
+    }
   }
 }

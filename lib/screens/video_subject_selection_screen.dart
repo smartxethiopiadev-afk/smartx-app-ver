@@ -139,7 +139,7 @@ class VideoSubjectSelectionScreen extends StatelessWidget {
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded, color: textColor),
           onPressed: () => Navigator.of(context).pop(),
-          tooltip: isEn ? 'Back to Grades' : 'ወደ ክፍሎች ተመለስ',
+          tooltip: isEn ? 'Back' : 'ተመለስ',
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,7 +169,7 @@ class VideoSubjectSelectionScreen extends StatelessWidget {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           children: [
-            // Header Info Pill
+            // Header Info Pill styled exactly like Quiz & Short Notes
             Container(
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -182,14 +182,14 @@ class VideoSubjectSelectionScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.video_collection_rounded, color: Color(0xFF0084FF), size: 22),
+                  const Icon(Icons.play_circle_fill_rounded, color: Color(0xFF0084FF), size: 24),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       isEn
-                          ? 'Choose a subject to explore curriculum unit walkthroughs.'
-                          : 'የዩኒት ማብራሪያዎችን ለመመልከት የትምህርት ዓይነት ይምረጡ።',
-                      style: TextStyle(
+                          ? 'Select a subject to watch chapter video walkthroughs aligned with Quiz & Short Notes.'
+                          : 'ከፈተና እና ማስታወሻዎች ጋር የተጣጣሙ የዩኒት የቪዲዮ ማብራሪያዎችን ለማየት ትምህርት ይምረጡ።',
+                      style: GoogleFonts.notoSansEthiopic(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: textColor,
@@ -200,43 +200,41 @@ class VideoSubjectSelectionScreen extends StatelessWidget {
               ),
             ),
 
-            // Subject Cards
-            ...subjects.map((subj) {
-              final Color color = subj['color'] as Color;
-              final IconData icon = subj['icon'] as IconData;
-              final String enTitle = subj['enTitle'] as String;
-              final String amTitle = subj['amTitle'] as String;
-              final int unitsCount = subj['units'] as int;
-
-              final String displayTitle = isEn ? enTitle : amTitle;
-              final String subTitle = isEn ? amTitle : enTitle;
+            // Subject Cards Grid/List matching Quiz & Short Note screen styling
+            ...subjects.map((sub) {
+              final Color subjectColor = sub['color'] as Color;
+              final IconData subjectIcon = sub['icon'] as IconData;
+              final String title = isEn ? sub['enTitle'] : sub['amTitle'];
+              final int unitsCount = sub['units'] as int;
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
                   color: cardBg,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: borderColor),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: borderColor, width: 1.2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: isLight ? 0.03 : 0.16),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withValues(alpha: isLight ? 0.03 : 0.18),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
                 child: Material(
                   color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(18),
                     onTap: () {
-                      Navigator.of(context).push(
+                      Navigator.push(
+                        context,
                         MaterialPageRoute(
-                          builder: (_) => VideoUnitSelectionScreen(
+                          builder: (context) => VideoUnitSelectionScreen(
                             grade: grade,
-                            subject: subj['id'] as String,
-                            subjectColor: color,
+                            subjectId: sub['id'],
+                            subjectTitle: title,
+                            themeColor: subjectColor,
                             isDarkMode: isDarkMode,
                             languageCode: languageCode,
                           ),
@@ -244,89 +242,61 @@ class VideoSubjectSelectionScreen extends StatelessWidget {
                       );
                     },
                     child: Padding(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          // Subject Icon Container
                           Container(
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: color.withValues(alpha: isLight ? 0.12 : 0.22),
+                              color: subjectColor.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: color.withValues(alpha: isLight ? 0.25 : 0.4),
-                              ),
+                              border: Border.all(color: subjectColor.withValues(alpha: 0.3)),
                             ),
-                            child: Center(
-                              child: Icon(icon, color: color, size: 24),
-                            ),
+                            child: Icon(subjectIcon, color: subjectColor, size: 24),
                           ),
-
                           const SizedBox(width: 14),
-
-                          // Titles
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  displayTitle,
+                                  title,
                                   style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 15,
+                                    fontSize: 15.5,
                                     fontWeight: FontWeight.w800,
                                     color: textColor,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  subTitle,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: subColor,
-                                  ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: subjectColor.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        isEn ? '$unitsCount Units Available' : '$unitsCount ዩኒቶች አሉ',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: subjectColor,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      isEn ? '• Videos & Notes' : '• ቪዲዮ እና ማስታወሻ',
+                                      style: TextStyle(fontSize: 11, color: subColor, fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-
-                          // Units & Free Badge
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF10B981).withValues(alpha: isLight ? 0.12 : 0.25),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  isEn ? 'Unit 1 Free' : 'ዩኒት 1 ነጻ',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                    color: Color(0xFF10B981),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                isEn ? '$unitsCount Units' : '$unitsCount ዩኒቶች',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: subColor,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.chevron_right_rounded,
-                            color: subColor.withValues(alpha: 0.6),
-                            size: 22,
-                          ),
+                          Icon(Icons.chevron_right_rounded, color: subColor, size: 22),
                         ],
                       ),
                     ),

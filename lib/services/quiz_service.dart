@@ -41,7 +41,7 @@ class QuizService {
           .eq('unit_number', unit)
           .order('order_index', ascending: true);
 
-      if (response == null || (response as List).isEmpty) {
+      if ((response as List).isEmpty) {
         // Try fallback with raw subject name
         final fallbackResponse = await _supabase
             .from('questions')
@@ -51,7 +51,7 @@ class QuizService {
             .eq('unit_number', unit)
             .order('order_index', ascending: true);
 
-        if (fallbackResponse == null || (fallbackResponse as List).isEmpty) {
+        if ((fallbackResponse as List).isEmpty) {
           debugPrint("QuizService WARNING: No questions found for grade $grade, subject $subject, unit $unit");
           return [];
         }

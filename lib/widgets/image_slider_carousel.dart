@@ -1,4 +1,3 @@
-// ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 
@@ -20,55 +19,44 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
   int _currentSlideIndex = 0;
   final CarouselSliderController _carouselController = CarouselSliderController();
 
-  // Education Oriented high quality slides with translated titles and descriptions
   final List<Map<String, dynamic>> _slidesData = [
     {
-      'assetPath': 'assets/images/student_phone.png',
-      'titleEn': 'Collaborative Learning Hub',
-      'titleAm': 'የጋራ ጥናት እና ማጠቃለያ',
-      'descEn': 'Connect and share summaries and matric preparation strategies with students nationwide.',
-      'descAm': 'አጠቃላይ ማጠቃለያዎችን እና የማትሪክ ዝግጅቶችን በሀገር አቀፍ ደረጃ ካሉ ተማሪዎች ጋር ይጋሩ።',
-      'accentColor': Color(0xFF0084FF),
-      'tagEn': 'ETHIO CONCEPT CENTER',
-      'tagAm': 'ኢትዮ ኮንሴፕት ሴንተር',
+      'assetPath': 'assets/images/home_banner1.png',
+      'titleEn': 'Smart Learn Ethiopia Hub',
+      'titleAm': 'ስማርት ለርን ኢትዮጵያ - አጠቃላይ ትምህርት',
+      'descEn': 'Comprehensive Grades 9-12 curriculum notes, formulas, and model exam prep.',
+      'descAm': 'ከ9-12ኛ ክፍል አጠቃላይ የትምህርት ማጠቃለያዎች፣ ቀመሮች እና የማትሪክ ዝግጅቶች።',
+      'accentColor': const Color(0xFF0084FF),
+      'tagEn': 'SMART LEARN ETHIOPIA',
+      'tagAm': 'ስማርት ለርን ኢትዮጵያ',
     },
     {
-      'assetPath': 'assets/images/student_tablet.png',
-      'titleEn': 'Curriculum Video Masterclasses',
+      'assetPath': 'assets/images/home_banner2.png',
+      'titleEn': 'Curriculum Video Walkthroughs',
       'titleAm': 'የቪዲዮ ትምህርቶች እና ማብራሪያዎች',
-      'descEn': 'Master Grade 9-12 units with crystal clear visual breakdowns and formulas.',
-      'descAm': 'ከ9-12ኛ ክፍል ያሉትን ሁሉንም የትምህርት ክፍሎች በቪዲዮ ማብራሪያ በቀላሉ ይረዱ።',
-      'accentColor': Color(0xFFEF4444),
+      'descEn': 'Master Grade 9-12 unit walkthroughs with crystal clear problem solving.',
+      'descAm': 'ከ9-12ኛ ክፍል ያሉትን ሁሉንም የትምህርት ምዕራፎች በቪዲዮ ማብራሪያ በቀላሉ ይረዱ።',
+      'accentColor': const Color(0xFF10B981),
       'tagEn': 'VIDEO LESSONS',
-      'tagAm': 'የቪዲዮ ትምህርቶች',
+      'tagAm': 'የቪዲዮ ማብራሪያዎች',
     },
     {
-      'assetPath': 'assets/images/student_laptop.png',
-      'titleEn': 'Excellence in National Exams',
+      'assetPath': 'assets/images/student_phone.png',
+      'titleEn': 'Excellence in Matric Exams',
       'titleAm': 'ለማትሪክ ፈተና ከፍተኛ ውጤት',
-      'descEn': 'Unlock high-quality practice tests, interactive flashcards, and verified solutions.',
-      'descAm': 'ከፍተኛ ጥራት ያላቸው የልምምድ ፈተናዎች፣ አጫጭር ካርዶች እና የተረጋገጡ ማብራሪያዎችን ያግኙ።',
-      'accentColor': Color(0xFF10B981),
+      'descEn': 'Unlock unit-by-unit practice tests, interactive cheat-cards, and verified solutions.',
+      'descAm': 'ከፍተኛ ጥራት ያላቸው የልምምድ ፈተናዎች፣ አጫጭር ካርዶች እና የተረጋገጡ ማብራሪያዎች።',
+      'accentColor': const Color(0xFFF59E0B),
       'tagEn': 'MATRIC READY',
       'tagAm': 'ለፈተና ዝግጁ',
     },
     {
-      'assetPath': 'assets/images/student_phone.png',
-      'titleEn': 'Track Academic Velocity',
-      'titleAm': 'የትምህርት እድገትዎን ይከታተሉ',
-      'descEn': 'Monitor study hours, completed chapters, and detailed mock success statistics.',
-      'descAm': 'የጥናት ሰዓታትን፣ ያለቁ ምዕራፎችን እና ዝርዝር የፈተና ውጤቶችን ይቆጣጠሩ።',
-      'accentColor': Color(0xFFF59E0B),
-      'tagEn': 'STUDY ANALYTICS',
-      'tagAm': 'የውጤት ትንታኔ',
-    },
-    {
       'assetPath': 'assets/images/student_tablet.png',
-      'titleEn': 'Offline Study Anywhere',
+      'titleEn': '100% Offline Learning',
       'titleAm': 'ያለ ኢንተርኔት በየትኛውም ቦታ ያጥኑ',
-      'descEn': 'Download textbooks, short notes, unit formulas, and mock tests for offline learning.',
-      'descAm': 'የትምህርት ክፍሎችን፣ አጫጭር ማስታወሻዎችን እና የልምምድ ፈተናዎችን አውርደው ያለ ኢንተርኔት ይጠቀሙ።',
-      'accentColor': Color(0xFF8B5CF6),
+      'descEn': 'Download short notes and practice quizzes to study anywhere without internet.',
+      'descAm': 'አጫጭር ማስታወሻዎችን እና የልምምድ ፈተናዎችን አውርደው ያለ ኢንተርኔት ይጠቀሙ።',
+      'accentColor': const Color(0xFF8B5CF6),
       'tagEn': 'OFFLINE ACCESS',
       'tagAm': 'ከመስመር ውጭ ዝግጁ',
     },
@@ -84,7 +72,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
           carouselController: _carouselController,
           itemCount: _slidesData.length,
           options: CarouselOptions(
-            height: 125.0,
+            height: 140.0,
             autoPlay: true,
             autoPlayInterval: const Duration(seconds: 4),
             autoPlayAnimationDuration: const Duration(milliseconds: 700),
@@ -101,6 +89,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
             final slide = _slidesData[index];
             final String title = widget.languageCode == 'en' ? slide['titleEn']! : slide['titleAm']!;
             final String desc = widget.languageCode == 'en' ? slide['descEn']! : slide['descAm']!;
+            final String tag = widget.languageCode == 'en' ? slide['tagEn']! : slide['tagAm']!;
             final Color accentColor = slide['accentColor']!;
 
             return Container(
@@ -109,8 +98,8 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                 borderRadius: BorderRadius.circular(16.0),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isLight ? 0.06 : 0.25),
-                    blurRadius: 8.0,
+                    color: Colors.black.withValues(alpha: isLight ? 0.08 : 0.3),
+                    blurRadius: 10.0,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -119,7 +108,6 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                 borderRadius: BorderRadius.circular(16.0),
                 child: Stack(
                   children: [
-                    // Slide Image background
                     Positioned.fill(
                       child: Image.asset(
                         slide['assetPath']!,
@@ -130,7 +118,6 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                         ),
                       ),
                     ),
-                    // High-quality dark multi-gradient mask overlay
                     Positioned.fill(
                       child: Container(
                         decoration: BoxDecoration(
@@ -138,62 +125,59 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              Colors.black.withValues(alpha: 0.1),
-                              Colors.black.withValues(alpha: 0.4),
-                              Colors.black.withValues(alpha: 0.82),
+                              Colors.black.withValues(alpha: 0.15),
+                              Colors.black.withValues(alpha: 0.45),
+                              Colors.black.withValues(alpha: 0.85),
                             ],
                           ),
                         ),
                       ),
                     ),
-                    // Text details and badge info overlay
                     Positioned(
-                      left: 14,
-                      bottom: 10,
-                      right: 14,
+                      left: 16.0,
+                      bottom: 14.0,
+                      right: 16.0,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: accentColor.withValues(alpha: 0.25),
+                              color: accentColor,
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: accentColor, width: 1),
                             ),
                             child: Text(
-                              widget.languageCode == 'en' 
-                                  ? (slide['tagEn'] ?? 'ETHIO CONCEPT CENTER') 
-                                  : (slide['tagAm'] ?? 'ኢትዮ ኮንሴፕት ሴንተር'),
+                              tag,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 8.0,
+                                fontSize: 9.5,
                                 fontWeight: FontWeight.w900,
-                                letterSpacing: 0.6,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 5.0),
                           Text(
                             title,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.2,
+                              fontSize: 15.0,
+                              fontWeight: FontWeight.w900,
+                              shadows: [
+                                Shadow(color: Colors.black82, blurRadius: 4),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 2.0),
                           Text(
                             desc,
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontSize: 10.0,
-                              height: 1.2,
-                              fontWeight: FontWeight.w500,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11.0,
+                              fontWeight: FontWeight.w600,
+                              height: 1.3,
                             ),
                           ),
                         ],
@@ -205,25 +189,22 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
             );
           },
         ),
-        const SizedBox(height: 8),
-        // Dots Indicator for slide selection
+        const SizedBox(height: 8.0),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: _slidesData.asMap().entries.map((entry) {
-            final int index = entry.key;
-            final bool isActive = _currentSlideIndex == index;
-
+            final bool isSelected = _currentSlideIndex == entry.key;
             return GestureDetector(
-              onTap: () => _carouselController.animateToPage(index),
+              onTap: () => _carouselController.animateToPage(entry.key),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
-                width: isActive ? 16.0 : 6.0,
-                height: 5.0,
+                width: isSelected ? 20.0 : 6.0,
+                height: 6.0,
                 margin: const EdgeInsets.symmetric(horizontal: 3.0),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3.0),
-                  color: isActive
-                      ? (isLight ? const Color(0xFF0284C7) : const Color(0xFF38BDF8))
+                  borderRadius: BorderRadius.circular(4.0),
+                  color: isSelected
+                      ? const Color(0xFF0084FF)
                       : (isLight ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
                 ),
               ),

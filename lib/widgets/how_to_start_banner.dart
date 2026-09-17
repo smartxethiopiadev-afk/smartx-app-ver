@@ -16,6 +16,7 @@ class HowToStartBanner extends StatelessWidget {
 
   void _showHowToStartPopUp(BuildContext context) {
     final bool isLight = !isDarkMode;
+    final bool isAm = languageCode == 'am';
 
     final Color dialogBg = isLight ? Colors.white : const Color(0xFF1E293B);
     final Color textPrimary = isLight ? const Color(0xFF0F172A) : Colors.white;
@@ -24,27 +25,39 @@ class HowToStartBanner extends StatelessWidget {
     final steps = [
       {
         'num': '1',
+        'title': isAm ? '1. ክፍልዎንና የትምህርት አይነትዎን ይምረጡ' : '1. Select Your Grade & Subject',
         'icon': Icons.school_rounded,
         'color': const Color(0xFF0284C7),
-        'text': 'ክፍልዎንና የትምህርት አይነትዎን ይምረጡ።',
+        'text': isAm
+            ? 'በመተግበሪያው የመነሻ ገጽ ላይ ከ 9ኛ እስከ 12ኛ ክፍል የሚፈልጉትን ክፍል ይምረጡ። ከዚያም ሂሳብ፣ ፊዚክስ፣ ኬሚስትሪ፣ ባዮሎጂ ወይም ሌሎች የትምህርት አይነቶችን ይክፈቱ።'
+            : 'Choose your enrolled grade level (Grade 9 to 12) from the home page header. Browse Mathematics, Physics, Chemistry, Biology, English and other subjects.',
       },
       {
         'num': '2',
+        'title': isAm ? '2. ክፍል 1ን በነፃ አጠናቀው እራስዎን ይፈትሹ' : '2. Study Unit 1 100% Free',
         'icon': Icons.check_circle_outline_rounded,
         'color': const Color(0xFF10B981),
-        'text': 'ክፍል 1ን በነፃ አጠናቀው እራስዎን ይፈትሹ።',
+        'text': isAm
+            ? 'የሁሉም የትምህርት አይነቶች ክፍል 1 (Unit 1) ማስታወሻዎች፣ የቪዲዮ ማብራሪያዎች እና የፈተና ጥያቄዎች በነፃ ክፍት የተደረጉ ናቸው። የትምህርቱን ጥራት በነፃ ሞክረው ያረጋግጡ።'
+            : 'Unit 1 for all subjects is completely free for all registered students. Access detailed textbook notes, video tutorials, and interactive quizzes without payment.',
       },
       {
         'num': '3',
-        'icon': Icons.send_rounded,
+        'title': isAm ? '3. ቀጣይ ክፍሎችን ለመክፈት አድሚኑን ያነጋግሩ' : '3. Contact Admin for Package Unlock',
+        'icon': Icons.admin_panel_settings_rounded,
         'color': const Color(0xFF0088CC),
-        'text': 'ክፍል 2 እና ቀጣዮቹን ለመክፈት አድሚኑን በቴሌግራም ያነጋግሩ።',
+        'text': isAm
+            ? 'ክፍል 2 እና ቀጣዮቹን (Unit 2+) ሙሉ በሙሉ ለመክፈት አድሚኑን በቴሌግራም ቀጥታ ያነጋግሩ (@EthioconceptcenterAdmin)። የተከፈተልዎት ፓኬጅ በስልክዎ ላይ በደህንነት ይዘጋጃል።'
+            : 'To unlock Unit 2 and all remaining chapters, contact the official Telegram Admin directly (@EthioconceptcenterAdmin). The admin will instantly unlock your single-device package.',
       },
       {
         'num': '4',
+        'title': isAm ? '4. ያለ ኢንተርኔት (100% Offline) ያጥኑ' : '4. Download & Study 100% Offline',
         'icon': Icons.wifi_off_rounded,
         'color': const Color(0xFF8B5CF6),
-        'text': 'የተከፈተልዎትን ትምህርት አውርደው ያለ ኢንተርኔት (100% Offline) ያጥኑ!',
+        'text': isAm
+            ? 'አንዴ የወረዱ ማስታወሻዎች እና ጥያቄዎች ያለ ምንም ኢንተርኔት በማንኛውም ቦታ እና ጊዜ ይሰራሉ። የፈተና ውጤትዎን በስልክዎ መዝግበው ይከታተሉ።'
+            : 'Once unlocked and downloaded, study all short notes and practice quizzes completely offline without requiring any internet connection.',
       },
     ];
 
@@ -81,18 +94,18 @@ class HowToStartBanner extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'እንዴት ልጀምር? (ቀላል መመሪያ)',
+                          isAm ? 'እንዴት ልጀምር? (ሙሉ ረዘም ያለ መመሪያ)' : 'How to Start? (Detailed Guide)',
                           style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 16,
+                            fontSize: 15.5,
                             fontWeight: FontWeight.w900,
                             color: textPrimary,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '4 ቀላል ደረጃዎች',
+                          isAm ? 'የስማርት ለርን ኢትዮጵያ አጠቃቀም መመሪያ' : 'Smart Learn Ethiopia Usage Workflow',
                           style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 12,
+                            fontSize: 11.5,
                             color: textSecondary,
                             fontWeight: FontWeight.w600,
                           ),
@@ -111,15 +124,14 @@ class HowToStartBanner extends StatelessWidget {
               const Divider(height: 1),
               const SizedBox(height: 18),
 
-              // Steps List in Dialog
+              // Steps List in Dialog with Admin Contact emphasis
               ...steps.map((step) {
                 final Color itemColor = step['color'] as Color;
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.only(bottom: 18),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Numbered Badge
                       Container(
                         width: 32,
                         height: 32,
@@ -139,20 +151,29 @@ class HowToStartBanner extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-
-                      // Content
                       Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            step['text'] as String,
-                            style: GoogleFonts.notoSansEthiopic(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: textPrimary,
-                              height: 1.4,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              step['title'] as String,
+                              style: GoogleFonts.notoSansEthiopic(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w800,
+                                color: textPrimary,
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 4),
+                            Text(
+                              step['text'] as String,
+                              style: GoogleFonts.notoSansEthiopic(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: textSecondary,
+                                height: 1.45,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -162,23 +183,28 @@ class HowToStartBanner extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              // Single Action Button: "ቴሌግራም ቻናል ተቀላቀል"
+              // Single Direct Action Button: Direct Telegram Admin Contact (@EthioconceptcenterAdmin)
               SizedBox(
-                height: 48,
+                height: 50,
                 child: ElevatedButton.icon(
                   onPressed: () async {
                     Navigator.of(ctx).pop();
-                    final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
-                    if (await canLaunchUrl(telegramUri)) {
-                      await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
+                    final Uri adminUri = Uri.parse('https://t.me/EthioconceptcenterAdmin');
+                    if (await canLaunchUrl(adminUri)) {
+                      await launchUrl(adminUri, mode: LaunchMode.externalApplication);
+                    } else {
+                      final Uri fallbackAdminUri = Uri.parse('https://t.me/Ethioconceptcenter');
+                      if (await canLaunchUrl(fallbackAdminUri)) {
+                        await launchUrl(fallbackAdminUri, mode: LaunchMode.externalApplication);
+                      }
                     }
                   },
-                  icon: const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+                  icon: const Icon(Icons.person_outline_rounded, size: 20, color: Colors.white),
                   label: Text(
-                    'ቴሌግራም ቻናል ተቀላቀል',
+                    isAm ? 'አድሚኑን በቴሌግራም ያነጋግሩ (Contact Admin)' : 'Contact Admin on Telegram',
                     style: GoogleFonts.notoSansEthiopic(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13.5,
                       color: Colors.white,
                     ),
                   ),
@@ -200,6 +226,7 @@ class HowToStartBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isLight = !isDarkMode;
+    final bool isAm = languageCode == 'am';
 
     final Color cardBg = isLight ? Colors.white : const Color(0xFF1E293B);
     final Color borderColor = isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155);
@@ -229,7 +256,6 @@ class HowToStartBanner extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                // Icon Box
                 Container(
                   width: 40,
                   height: 40,
@@ -244,11 +270,9 @@ class HowToStartBanner extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-
-                // Text details
                 Expanded(
                   child: Text(
-                    'እንዴት ልጀምር? (ቀላል መመሪያ)',
+                    isAm ? 'እንዴት ልጀምር? (ሙሉ መመሪያ)' : 'How to Start? (Usage Guide)',
                     style: GoogleFonts.notoSansEthiopic(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
@@ -256,8 +280,6 @@ class HowToStartBanner extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                // Button Indicator
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
@@ -265,7 +287,7 @@ class HowToStartBanner extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    'እይ (View)',
+                    isAm ? 'እይ (View)' : 'View',
                     style: GoogleFonts.notoSansEthiopic(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,

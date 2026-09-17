@@ -104,8 +104,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Dictionary for dynamic translation matching 'EN/አማርኛ'
   final Map<String, Map<String, String>> _localizedValues = {
     'en': {
-      'title': 'Ethio Concept Center',
-      'tutorial_desc': 'Watch tutorial: Getting started with Ethio Concept Center',
+      'title': 'Smart Learn Ethiopia',
+      'tutorial_desc': 'Watch tutorial: Getting started with Smart Learn Ethiopia',
       'explore_title': 'Explore Your Learning Path',
       'explore_sub': 'Select your grade to access courses and resources.',
       'g9_title': 'Grade 9',
@@ -139,8 +139,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       'pdf_page_label': 'Page',
     },
     'am': {
-      'title': 'ኢትዮ ኮንሴፕት ሴንተር',
-      'tutorial_desc': 'የማጠናከሪያ ቪዲዮ: በኢትዮ ኮንሴፕት ሴንተር መተግበሪያ እንዴት እንደሚጀመር።',
+      'title': 'ስማርት ለርን ኢትዮጵያ',
+      'tutorial_desc': 'የማጠናከሪያ ቪዲዮ: በስማርት ለርን ኢትዮጵያ መተግበሪያ እንዴት እንደሚጀመር።',
       'explore_title': 'የመማር መንገድዎን ያስሱ',
       'explore_sub': 'ኮርሶችን እና ሀብቶችን ለማግኘት ክፍልዎን ይምረጡ።',
       'g9_title': 'ክፍል 9',
@@ -3396,77 +3396,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
 
-            const SizedBox(height: 24),
-
-            // Logout / Sign Out Button
-            GestureDetector(
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    backgroundColor: cardBg,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    title: Text(
-                      isAmharic ? 'ከመለያ መውጣት' : 'Sign Out',
-                      style: TextStyle(fontWeight: FontWeight.w900, color: textColor),
-                    ),
-                    content: Text(
-                      isAmharic
-                          ? 'እርግጠኛ ነዎት ከመለያዎ መውጣት ይፈልጋሉ?'
-                          : 'Are you sure you want to sign out?',
-                      style: TextStyle(color: subColor, fontSize: 13.5),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: Text(isAmharic ? 'ይቅር' : 'Cancel', style: TextStyle(color: subColor, fontWeight: FontWeight.bold)),
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFEF4444),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        onPressed: () async {
-                          await CredentialAuthService.logout();
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.remove('is_authenticated');
-                          await prefs.remove('user_fullName');
-                          await prefs.remove('user_phoneNumber');
-                          if (ctx.mounted) {
-                            Navigator.pop(ctx);
-                          }
-                          _loadProfileData();
-                        },
-                        child: Text(isAmharic ? 'ውጣ' : 'Sign Out', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-                decoration: BoxDecoration(
-                  color: isLight ? const Color(0xFFFEF2F2) : const Color(0xFF450A0A),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      isAmharic ? 'ከመለያ ውጣ (Sign Out)' : 'Sign Out',
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFFEF4444),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
             const SizedBox(height: 36),
           ],
         ),
