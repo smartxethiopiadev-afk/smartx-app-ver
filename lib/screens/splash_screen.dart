@@ -305,13 +305,13 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF000000),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark,
-          systemNavigationBarColor: Colors.white,
-          systemNavigationBarIconBrightness: Brightness.dark,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarColor: Color(0xFF000000),
+          systemNavigationBarIconBrightness: Brightness.light,
         ),
         child: SafeArea(
           child: Center(
@@ -329,40 +329,52 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // App Icon Badge
-                        Container(
-                          width: 110,
-                          height: 110,
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF0284C7).withValues(alpha: 0.15),
-                                blurRadius: 30,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
+                        // App Icon Badge with Smooth Pulsing Animation
+                        ScaleTransition(
+                          scale: Tween<double>(begin: 0.95, end: 1.05).animate(
+                            CurvedAnimation(
+                              parent: _pulseController,
+                              curve: Curves.easeInOut,
+                            ),
                           ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/smart_x_logo.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  shape: BoxShape.circle,
+                          child: Container(
+                            width: 116,
+                            height: 116,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0B132B),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF0284C7).withValues(alpha: 0.5),
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF0284C7).withValues(alpha: 0.35),
+                                  blurRadius: 36,
+                                  spreadRadius: 4,
                                 ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.school_rounded,
-                                    color: Colors.white,
-                                    size: 54,
+                              ],
+                            ),
+                            child: ClipOval(
+                              child: Image.asset(
+                                'assets/images/smart_x_logo.png',
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.school_rounded,
+                                      color: Colors.white,
+                                      size: 56,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -370,7 +382,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                           ),
                         ),
 
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 28),
 
                         // Main Title typography: Smart Learn Ethiopian
                         Row(
@@ -381,24 +393,24 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                             Text(
                               'Smart Learn ',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 26,
+                                fontSize: 28,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.5,
-                                color: const Color(0xFF0F172A),
+                                color: Colors.white,
                               ),
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                                  colors: [Color(0xFF0284C7), Color(0xFF0284C7)],
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 'Ethiopian',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 20,
+                                  fontSize: 21,
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: 0.5,
                                   color: Colors.white,
@@ -408,20 +420,20 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                           ],
                         ),
 
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
 
                         // Platform Subtitle Message (Amharic & English)
                         Text(
                           'ስማርት ለርን ኢትዮጵያን - የሁለተኛ ደረጃ የትምህርት መድረክ',
                           style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 13.5,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.3,
-                            color: const Color(0xFF0284C7),
+                            color: const Color(0xFF38BDF8),
                           ),
                         ),
 
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
 
                         Text(
                           'GRADES 9 - 12 LEARNING PLATFORM',
@@ -429,7 +441,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 2.5,
-                            color: const Color(0xFF64748B),
+                            color: const Color(0xFF94A3B8),
                           ),
                         ),
                       ],
@@ -437,19 +449,19 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   ),
                 ),
 
-                const SizedBox(height: 38),
+                const SizedBox(height: 42),
 
-                // Understated Minimal Teal Blue Loading Spinner
+                // Smooth Minimalist Cyan Blue Loading Spinner
                 FadeTransition(
                   opacity: _spinnerFadeAnimation,
                   child: Container(
-                    width: 26,
-                    height: 26,
+                    width: 28,
+                    height: 28,
                     padding: const EdgeInsets.all(2),
                     child: const CircularProgressIndicator(
                       strokeWidth: 2.5,
                       strokeCap: StrokeCap.round,
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0284C7)),
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF38BDF8)),
                     ),
                   ),
                 ),

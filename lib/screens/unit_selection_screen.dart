@@ -10,7 +10,6 @@ import '../services/quiz_service.dart';
 import '../main.dart';
 import 'quiz_screen.dart';
 import 'notes_screen.dart';
-import 'worksheet_screen.dart';
 import '../services/analytics_service.dart';
 import '../services/subscription_service.dart';
 import '../widgets/locked_unit_dialog.dart';
@@ -345,89 +344,6 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                   widget.languageCode == 'en' 
                                       ? "Timed, no instant answers, final score only." 
                                       : "በጊዜ የተገደበ ፈተና ፣ ፈጣን መልስ የሌለው ፣ የመጨረሻ ውጤት ብቻ",
-                                  style: TextStyle(fontSize: 11.5, color: descColor, fontWeight: FontWeight.w500),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(Icons.chevron_right_rounded, color: descColor, size: 20),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // 4. Worksheet & Model Solutions Card
-                  InkWell(
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => WorksheetScreen(
-                            grade: widget.grade,
-                            subject: widget.enTitle,
-                            unitNumber: unitNumber,
-                            unitTitle: unitTitle,
-                            languageCode: widget.languageCode,
-                            themeColor: widget.color,
-                          ),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.assignment_turned_in_rounded, color: Color(0xFF10B981), size: 24),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      widget.languageCode == 'en' ? "Practice Worksheets" : "የልምምድ ወረቀቶች",
-                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: headerColor),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        unitNumber == 1 ? "FREE" : "SOLUTIONS",
-                                        style: const TextStyle(
-                                          color: Color(0xFF10B981),
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w900,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  widget.languageCode == 'en' 
-                                      ? "Curriculum problems with step-by-step solutions." 
-                                      : "ከደረጃ በደረጃ የተሰሩ ማብራሪያዎች ጋር የተዘጋጁ ጥያቄዎች",
                                   style: TextStyle(fontSize: 11.5, color: descColor, fontWeight: FontWeight.w500),
                                 ),
                               ],

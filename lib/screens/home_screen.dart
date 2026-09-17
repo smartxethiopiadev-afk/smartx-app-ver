@@ -409,49 +409,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     },
                   ),
                   _buildDrawerTile(
-                    icon: Icons.rocket_launch_rounded,
-                    title: widget.languageCode == 'en' ? 'Upgrade & Register' : 'የተማሪ ምዝገባ እና ማግበሪያ',
-                    isSelected: false,
-                    isLight: isLight,
-                    onTap: () {
-                      Navigator.pop(context);
-                      UpgradeRegistrationScreen.push(
-                        context,
-                        isDarkMode: widget.isDarkMode,
-                        languageCode: widget.languageCode,
-                        initialGrade: _selectedGradeForLibraryTab,
-                      );
-                    },
-                  ),
-                  _buildDrawerTile(
-                    icon: Icons.vpn_key_rounded,
-                    title: widget.languageCode == 'en' ? 'Student Login / Activation' : 'የተማሪ መግቢያ / ማግበር',
-                    isSelected: false,
-                    isLight: isLight,
-                    onTap: () {
-                      Navigator.pop(context);
-                      LoginActivationScreen.push(
-                        context,
-                        isDarkMode: widget.isDarkMode,
-                        languageCode: widget.languageCode,
-                        preferredGrade: _selectedGradeForLibraryTab,
-                      );
-                    },
-                  ),
-                  _buildDrawerTile(
                     icon: Icons.help_outline_rounded,
-                    title: widget.languageCode == 'en' ? 'Help & Support' : 'እርዳታ እና ድጋፍ',
+                    title: widget.languageCode == 'en' ? 'How to Start' : 'እንዴት ልጀምር?',
                     isSelected: false,
                     isLight: isLight,
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => HelpSupportScreen(
-                            isDarkMode: widget.isDarkMode,
-                            languageCode: widget.languageCode,
-                          ),
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => HowToStartBanner(
+                          isDarkMode: widget.isDarkMode,
+                          languageCode: widget.languageCode,
                         ),
                       );
                     },
@@ -487,6 +455,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     onTap: () async {
                       Navigator.pop(context);
                       final Uri uri = Uri.parse('https://admi8829.github.io/privacy-policy.html/');
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                  ),
+                  _buildDrawerTile(
+                    icon: Icons.send_rounded,
+                    title: widget.languageCode == 'en' ? 'Contact Telegram' : 'ቴሌግራም አግኙን',
+                    isSelected: false,
+                    isLight: isLight,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final Uri uri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
                       if (await canLaunchUrl(uri)) {
                         await launchUrl(uri, mode: LaunchMode.externalApplication);
                       }
@@ -2327,82 +2308,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ),
               ),
             ],
-          ),
-
-          // Student Registration & Upgrade banner
-          const SizedBox(height: 20.0),
-          _animateItem(
-            index: 7,
-            child: InkWell(
-              onTap: () {
-                UpgradeRegistrationScreen.push(
-                  context,
-                  isDarkMode: widget.isDarkMode,
-                  languageCode: widget.languageCode,
-                  initialGrade: _selectedGradeForLibraryTab,
-                );
-              },
-              borderRadius: BorderRadius.circular(18.0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 15.0),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
-                  borderRadius: BorderRadius.circular(18.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0284C7).withValues(alpha: 0.28),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10.0),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.rocket_launch_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 14.0),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.languageCode == 'am' ? 'የተማሪ ምዝገባ እና ማግበሪያ (Upgrade)' : 'Student Registration & Upgrade',
-                            style: const TextStyle(
-                              fontSize: 14.0,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 2.0),
-                          Text(
-                            widget.languageCode == 'am' ? 'በቴሌግራም አድሚኑን በማነጋገር ስም፣ ስልክ እና ፓስወርድ ይቀበሉ' : 'Contact admin on Telegram to receive credentials for this device',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 14),
-                  ],
-                ),
-              ),
-            ),
           ),
         ],
       ),

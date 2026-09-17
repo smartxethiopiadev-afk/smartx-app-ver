@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../screens/login_activation_screen.dart';
 
 class HowToStartBanner extends StatelessWidget {
   final bool isDarkMode;
@@ -16,7 +16,6 @@ class HowToStartBanner extends StatelessWidget {
 
   void _showHowToStartPopUp(BuildContext context) {
     final bool isLight = !isDarkMode;
-    final bool isAm = languageCode == 'am';
 
     final Color dialogBg = isLight ? Colors.white : const Color(0xFF1E293B);
     final Color textPrimary = isLight ? const Color(0xFF0F172A) : Colors.white;
@@ -26,38 +25,26 @@ class HowToStartBanner extends StatelessWidget {
       {
         'num': '1',
         'icon': Icons.school_rounded,
-        'color': const Color(0xFF0084FF),
-        'title': isAm ? 'ክፍልዎን ይምረጡ' : 'Select Your Grade',
-        'desc': isAm
-            ? 'ከክፍል 9 እስከ 12 ድረስ የእርስዎን ክፍል ይምረጡ። ክፍል 1 ለሁሉም ትምህርቶች ነፃ ነው።'
-            : 'Choose your Grade (9–12). Unit 1 of every subject is 100% FREE.',
+        'color': const Color(0xFF0284C7),
+        'text': 'ክፍልዎንና የትምህርት አይነትዎን ይምረጡ።',
       },
       {
         'num': '2',
-        'icon': Icons.menu_book_rounded,
+        'icon': Icons.check_circle_outline_rounded,
         'color': const Color(0xFF10B981),
-        'title': isAm ? 'ማጠቃለያ እና ቪዲዮዎችን ይክፈቱ' : 'Access Short Notes & Videos',
-        'desc': isAm
-            ? 'ምርጥ የአጭር ማጠቃለያ ማስታወሻዎችን፣ ቀመሮችን እና የማስተርክላስ ቪዲዮዎችን ያግኙ።'
-            : 'Read chapter summary notes, vector formulas, and watch video masterclasses.',
+        'text': 'ክፍል 1ን በነፃ አጠናቀው እራስዎን ይፈትሹ።',
       },
       {
         'num': '3',
         'icon': Icons.send_rounded,
         'color': const Color(0xFF0088CC),
-        'title': isAm ? 'በቴሌግራም አድሚኑን ያነጋግሩ' : 'Contact Telegram Admin',
-        'desc': isAm
-            ? 'በቴሌግራም አድሚኑን በማነጋገር ስም፣ ስልክ እና የይለፍ ቃል ተቀብለው መለያዎን ለአንድ ስልክ ያግብሩ።'
-            : 'Contact admin on Telegram to receive credentials and unlock subjects on this device.',
+        'text': 'ክፍል 2 እና ቀጣዮቹን ለመክፈት አድሚኑን በቴሌግራም ያነጋግሩ።',
       },
       {
         'num': '4',
         'icon': Icons.wifi_off_rounded,
         'color': const Color(0xFF8B5CF6),
-        'title': isAm ? '100% ከመስመር ውጭ (Offline) ይጠቀሙ' : 'Study 100% Offline',
-        'desc': isAm
-            ? 'ያለ ኢንተርኔት ኮኔክሽን በየትኛውም ቦታ እና ጊዜ በጥራት ያጥኑ።'
-            : 'Download contents once and learn anytime without internet data fees.',
+        'text': 'የተከፈተልዎትን ትምህርት አውርደው ያለ ኢንተርኔት (100% Offline) ያጥኑ!',
       },
     ];
 
@@ -79,13 +66,13 @@ class HowToStartBanner extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0084FF).withValues(alpha: 0.12),
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.rocket_launch_rounded,
-                      color: Color(0xFF0084FF),
-                      size: 26,
+                      Icons.help_outline_rounded,
+                      color: Color(0xFF0284C7),
+                      size: 24,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -94,16 +81,21 @@ class HowToStartBanner extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isAm ? 'እንዴት እንጀምር?' : 'How to Get Started?',
-                          style: TextStyle(
-                            fontSize: 18,
+                          'እንዴት ልጀምር? (ቀላል መመሪያ)',
+                          style: GoogleFonts.notoSansEthiopic(
+                            fontSize: 16,
                             fontWeight: FontWeight.w900,
                             color: textPrimary,
                           ),
                         ),
+                        const SizedBox(height: 2),
                         Text(
-                          isAm ? '4 ቀላል ደረጃዎች በስልክዎ ለማጠናናት' : '4 Simple steps to start learning',
-                          style: TextStyle(fontSize: 12, color: textSecondary),
+                          '4 ቀላል ደረጃዎች',
+                          style: GoogleFonts.notoSansEthiopic(
+                            fontSize: 12,
+                            color: textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -129,57 +121,38 @@ class HowToStartBanner extends StatelessWidget {
                     children: [
                       // Numbered Badge
                       Container(
-                        width: 38,
-                        height: 38,
+                        width: 32,
+                        height: 32,
                         decoration: BoxDecoration(
                           color: itemColor.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
-                          border: Border.all(color: itemColor.withValues(alpha: 0.3), width: 1.5),
                         ),
                         child: Center(
                           child: Text(
                             step['num'] as String,
                             style: TextStyle(
                               color: itemColor,
-                              fontSize: 15,
+                              fontSize: 14,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 12),
 
                       // Content
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(step['icon'] as IconData, size: 16, color: itemColor),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    step['title'] as String,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w800,
-                                      color: textPrimary,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            step['text'] as String,
+                            style: GoogleFonts.notoSansEthiopic(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: textPrimary,
+                              height: 1.4,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              step['desc'] as String,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: textSecondary,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ],
@@ -187,80 +160,35 @@ class HowToStartBanner extends StatelessWidget {
                 );
               }),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
 
-              // Action Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        LoginActivationScreen.push(
-                          context,
-                          isDarkMode: isDarkMode,
-                          languageCode: languageCode,
-                        );
-                      },
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFF0084FF)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      child: Text(
-                        isAm ? 'መለያ ግባ' : 'Login',
-                        style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF0084FF)),
-                      ),
+              // Single Action Button: "ቴሌግራም ቻናል ተቀላቀል"
+              SizedBox(
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.of(ctx).pop();
+                    final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
+                    if (await canLaunchUrl(telegramUri)) {
+                      await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  icon: const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+                  label: Text(
+                    'ቴሌግራም ቻናል ተቀላቀል',
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      color: Colors.white,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        Navigator.of(ctx).pop();
-                        final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
-                        if (await canLaunchUrl(telegramUri)) {
-                          await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0088CC),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        elevation: 0,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              const Icon(Icons.send_rounded, size: 16, color: Colors.white),
-                              Positioned(
-                                right: -3,
-                                top: -3,
-                                child: Container(
-                                  padding: const EdgeInsets.all(1.5),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF10B981),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.add, size: 7, color: Colors.white),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            isAm ? 'ቴሌግራም አግኙን' : 'Contact Admin',
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
-                          ),
-                        ],
-                      ),
-                    ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0088CC),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -272,12 +200,10 @@ class HowToStartBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isLight = !isDarkMode;
-    final bool isAm = languageCode == 'am';
 
     final Color cardBg = isLight ? Colors.white : const Color(0xFF1E293B);
     final Color borderColor = isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155);
     final Color textPrimary = isLight ? const Color(0xFF0F172A) : Colors.white;
-    final Color textSecondary = isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6.0),
@@ -300,31 +226,20 @@ class HowToStartBanner extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           onTap: () => _showHowToStartPopUp(context),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
                 // Icon Box
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0084FF), Color(0xFF00BFFF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: const Color(0xFF0284C7).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0084FF).withValues(alpha: 0.3),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
                   ),
                   child: const Icon(
-                    Icons.rocket_launch_rounded,
-                    color: Colors.white,
+                    Icons.help_outline_rounded,
+                    color: Color(0xFF0284C7),
                     size: 22,
                   ),
                 ),
@@ -332,48 +247,13 @@ class HowToStartBanner extends StatelessWidget {
 
                 // Text details
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            isAm ? 'እንዴት እንጀምር?' : 'How to Start?',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              color: textPrimary,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0084FF).withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              isAm ? '4 ደረጃዎች' : '4 STEPS',
-                              style: const TextStyle(
-                                color: Color(0xFF0084FF),
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        isAm ? 'መመሪያዎቹን በይዘት Pop-up ለማየት ይጫኑ' : 'Tap to view step-by-step guide dialog',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    'እንዴት ልጀምር? (ቀላል መመሪያ)',
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: textPrimary,
+                    ),
                   ),
                 ),
 
@@ -381,26 +261,16 @@ class HowToStartBanner extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0084FF).withValues(alpha: 0.1),
+                    color: const Color(0xFF0284C7).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Row(
-                    children: [
-                      Text(
-                        isAm ? 'መመሪያ' : 'Guide',
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0084FF),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.open_in_new_rounded,
-                        color: Color(0xFF0084FF),
-                        size: 14,
-                      ),
-                    ],
+                  child: Text(
+                    'እይ (View)',
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF0284C7),
+                    ),
                   ),
                 ),
               ],
