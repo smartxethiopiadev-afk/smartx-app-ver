@@ -6,38 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 class QuizService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  static String mapSubjectToPrefix(String subject) {
-    final sub = subject.toLowerCase().trim();
-    switch (sub) {
-      case 'mathematics':
-      case 'math':
-        return 'math';
-      case 'biology':
-      case 'bio':
-        return 'bio';
-      case 'physics':
-      case 'phys':
-        return 'phys';
-      case 'chemistry':
-      case 'chem':
-        return 'chem';
-      case 'geography':
-      case 'geo':
-        return 'geo';
-      case 'history':
-      case 'hist':
-        return 'hist';
-      case 'civics':
-      case 'civ':
-        return 'civ';
-      case 'agriculture':
-      case 'agri':
-        return 'agri';
-      default:
-        return sub.length > 4 ? sub.substring(0, 4) : sub;
-    }
-  }
-
   static String getNormalizedSubjectName(String rawSubject) {
     final sub = rawSubject.toLowerCase().trim();
     if (sub.contains('math')) return 'mathematics';
@@ -53,96 +21,64 @@ class QuizService {
     return sub;
   }
 
-  /// Fetches filtered questions from Supabase.
-  /// If [grade] is supplied, filters by grade.
-  /// If [subject] is supplied, filters by subject (case-insensitive).
-  /// If [unit] is supplied, filters by unit.
+  /// Fetches questions from the unified 4-table 'questions' schema:
+  /// query `supabase.from('questions').select().eq('grade', grade).ilike('subject', subject).eq('unit_number', unit).order('order_index', ascending: true)`.
   static Future<List<QuestionModel>> fetchQuestions({
     required int grade,
     required String subject,
     required int unit,
   }) async {
     try {
-      debugPrint("QuizService: Fetching questions for grade = $grade, subject = $subject, unit = $unit");
+      debugPrint("QuizService: Fetching questions for grade = $grade, subject = $subject, unit_number = $unit");
 
       final String normalizedSubject = getNormalizedSubjectName(subject);
-      final String expectedSubjectId = '${grade}_$normalizedSubject';
 
       final response = await _supabase
-          .from('units')
-          .select('''
-            id,
-            subject_id,
-            unit_number,
-            subjects!inner(
-              id,
-              name,
-              grade
-            ),
-            questions (
-              id,
-              unit_id,
-              question_text,
-              question_number,
-              order_index,
-              explanation,
-              created_at,
-              question_options (
-                id,
-                text,
-                is_correct,
-                explanation
-              )
-            )
-          ''')
+          .from('questions')
+          .select()
+          .eq('grade', grade)
+          .ilike('subject', '%$normalizedSubject%')
           .eq('unit_number', unit)
-          .eq('subjects.grade', grade)
-          .or('subject_id.eq.$expectedSubjectId,subject_id.ilike.%$normalizedSubject%,subject_id.ilike.%$subject%')
-          .order('order_index', ascending: true, referencedTable: 'questions')
-          .order('created_at', ascending: true, referencedTable: 'questions')
-          .maybeSingle();
+          .order('order_index', ascending: true);
 
-      if (response == null || response['questions'] == null) {
-        debugPrint("QuizService WARNING: No questions found or response is null for $subject grade $grade unit $unit. Raw: $response");
-        return [];
+      if (response == null || (response as List).isEmpty) {
+        // Try fallback with raw subject name
+        final fallbackResponse = await _supabase
+            .from('questions')
+            .select()
+            .eq('grade', grade)
+            .ilike('subject', '%$subject%')
+            .eq('unit_number', unit)
+            .order('order_index', ascending: true);
+
+        if (fallbackResponse == null || (fallbackResponse as List).isEmpty) {
+          debugPrint("QuizService WARNING: No questions found for grade $grade, subject $subject, unit $unit");
+          return [];
+        }
+
+        final List<dynamic> data = fallbackResponse as List<dynamic>;
+        return data.map((json) => QuestionModel.fromJson(json as Map<String, dynamic>)).toList();
       }
 
-      final List<dynamic> questionsData = response['questions'] as List<dynamic>;
-      final List<QuestionModel> questions = questionsData.map((json) => QuestionModel.fromJson(json)).toList();
+      final List<dynamic> questionsData = response as List<dynamic>;
+      final List<QuestionModel> questions = questionsData
+          .map((json) => QuestionModel.fromJson(json as Map<String, dynamic>))
+          .toList();
 
-      // Enforce strict deterministic sorting: order_index ASC first, created_at ASC second, id fallback
+      // Ensure deterministic sorting by order_index ASC
       questions.sort((a, b) {
-        if (a.orderIndex != null && b.orderIndex != null) {
-          final cmp = a.orderIndex!.compareTo(b.orderIndex!);
-          if (cmp != 0) return cmp;
-        } else if (a.orderIndex != null) {
-          return -1;
-        } else if (b.orderIndex != null) {
-          return 1;
-        }
-
-        if (a.questionNumber != null && b.questionNumber != null) {
-          final cmp = a.questionNumber!.compareTo(b.questionNumber!);
-          if (cmp != 0) return cmp;
-        }
-
-        if (a.createdAt != null && b.createdAt != null) {
-          final cmp = a.createdAt!.compareTo(b.createdAt!);
-          if (cmp != 0) return cmp;
-        }
-
-        return a.id.compareTo(b.id);
+        final aIdx = a.orderIndex ?? a.questionNumber ?? 0;
+        final bIdx = b.orderIndex ?? b.questionNumber ?? 0;
+        return aIdx.compareTo(bIdx);
       });
 
       return questions;
     } catch (e) {
-      debugPrint('Supabase query failed: $e');
+      debugPrint('QuizService fetchQuestions error: $e');
       rethrow;
     }
   }
 
-  /// Filters a list of questions to randomly select up to 25 questions if 40 are available,
-  /// tracking already answered questions using SharedPreferences.
   static Future<List<QuestionModel>> filterAndSelectQuestions({
     required String unitId,
     required List<QuestionModel> allQuestions,
@@ -150,7 +86,6 @@ class QuizService {
     return allQuestions;
   }
 
-  /// Marks the given questions as answered/used in SharedPreferences.
   static Future<void> markQuestionsAsAnswered({
     required String unitId,
     required List<QuestionModel> questions,
@@ -167,22 +102,8 @@ class QuizService {
         }
       }
       await prefs.setStringList(answeredKey, answeredIds);
-      debugPrint("QuizService: Marked ${questions.length} questions as answered. Total answered: ${answeredIds.length}");
     } catch (e) {
       debugPrint("QuizService: Failed to mark questions as answered: $e");
     }
-  }
-
-  /// Submits the student's quiz score to the user_progress table. Disabled.
-  static Future<void> submitLeaderboardScore({
-    required String fullName,
-    required String phoneNumber,
-    required String subjectId,
-    required String unitId,
-    required int score,
-    required int totalQuestions,
-  }) async {
-    debugPrint("QuizService: submitLeaderboardScore is disabled.");
-    return;
   }
 }

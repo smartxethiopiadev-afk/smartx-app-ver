@@ -53,12 +53,19 @@ class QuestionModel {
 
   factory QuestionModel.fromJson(Map<String, dynamic> json) {
     List<QuestionOption> parsedOptions = [];
-    if (json['question_options'] != null) {
-      if (json['question_options'] is List) {
-        parsedOptions = (json['question_options'] as List)
-            .map((item) => QuestionOption.fromJson(item as Map<String, dynamic>))
-            .toList();
-      }
+    final rawOptions = json['options'] ?? json['question_options'];
+    if (rawOptions != null && rawOptions is List) {
+      parsedOptions = rawOptions
+          .map((item) {
+            if (item is Map<String, dynamic>) {
+              return QuestionOption.fromJson(item);
+            } else if (item is Map) {
+              return QuestionOption.fromJson(Map<String, dynamic>.from(item));
+            }
+            return null;
+          })
+          .whereType<QuestionOption>()
+          .toList();
     }
 
     int? qNum = int.tryParse(json['question_number']?.toString() ?? '');
@@ -66,8 +73,8 @@ class QuestionModel {
 
     return QuestionModel(
       id: json['id']?.toString() ?? '',
-      unitId: json['unit_id']?.toString() ?? '',
-      questionText: json['question']?.toString() ?? json['question_text']?.toString() ?? json['questionText']?.toString() ?? '',
+      unitId: json['unit_id']?.toString() ?? json['unit_number']?.toString() ?? '',
+      questionText: json['question_text']?.toString() ?? json['question']?.toString() ?? json['questionText']?.toString() ?? '',
       options: parsedOptions,
       explanation: json['explanation']?.toString(),
       createdAt: json['created_at']?.toString(),

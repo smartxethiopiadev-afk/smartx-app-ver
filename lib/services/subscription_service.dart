@@ -29,7 +29,7 @@ class SubscriptionService {
     }
   }
 
-  /// Initialize local subscription state
+  /// Initialize local subscription state from SharedPreferences
   static Future<void> init() async {
     if (_isLoaded) return;
     try {
@@ -44,13 +44,17 @@ class SubscriptionService {
     }
   }
 
+  static Future<void> setUnlockedPackages(List<String> packages) async {
+    await init();
+    _unlockedPackages = packages.toSet();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_unlockedKey, _unlockedPackages.toList());
+    _notifyListeners();
+  }
+
   /// Check if a specific package is unlocked
   static Future<bool> isPackageUnlocked(String packageId) async {
     await init();
-    final bool tamperOk = await DeviceService.verifyOfflineTamperIntegrity();
-    if (!tamperOk) {
-      return false; // Lock content if data was cloned to another unauthorized phone
-    }
     return _unlockedPackages.contains(packageId) ||
         _unlockedPackages.contains('all_inclusive') ||
         _unlockedPackages.contains('all_grades');
@@ -59,26 +63,20 @@ class SubscriptionService {
   /// Check if a specific Grade package or subject is unlocked
   static Future<bool> isGradeUnlocked(int grade, {String? subject}) async {
     await init();
-    final bool tamperOk = await DeviceService.verifyOfflineTamperIntegrity();
-    if (!tamperOk) {
-      return false;
-    }
 
     final String targetPkg = 'pkg_grade_$grade';
-    final String targetAllInclusive = 'pkg_all_inclusive_g$grade';
 
     if (_unlockedPackages.contains(targetPkg) ||
-        _unlockedPackages.contains(targetAllInclusive) ||
-        _unlockedPackages.contains('grade_$grade') ||
         _unlockedPackages.contains('all_inclusive') ||
-        _unlockedPackages.contains('all_grades')) {
+        _unlockedPackages.contains('all_grades') ||
+        _unlockedPackages.contains('grade_$grade')) {
       return true;
     }
 
     if (subject != null && subject.trim().isNotEmpty) {
       final String subjectSlug = subject.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
       final String specificSubjectPkg = 'pkg_g${grade}_$subjectSlug';
-      if (_unlockedPackages.contains(specificSubjectPkg)) {
+      if (_unlockedPackages.contains(specificSubjectPkg) || _unlockedPackages.contains(subjectSlug)) {
         return true;
       }
     }
@@ -88,7 +86,7 @@ class SubscriptionService {
 
   /// Core Business Rule:
   /// Unit 1 is ALWAYS 100% FREE for all subjects and grades.
-  /// Unit 2+ requires an active single-device bound subscription.
+  /// Unit 2+ requires an active package unlock or student subscription.
   static Future<bool> isUnitAccessible(int grade, int unitNumber, {String? subject}) async {
     if (unitNumber <= 1) {
       return true; // Unit 1 is 100% FREE!
@@ -106,20 +104,18 @@ class SubscriptionService {
       return true;
     }
     final String targetPkg = 'pkg_grade_$grade';
-    final String targetAllInclusive = 'pkg_all_inclusive_g$grade';
 
     if (_unlockedPackages.contains(targetPkg) ||
-        _unlockedPackages.contains(targetAllInclusive) ||
-        _unlockedPackages.contains('grade_$grade') ||
         _unlockedPackages.contains('all_inclusive') ||
-        _unlockedPackages.contains('all_grades')) {
+        _unlockedPackages.contains('all_grades') ||
+        _unlockedPackages.contains('grade_$grade')) {
       return true;
     }
 
     if (subject != null && subject.trim().isNotEmpty) {
       final String subjectSlug = subject.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
       final String specificSubjectPkg = 'pkg_g${grade}_$subjectSlug';
-      if (_unlockedPackages.contains(specificSubjectPkg)) {
+      if (_unlockedPackages.contains(specificSubjectPkg) || _unlockedPackages.contains(subjectSlug)) {
         return true;
       }
     }
@@ -127,17 +123,12 @@ class SubscriptionService {
     return false;
   }
 
-  /// Unlocks a package locally and persists in SharedPreferences with device binding fingerprint
+  /// Unlocks a package locally and persists in SharedPreferences
   static Future<void> unlockPackage(String packageId) async {
     await init();
     _unlockedPackages.add(packageId);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_unlockedKey, _unlockedPackages.toList());
-
-    // Save device binding
-    final currentDevId = await DeviceService.getDeviceId();
-    await prefs.setString('smartx_verified_device_binding', currentDevId);
-
     _notifyListeners();
   }
 
@@ -146,83 +137,56 @@ class SubscriptionService {
     await unlockPackage('pkg_grade_$grade');
   }
 
-  /// Syncs user subscriptions from Supabase with strict Single-Device Binding check
-  static Future<DeviceBindingResult> syncWithSupabaseAndVerifyDevice(String phoneNumber, {String? packageId}) async {
+  /// Syncs subscriptions against `students.unlocked_packages` and enforces `students.device_id == currentDeviceId`.
+  static Future<bool> syncWithSupabase(String phoneNumber) async {
     final cleanPhone = phoneNumber.replaceAll(RegExp(r'\s+'), '').trim();
-    if (cleanPhone.isEmpty) {
-      final devId = await DeviceService.getDeviceId();
-      return DeviceBindingResult(
-        status: DeviceBindingStatus.noSubscription,
-        currentDeviceId: devId,
-        message: 'No phone number provided.',
-      );
-    }
+    if (cleanPhone.isEmpty) return false;
 
-    final String targetPkgId = packageId ?? 'all_inclusive';
-    final DeviceBindingResult result = await DeviceService.verifyAndBindSubscription(
-      phoneNumber: cleanPhone,
-      packageId: targetPkgId,
-    );
+    try {
+      final supabase = Supabase.instance.client;
+      final currentDeviceId = await DeviceService.getDeviceId();
 
-    if (result.isAllowed) {
-      try {
-        final supabase = Supabase.instance.client;
-        final response = await supabase
-            .from('user_subscriptions')
-            .select()
-            .eq('phone_number', cleanPhone)
-            .eq('is_active', true);
+      final response = await supabase
+          .from('students')
+          .select('device_id, unlocked_packages, is_active, grade')
+          .eq('phone_number', cleanPhone)
+          .maybeSingle();
 
-        if (response.isNotEmpty) {
-          await init();
-          final currentDevId = await DeviceService.getDeviceId();
-          for (final item in response) {
-            final devId = item['device_id'] as String?;
-            if (devId != null && devId.isNotEmpty && devId != currentDevId) {
-              continue; // Bound to another device
-            }
-            final pkgId = item['package_id'] as String?;
-            final pkgType = item['package_type'] as String?;
-            final subName = item['subject_name'] as String? ?? item['subject'] as String?;
-            final gradeNum = (item['grade'] as num?)?.toInt();
+      if (response == null) return false;
 
-            if (pkgId != null && pkgId.isNotEmpty) {
-              _unlockedPackages.add(pkgId);
-            }
-            if (pkgType != null && pkgType.isNotEmpty) {
-              _unlockedPackages.add(pkgType);
-            }
-            if (gradeNum != null) {
-              _unlockedPackages.add('pkg_grade_$gradeNum');
-              _unlockedPackages.add('grade_$gradeNum');
-            }
-            if (subName != null && subName.isNotEmpty) {
-              final slug = subName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
-              if (gradeNum != null) {
-                _unlockedPackages.add('pkg_g${gradeNum}_$slug');
-              }
-              _unlockedPackages.add(slug);
-            }
-          }
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setStringList(_unlockedKey, _unlockedPackages.toList());
-          _notifyListeners();
-        }
-      } catch (e) {
-        debugPrint("[SubscriptionService] Supabase sync packages error: $e");
+      final bool isActive = response['is_active'] as bool? ?? true;
+      if (!isActive) return false;
+
+      final String? boundDev = response['device_id'] as String?;
+      if (boundDev == null || boundDev.isEmpty) {
+        // Auto-bind device
+        try {
+          await supabase.from('students').update({
+            'device_id': currentDeviceId,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          }).eq('phone_number', cleanPhone);
+        } catch (_) {}
+      } else if (boundDev != currentDeviceId) {
+        // Device mismatch locked!
+        return false;
       }
-    }
 
-    return result;
+      final List<dynamic>? rawPkgs = response['unlocked_packages'] as List<dynamic>?;
+      final List<String> pkgs = rawPkgs != null ? rawPkgs.map((e) => e.toString()).toList() : [];
+      final int? grade = (response['grade'] as num?)?.toInt();
+      if (grade != null) {
+        pkgs.add('pkg_grade_$grade');
+        pkgs.add('grade_$grade');
+      }
+
+      await setUnlockedPackages(pkgs);
+      return true;
+    } catch (e) {
+      debugPrint("[SubscriptionService] Supabase sync packages error: $e");
+      return false;
+    }
   }
 
-  /// Granular verification for Unit 2+ access.
-  /// Rule 1: Unit 1 is 100% FREE.
-  /// Rule 2: Unit 2+ queries `user_subscriptions` in Supabase:
-  ///   - phone_number == user_phoneNumber
-  ///   - device_id == currentDeviceId
-  ///   - is_active == true
-  ///   - subject_name == currentSubject OR package_type == 'all_inclusive' OR grade == currentGrade
   static Future<bool> checkSubscriptionAccess({
     required int grade,
     required String subject,
@@ -243,58 +207,11 @@ class SubscriptionService {
       final phone = prefs.getString('user_phoneNumber') ?? prefs.getString('phone_number') ?? '';
       if (phone.isEmpty) return false;
 
-      final cleanPhone = phone.replaceAll(RegExp(r'\s+'), '').trim();
-      final currentDeviceId = await DeviceService.getDeviceId();
-      final supabase = Supabase.instance.client;
-
-      final List<dynamic> records = await supabase
-          .from('user_subscriptions')
-          .select()
-          .eq('phone_number', cleanPhone)
-          .eq('is_active', true);
-
-      final cleanSubject = subject.trim().toLowerCase();
-
-      for (final rec in records) {
-        final recDevId = rec['device_id'] as String?;
-        if (recDevId == null || recDevId.trim().isEmpty) {
-          // Auto bind device
-          try {
-            await supabase
-                .from('user_subscriptions')
-                .update({'device_id': currentDeviceId})
-                .eq('id', rec['id']);
-          } catch (_) {}
-        } else if (recDevId.trim() != currentDeviceId.trim()) {
-          // Bound to a different device
-          continue;
-        }
-
-        final pkgType = (rec['package_type'] as String? ?? rec['package_id'] as String? ?? '').toLowerCase();
-        final recSub = (rec['subject_name'] as String? ?? rec['subject'] as String? ?? '').toLowerCase();
-        final recGrade = (rec['grade'] as num?)?.toInt();
-
-        final bool isAllInclusive = pkgType.contains('all_inclusive') || pkgType.contains('all_grades');
-        final bool isGradeMatch = recGrade == grade || pkgType.contains('grade_$grade');
-        final bool isSubjectMatch = recSub.isNotEmpty &&
-            (recSub == cleanSubject || cleanSubject.contains(recSub) || recSub.contains(cleanSubject));
-
-        if (isAllInclusive || isGradeMatch || isSubjectMatch) {
-          await unlockGrade(grade);
-          final slug = cleanSubject.replaceAll(RegExp(r'[^a-z0-9]'), '_');
-          await unlockPackage('pkg_g${grade}_$slug');
-          return true;
-        }
-      }
+      return await syncWithSupabase(phone);
     } catch (e) {
       debugPrint('[SubscriptionService] checkSubscriptionAccess notice: $e');
     }
 
     return false;
-  }
-
-  /// Legacy sync method for backwards compatibility
-  static Future<void> syncWithSupabase(String phoneNumber) async {
-    await syncWithSupabaseAndVerifyDevice(phoneNumber);
   }
 }
