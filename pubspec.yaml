@@ -1,5 +1,5 @@
-name: smart_x_academy
-description: "A gorgeous, responsive mobile application for Smart X Ethiopian. Replicates the Grade-level courses hub, multilingual support, light/dark modes, and video tutorials."
+name: smart_learn_ethiopian
+description: "Smart Learn Ethiopian - Comprehensive Ethiopian Curriculum Learning & Exam Preparation Platform for Grades 9-12 with curriculum notes, quizzes, worksheets, offline study, and progress tracking."
 publish_to: 'none'
 
 version: 1.0.16+16
@@ -19,6 +19,11 @@ dependencies:
   carousel_slider: ^5.0.0
   connectivity_plus: ^6.0.3
   device_info_plus: ^10.1.0
+
+  # Firebase Core, Analytics & Crashlytics
+  firebase_core: ^3.6.0
+  firebase_crashlytics: ^4.1.3
+  firebase_analytics: ^11.3.3
 
   # Backend Integration
   supabase_flutter: ^2.6.0

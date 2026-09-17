@@ -155,12 +155,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       final currentDeviceId = await DeviceService.getDeviceId();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_registered', true);
+      await prefs.setBool('is_authenticated', true);
       await prefs.setString('user_id', profileId);
       await prefs.setString('user_fullName', fullName);
       await prefs.setString('user_phoneNumber', formattedPhone);
       await prefs.setString('user_school', schoolName);
       await prefs.setString('user_gender', _selectedGender);
       await prefs.setString('user_grade', 'Grade $_selectedGrade');
+      await prefs.setInt('selected_grade', _selectedGrade);
       await prefs.setString('smartx_verified_device_binding', currentDeviceId);
       await prefs.setString('user_device_id', currentDeviceId);
 
@@ -228,8 +230,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               const SizedBox(height: 8),
               Text(
                 isEn
-                    ? 'Your details have been registered. The admin will verify and provide your access password via Telegram.'
-                    : 'የተማሪ መረጃዎ በተሳካ ሁኔታ ተመዝግቧል። አድሚኑ መረጃዎን አይቶ የይለፍ ቃል በቴሌግራም ይልክልዎታል።',
+                    ? 'Your details have been registered successfully. Unit 1 is free for all subjects. Contact our Telegram Admin anytime to unlock all units!'
+                    : 'የተማሪ መረጃዎ በተሳካ ሁኔታ ተመዝግቧል። የሁሉም ትምህርቶች ዩኒት 1 ክፍት ነው። ቀሪ ክፍሎችን ለማስከፈት የቴሌግራም አድሚናችንን ማነጋገር ይችላሉ።',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12.5,
@@ -239,8 +241,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Button 1: Send Request to Telegram Admin
+              // Primary Button: Enter Academy
               ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _navigateToHome();
+                },
+                icon: const Icon(Icons.school_rounded, size: 18),
+                label: Text(
+                  isEn ? 'Enter Academy & Start Learning' : 'ወደ አካዳሚው ይግቡ',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Secondary Button: Contact Telegram Admin to Unlock All Units
+              OutlinedButton.icon(
                 onPressed: () async {
                   final String msg =
                       'ሰላም Ethio Concept Center Admin, አዲስ ተማሪ ሆኜ ተመዝግቤያለሁ:\n'
@@ -249,7 +272,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       '• የትምህርት ቤት ስም: $school\n'
                       '• ክፍል: Grade $_selectedGrade\n'
                       '• ፆታ: ${_selectedGender == 'male' ? 'ወንድ' : 'ሴት'}\n'
-                      'እባክዎ የይለፍ ቃል (Password) ይስጡኝ።';
+                      'እባክዎ ሙሉ የትምህርት ክፍሎችን ያስከፍቱልኝ።';
 
                   final Uri telegramUri = Uri.parse(
                       'https://t.me/EthioconceptcenterAcademy?text=${Uri.encodeComponent(msg)}');
@@ -257,64 +280,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
                   }
                 },
-                icon: const Icon(Icons.send_rounded, size: 18),
+                icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF0088CC)),
                 label: Text(
-                  isEn ? 'Request Password via Telegram' : 'በቴሌግራም የይለፍ ቃል ጠይቅ',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0088CC),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(46),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Button 2: Already have password? Go to login
-              OutlinedButton.icon(
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  final res = await LoginActivationScreen.push(
-                    context,
-                    isDarkMode: widget.isDarkMode,
-                    languageCode: widget.languageCode,
-                    preferredGrade: _selectedGrade,
-                  );
-                  if (res == true) {
-                    _navigateToHome();
-                  } else {
-                    _navigateToHome();
-                  }
-                },
-                icon: const Icon(Icons.key_rounded, size: 18, color: Color(0xFF0084FF)),
-                label: Text(
-                  isEn ? 'I have a password -> Login' : 'የይለፍ ቃል አለኝ -> ግባ',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF0084FF)),
+                  isEn ? 'Telegram Admin (@Ethioconceptcenter)' : 'ቴሌግራም አድሚን አግኝ',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF0088CC)),
                 ),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF0084FF), width: 1.5),
+                  side: const BorderSide(color: Color(0xFF0088CC), width: 1.5),
                   minimumSize: const Size.fromHeight(46),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // Button 3: Skip / Explore app freely
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _navigateToHome();
-                },
-                child: Text(
-                  isEn ? 'Start Exploring (Free Trial Units)' : 'ወደ መተግበሪያው ግባ (ይዘቶችን በነጻ ሞክር)',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                  ),
                 ),
               ),
             ],
@@ -322,13 +296,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         );
       },
     );
-  }
-
-  Future<void> _handleSkip() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_registered', false);
-    await prefs.setBool('is_authenticated', false);
-    _navigateToHome();
   }
 
   void _navigateToHome() {
@@ -716,19 +683,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                             ),
                           ),
                         ],
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // Skip link
-                      Center(
-                        child: TextButton(
-                          onPressed: _isLoading ? null : _handleSkip,
-                          child: Text(
-                            isEn ? 'Skip and continue to app' : 'ይዝለሉና ወደ መተግበሪያው ይግቡ',
-                            style: TextStyle(fontSize: 12, color: subtitleColor),
-                          ),
-                        ),
                       ),
                     ],
                   ),

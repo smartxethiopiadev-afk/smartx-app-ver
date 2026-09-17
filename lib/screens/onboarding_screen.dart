@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'home_screen.dart';
 import 'registration_screen.dart';
 import '../services/analytics_service.dart';
 
@@ -101,29 +99,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (!mounted) return;
 
-    bool isOffline = false;
-    try {
-      final connectivity = await Connectivity().checkConnectivity().timeout(const Duration(seconds: 2));
-      if (connectivity.contains(ConnectivityResult.none) || connectivity.isEmpty) {
-        isOffline = true;
-      }
-    } catch (e) {
-      debugPrint('[Offline Auth Check] Onboarding completion connectivity check: $e');
-    }
-
-    final Widget targetScreen = isOffline
-        ? HomeScreen(
-            isDarkMode: widget.isDarkMode,
-            languageCode: widget.languageCode,
-            onToggleTheme: widget.onToggleTheme,
-            onToggleLanguage: widget.onToggleLanguage,
-          )
-        : RegistrationScreen(
-            isDarkMode: widget.isDarkMode,
-            languageCode: widget.languageCode,
-            onToggleTheme: widget.onToggleTheme,
-            onToggleLanguage: widget.onToggleLanguage,
-          );
+    final Widget targetScreen = RegistrationScreen(
+      isDarkMode: widget.isDarkMode,
+      languageCode: widget.languageCode,
+      onToggleTheme: widget.onToggleTheme,
+      onToggleLanguage: widget.onToggleLanguage,
+    );
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
@@ -443,23 +424,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             ),
 
                             const Spacer(),
-
-                            // Skip Button
-                            TextButton(
-                              onPressed: _completeOnboarding,
-                              style: TextButton.styleFrom(
-                                foregroundColor: const Color(0xFF94A3B8),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              ),
-                              child: Text(
-                                isAm ? 'ዝለል' : 'Skip',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
 
                             // Next / Get Started Action Button
                             ElevatedButton(

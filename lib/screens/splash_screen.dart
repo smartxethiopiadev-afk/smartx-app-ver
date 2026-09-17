@@ -198,7 +198,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     }
 
     final bool isAuth = await CredentialAuthService.isAuthenticated();
-    final bool hasRegistered = prefs?.getBool('has_registered') ?? false;
 
     if (!mounted) return;
 
@@ -209,18 +208,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       if (isAuth) {
         debugPrint('[Splash] Authenticated session -> HomeScreen');
         _navigateToHomeScreen();
-      } else if (!hasSeenOnboarding) {
-        debugPrint('[Splash] First time user -> OnboardingScreen');
-        _navigateToOnboarding();
-      } else if (!isOnline) {
-        debugPrint('[Splash] Offline launch -> LoginActivationScreen (Welcome Back)');
-        _navigateToLogin(isOffline: true);
-      } else if (!hasRegistered) {
-        debugPrint('[Splash] Unregistered user -> RegistrationScreen');
-        _navigateToRegistration();
       } else {
-        debugPrint('[Splash] Registered user -> LoginActivationScreen');
-        _navigateToLogin(isOffline: false);
+        debugPrint('[Splash] Unauthenticated session -> Mandatory Registration/Login Auth Gate');
+        _navigateToRegistration();
       }
     });
   }
@@ -331,7 +321,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               children: [
                 const Spacer(flex: 10),
 
-                // Central App Logo & Title: "Ethio Concept Center"
+                // Central App Logo & Title: "Smart Learn Ethiopian"
                 SlideTransition(
                   position: _titleSlideAnimation,
                   child: FadeTransition(
@@ -382,16 +372,16 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
                         const SizedBox(height: 24),
 
-                        // Main Title typography: Ethio Concept Center
+                        // Main Title typography: Smart Learn Ethiopian
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.baseline,
                           textBaseline: TextBaseline.alphabetic,
                           children: [
                             Text(
-                              'Ethio Concept ',
+                              'Smart Learn ',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 30,
+                                fontSize: 26,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.5,
                                 color: const Color(0xFF0F172A),
@@ -406,9 +396,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                'Center',
+                                'Ethiopian',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 22,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: 0.5,
                                   color: Colors.white,
@@ -422,11 +412,11 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
                         // Platform Subtitle Message (Amharic & English)
                         Text(
-                          'የኢትዮጵያ ሁለተኛ ደረጃ የትምህርት መድረክ',
+                          'ስማርት ለርን ኢትዮጵያን - የሁለተኛ ደረጃ የትምህርት መድረክ',
                           style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 14,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
+                            letterSpacing: 0.3,
                             color: const Color(0xFF0284C7),
                           ),
                         ),

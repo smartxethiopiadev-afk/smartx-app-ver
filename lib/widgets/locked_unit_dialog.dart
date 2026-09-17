@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../screens/login_activation_screen.dart';
-import '../widgets/youtube_video_player_dialog.dart';
-import '../models/video_model.dart';
 
 class LockedUnitDialog extends StatelessWidget {
   final int grade;
@@ -50,8 +49,15 @@ class LockedUnitDialog extends StatelessWidget {
   }
 
   Future<void> _contactTelegramAdmin(BuildContext context) async {
-    final String inquiry =
-        'ሰላም Ethio Concept Center Admin, የ Grade $grade $subject ክፍል $unitNumber መለያ (Name, Phone, Password) ለማስከፈት ፈልጌ ነበር።';
+    final prefs = await SharedPreferences.getInstance();
+    final userName = prefs.getString('user_fullName') ?? prefs.getString('user_name') ?? 'Student';
+    final userPhone = prefs.getString('user_phoneNumber') ?? prefs.getString('phone_number') ?? '';
+    final userGrade = 'Grade $grade';
+
+    final String inquiry = languageCode == 'am'
+        ? 'ሰላም Smart Learn Ethiopian Admin፣ የ Grade $grade $subject Unit $unitNumber ለማስከፈት ፈልጌ ነበር።\nስም: $userName\nስልክ: $userPhone\nክፍል: $userGrade\nየትምህርት አይነት: $subject\nዩኒት: Unit $unitNumber'
+        : 'Hello Smart Learn Ethiopian Admin, I would like to unlock Grade $grade $subject Unit $unitNumber.\nName: $userName\nPhone: $userPhone\nGrade: $userGrade\nSubject: $subject\nUnit: Unit $unitNumber';
+
     final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy?text=${Uri.encodeComponent(inquiry)}');
 
     try {
@@ -70,25 +76,6 @@ class LockedUnitDialog extends StatelessWidget {
         );
       }
     }
-  }
-
-  void _openVideoGuide(BuildContext context) {
-    // Demonstration video guide on how to activate account with Telegram admin
-    YouTubeVideoPlayerDialog.show(
-      context,
-      video: VideoModel(
-        id: 'guide_activation',
-        grade: grade,
-        subject: subject,
-        unitNumber: unitNumber,
-        title: languageCode == 'am'
-            ? 'መለያዎን በአድሚን እንዴት እንደሚያስከፍቱ (የቪዲዮ መመሪያ)'
-            : 'How to Unlock Account via Telegram Admin (Video Guide)',
-        youtubeVideoId: 'fJ9rUzIMcZQ',
-      ),
-      isDarkMode: isDarkMode,
-      languageCode: languageCode,
-    );
   }
 
   @override
@@ -210,77 +197,7 @@ class LockedUnitDialog extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Video Guide Card
-                    InkWell(
-                      onTap: () => _openVideoGuide(context),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0088CC).withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFF0088CC).withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0088CC),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.play_arrow_rounded,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        isAm ? 'የቪዲዮ መመሪያ (ቪዲዮ ይመልከቱ)' : 'Video Tutorial (Watch Guide)',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 12.5,
-                                          color: Color(0xFF0088CC),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    isAm
-                                        ? 'በቴሌግራም መለያ እንዴት እንደሚከፈት ደረጃ በደረጃ'
-                                        : 'Step-by-step account activation via Telegram',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 14,
-                              color: Color(0xFF0088CC),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Explanation Notice
+                    // Information Notice
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
@@ -297,31 +214,31 @@ class LockedUnitDialog extends StatelessWidget {
                             '1',
                             isAm
                                 ? 'ክፍል 1 (Unit 1) ለሁሉም ተማሪዎች 100% ነፃ ነው'
-                                : 'Unit 1 is 100% free for preview',
+                                : 'Unit 1 is 100% free for all students',
                             isLight,
                           ),
                           const SizedBox(height: 8),
                           _buildStepRow(
                             '2',
                             isAm
-                                ? 'ክፍል 2 እና ቀጣዮቹን ለመክፈት በቴሌግራም አድሚኑን ያነጋግሩ'
-                                : 'Contact Admin on Telegram to unlock Unit 2 and above',
+                                ? 'ክፍል 2 እና ቀጣዮቹን ለመክፈት በቴሌግራም አድሚናችንን ያነጋግሩ'
+                                : 'Contact our Telegram Admin to activate access for Unit 2+',
                             isLight,
                           ),
                           const SizedBox(height: 8),
                           _buildStepRow(
                             '3',
                             isAm
-                                ? 'አድሚኑ ሙሉ ስም (Name)፣ ስልክ (Phone) እና ይለፍ ቃል (Password) ይሰጥዎታል'
-                                : 'Admin will provide your Full Name, Phone, and Password',
+                                ? 'ክፍያዎችን ለመፈጸም እና ይዘቶችን ለማስከፈት የቴሌግራም አድሚናችንን ያነጋግሩ'
+                                : 'Contact our Telegram Admin to activate access and unlock content',
                             isLight,
                           ),
                           const SizedBox(height: 8),
                           _buildStepRow(
                             '4',
                             isAm
-                                ? 'ይህ መለያ ለአንዴና ለዚህ ስልክ ብቻ ቋሚ ሆኖ የተፈቀደለትን ትምህርት ብቻ ይከፍታል'
-                                : 'Credentials permanently unlock authorized subjects on 1 device only',
+                                ? 'ፈቃድ ከተሰጠዎት በኋላ በዚህ ስልክ ቋሚ ሆኖ ይከፈታል'
+                                : 'Once activated by Admin, content is permanently unlocked on your device',
                             isLight,
                           ),
                         ],
@@ -345,24 +262,7 @@ class LockedUnitDialog extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                              Positioned(
-                                right: -3,
-                                top: -3,
-                                child: Container(
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF10B981),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.add, size: 8, color: Colors.white),
-                                ),
-                              ),
-                            ],
-                          ),
+                          const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                           const SizedBox(width: 10),
                           Text(
                             isAm ? 'በቴሌግራም አድሚኑን አግኝ (DM Admin)' : 'Contact Admin on Telegram',
@@ -377,7 +277,7 @@ class LockedUnitDialog extends StatelessWidget {
 
                     const SizedBox(height: 10),
 
-                    // Login with Credentials Button
+                    // Verify / Login Button
                     OutlinedButton.icon(
                       onPressed: () async {
                         Navigator.of(context).pop();
@@ -401,17 +301,13 @@ class LockedUnitDialog extends StatelessWidget {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      icon: Icon(
-                        Icons.key_rounded,
-                        size: 18,
-                        color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                      ),
+                      icon: const Icon(Icons.verified_user_rounded, size: 16),
                       label: Text(
-                        isAm ? 'የይለፍ ቃል አለኝ (Login)' : 'I have credentials (Login)',
+                        isAm ? 'መለያዎን ያረጋግጡ (Verify Access)' : 'Verify Activated Subscription',
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: isLight ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                         ),
                       ),
                     ),
@@ -425,7 +321,7 @@ class LockedUnitDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildStepRow(String stepNumber, String text, bool isLight) {
+  Widget _buildStepRow(String num, String text, bool isLight) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -433,28 +329,28 @@ class LockedUnitDialog extends StatelessWidget {
           width: 20,
           height: 20,
           alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: Color(0xFFEF4444),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEF4444).withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
           child: Text(
-            stepNumber,
+            num,
             style: const TextStyle(
-              color: Colors.white,
               fontSize: 11,
               fontWeight: FontWeight.w900,
+              color: Color(0xFFEF4444),
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         Expanded(
           child: Text(
             text,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              height: 1.35,
               color: isLight ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+              height: 1.3,
             ),
           ),
         ),

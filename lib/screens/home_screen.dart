@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'subject_selection_screen.dart';
 import 'splash_screen.dart';
 import 'unit_selection_screen.dart';
+import 'video_subject_selection_screen.dart';
 import '../services/offline_manager.dart';
 import 'quiz_screen.dart';
 import 'notes_screen.dart';
@@ -837,11 +838,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
           onTap: () {
-            setState(() {
-              _selectedGradeForVideosTab = gradeNum;
-              _selectedSubjectForVideosTab = 'Mathematics';
-              _selectedUnitForVideosTab = 1;
-            });
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => VideoSubjectSelectionScreen(
+                  grade: gradeNum,
+                  isDarkMode: !isLight,
+                  languageCode: widget.languageCode,
+                ),
+              ),
+            );
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -1066,7 +1071,47 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ),
                       ],
                     ),
+                    const SizedBox(height: 6),
+                    Text(
+                      isAmharic
+                          ? 'የትምህርት ዓይነት እና የዩኒት ማብራሪያዎችን ለመመልከት ክፍልዎን ይምረጡ'
+                          : 'Choose your grade to explore subjects, units, and video walkthroughs.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: subColor,
+                      ),
+                    ),
                     const SizedBox(height: 12),
+                    // Freemium Tip Banner
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: isLight ? 0.08 : 0.16),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: const Color(0xFF10B981).withValues(alpha: isLight ? 0.25 : 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.lock_open_rounded, color: Color(0xFF10B981), size: 18),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              isAmharic
+                                  ? 'Unit 1 ለሁሉም ክፍሎች እና የትምህርት አይነቶች 100% ነጻ ነው!'
+                                  : 'Unit 1 is 100% Free for all subjects and grades!',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: textColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     _buildGradeVideoLandingCard(gradeNum: 9, isLight: isLight, isAmharic: isAmharic),
                     _buildGradeVideoLandingCard(gradeNum: 10, isLight: isLight, isAmharic: isAmharic),
                     _buildGradeVideoLandingCard(gradeNum: 11, isLight: isLight, isAmharic: isAmharic),

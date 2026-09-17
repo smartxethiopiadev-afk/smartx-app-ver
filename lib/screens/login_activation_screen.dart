@@ -50,17 +50,14 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
 
-  bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
-  late bool _isWelcomeBackMode;
+  bool get _isWelcomeBackMode => widget.isOfflineWelcomeBack;
 
   @override
   void initState() {
     super.initState();
-    _isWelcomeBackMode = widget.isOfflineWelcomeBack;
     _loadSavedCredentials();
   }
 
@@ -80,7 +77,6 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
@@ -94,23 +90,13 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
 
     final fullName = _nameController.text.trim().isEmpty ? 'Student' : _nameController.text.trim();
     final phone = _phoneController.text.trim();
-    final password = _passwordController.text.trim();
 
-    final CredentialAuthResult result;
-    if (_isWelcomeBackMode) {
-      result = await CredentialAuthService.loginOfflineWelcomeBack(
-        fullName: fullName,
-        phoneNumber: phone,
-      );
-    } else {
-      result = await CredentialAuthService.loginWithCredentials(
-        fullName: fullName,
-        phoneNumber: phone,
-        password: password,
-        grade: widget.preferredGrade,
-        subject: widget.preferredSubject,
-      );
-    }
+    final result = await CredentialAuthService.loginWithPhoneAndName(
+      fullName: fullName,
+      phoneNumber: phone,
+      grade: widget.preferredGrade,
+      subject: widget.preferredSubject,
+    );
 
     if (!mounted) return;
 
@@ -251,137 +237,22 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
               ),
               const SizedBox(height: 14),
               Text(
-                _isWelcomeBackMode
-                    ? (isAm ? 'እንኳን ደህና መጡ! (Welcome Back)' : 'Welcome Back!')
-                    : (isAm ? 'በአስተዳዳሪ የተሰጠውን የይለፍ ቃል ያስገቡ' : 'Enter Admin-Issued Credentials'),
+                isAm ? 'ይግቡ (Login)' : 'Student Login',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.w900,
                   color: textPrimary,
                 ),
               ),
               const SizedBox(height: 6),
               Text(
-                _isWelcomeBackMode
-                    ? (isAm
-                        ? 'በስም እና ስልክ ቁጥርዎ ይግቡ። የስርዓቱ Device ID እና ስልክ ቁጥር ተረጋግጦ ይዘቱ ይከፈታል።'
-                        : 'Sign in with your registered Name & Phone. Device ID and phone are verified instantly.')
-                    : (isAm
-                        ? 'በቴሌግራም የተሰጦትን ስልክ ቁጥር እና የይለፍ ቃል ያስገቡ።'
-                        : 'Enter the registered phone number and password provided by Ethio Concept Center Admin.'),
+                isAm
+                    ? 'በስም እና ስልክ ቁጥርዎ በቀላሉ ይግቡ'
+                    : 'Sign in with your Full Name and registered Phone Number',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12.5, color: textSecondary, height: 1.4),
+                style: TextStyle(fontSize: 13, color: textSecondary, height: 1.4),
               ),
-              const SizedBox(height: 18),
-
-              // Mode Switcher Tabs
-              Container(
-                decoration: BoxDecoration(
-                  color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: borderColor),
-                ),
-                padding: const EdgeInsets.all(4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isWelcomeBackMode = false;
-                            _errorMessage = null;
-                          });
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 9),
-                          decoration: BoxDecoration(
-                            color: !_isWelcomeBackMode
-                                ? const Color(0xFF0084FF)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                          child: Center(
-                            child: Text(
-                              isAm ? 'የይለፍ ቃል መግቢያ' : 'Password Login',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: !_isWelcomeBackMode ? Colors.white : textSecondary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isWelcomeBackMode = true;
-                            _errorMessage = null;
-                          });
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 9),
-                          decoration: BoxDecoration(
-                            color: _isWelcomeBackMode
-                                ? const Color(0xFF10B981)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                          child: Center(
-                            child: Text(
-                              isAm ? 'እንኳን ደህና መጡ' : 'Welcome Back',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: _isWelcomeBackMode ? Colors.white : textSecondary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-
-              // Single Device Notice Card
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.phonelink_lock_rounded, color: Color(0xFFF59E0B), size: 22),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _isWelcomeBackMode
-                            ? (isAm
-                                ? 'የስልክዎ Device ID እና ስልክ ቁጥር ተረጋግጦ ከመስመር ውጭ በቀጥታ ይከፈታል።'
-                                : 'Verifies your Device ID and Phone Number for instant access.')
-                            : (isAm
-                                ? 'ማስታወሻ፡ መለያዎ በመጀመሪያ በሚገቡበት ስልክ ላይ በቋሚነት ይቆለፋል። መለያ ማጋራት አይቻልም።'
-                                : 'Notice: Your account binds strictly to this device on first login to prevent unauthorized sharing.'),
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: isLight ? const Color(0xFFB45309) : const Color(0xFFFBBF24),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
               const SizedBox(height: 20),
 
               // Error Message if any
@@ -409,14 +280,20 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // Full Name Field (Optional)
+              // Full Name Field
               Text(
-                isAm ? 'ሙሉ ስም (አማራጭ)' : 'Student Name (Optional)',
+                isAm ? 'ሙሉ ስም' : 'Full Name',
                 style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: textPrimary),
               ),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _nameController,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return isAm ? 'እባክዎ ሙሉ ስም ያስገቡ' : 'Please enter your full name';
+                  }
+                  return null;
+                },
                 decoration: InputDecoration(
                   hintText: isAm ? 'ለምሳሌ፡ አበበ ከበደ' : 'e.g., Abebe Kebede',
                   filled: true,
@@ -437,7 +314,7 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
 
               // Phone Number Field
               Text(
-                isAm ? 'ስልክ ቁጥር (መለያ)' : 'Phone Number (Account ID)',
+                isAm ? 'ስልክ ቁጥር' : 'Phone Number',
                 style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: textPrimary),
               ),
               const SizedBox(height: 6),
@@ -466,52 +343,6 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                 ),
               ),
 
-              // Password Field (Hidden in Welcome Back mode)
-              if (!_isWelcomeBackMode) ...[
-                const SizedBox(height: 16),
-                Text(
-                  isAm ? 'የይለፍ ቃል (Password)' : 'Password',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: textPrimary),
-                ),
-                const SizedBox(height: 6),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  validator: (val) {
-                    if (_isWelcomeBackMode) return null;
-                    if (val == null || val.trim().isEmpty) {
-                      return isAm ? 'እባክዎ የይለፍ ቃል ያስገቡ' : 'Please enter your password';
-                    }
-                    return null;
-                  },
-                  decoration: InputDecoration(
-                    hintText: '••••••••',
-                    filled: true,
-                    fillColor: cardBg,
-                    prefixIcon: const Icon(Icons.vpn_key_outlined, size: 20),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                        size: 20,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: borderColor),
-                    ),
-                  ),
-                ),
-              ],
-
               const SizedBox(height: 24),
 
               // Login Button
@@ -520,7 +351,7 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _performLogin,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isWelcomeBackMode ? const Color(0xFF10B981) : const Color(0xFF0084FF),
+                    backgroundColor: const Color(0xFF0084FF),
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -532,9 +363,7 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
                         )
                       : Text(
-                          _isWelcomeBackMode
-                              ? (isAm ? 'በስም እና ስልክ ግባ' : 'Login with Name & Phone')
-                              : (isAm ? 'ግባ እና ይዘቶችን ክፈት' : 'Login & Unlock Content'),
+                          isAm ? 'ግባና ቀጥል' : 'Login & Continue',
                           style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14.5),
                         ),
                 ),
@@ -553,7 +382,7 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                 child: Column(
                   children: [
                     Text(
-                      isAm ? 'የይለፍ ቃል የሎትም?' : "Don't have a password yet?",
+                      isAm ? 'መለያዎን ማስከፈት ይፈልጋሉ?' : 'Need to activate your account?',
                       style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
@@ -563,8 +392,8 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                     const SizedBox(height: 4),
                     Text(
                       isAm
-                          ? 'የቴሌግራም ቻናላችንን በመቀላቀል ወይም አድሚኑን በማነጋገር ፈጣን የይለፍ ቃል ያግኙ።'
-                          : 'Join our Telegram channel or contact Admin to get instant access credentials.',
+                          ? 'የቴሌግራም ቻናላችንን በመቀላቀል ወይም አድሚናችንን በማነጋገር ፈጣን ፈቃድ ያግኙ።'
+                          : 'Contact our Telegram Admin to activate your subscription and unlock content.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 11.5, color: textSecondary),
                     ),

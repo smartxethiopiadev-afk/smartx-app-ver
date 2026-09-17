@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'config/app_config.dart';
 import 'screens/splash_screen.dart';
 import 'services/offline_manager.dart';
@@ -14,18 +18,44 @@ void main() {
     // 1. Ensure widget bindings are safely initialized at the very beginning inside the zone
     WidgetsFlutterBinding.ensureInitialized();
 
-    // 2. Custom ErrorWidget builder to present a structured, copyable error UI instead of gray/white screens
+    // 2. Initialize Firebase Core
+    bool firebaseReady = false;
+    try {
+      await Firebase.initializeApp();
+      firebaseReady = true;
+      debugPrint('[Firebase] Firebase initialized successfully.');
+    } catch (e) {
+      debugPrint('[Firebase] Initialization notice: $e');
+    }
+
+    // 3. Error reporting & Crashlytics Integration
+    if (firebaseReady) {
+      // Pass all uncaught Flutter framework errors to Firebase Crashlytics
+      FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+
+      // Pass all asynchronous errors in the platform dispatcher to Crashlytics
+      PlatformDispatcher.instance.onError = (error, stack) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        return true;
+      };
+    } else {
+      FlutterError.onError = (FlutterErrorDetails details) {
+        FlutterError.presentError(details);
+        debugPrint('[FlutterError] Uncaught Flutter Framework Error: ${details.exception}');
+      };
+    }
+
+    // 4. Custom ErrorWidget builder to present a structured, copyable error UI instead of gray/white screens
     ErrorWidget.builder = (FlutterErrorDetails details) {
       return GlobalCustomErrorWidget(details: details);
     };
 
-    // 3. Catch and report unhandled Flutter framework errors
-    FlutterError.onError = (FlutterErrorDetails details) {
-      FlutterError.presentError(details);
-      debugPrint('[FlutterError] Uncaught Flutter Framework Error: ${details.exception}');
-    };
+    // 5. Run lightweight Firebase Health Check (logs app_open event and confirms analytics ping)
+    if (firebaseReady) {
+      unawaited(AnalyticsService.checkFirebaseHealth());
+    }
 
-    // 4. Load fast local preferences
+    // 6. Load fast local preferences
     SharedPreferences? prefs;
     try {
       prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 2));
@@ -39,14 +69,17 @@ void main() {
       debugPrint('[GoogleFonts] Runtime fetch notice: $e');
     }
 
-    // 5. Launch Flutter application UI immediately
-    runApp(SmartXAcademyApp(prefs: prefs));
+    // 7. Launch Flutter application UI immediately
+    runApp(SmartLearnEthiopianApp(prefs: prefs));
 
-    // 6. Non-blocking background initialization of secondary services
+    // 8. Non-blocking background initialization of secondary services
     _initServicesBackground();
   }, (Object error, StackTrace stack) {
     debugPrint('[runZonedGuarded] Uncaught Async Exception: $error');
     debugPrint(stack.toString());
+    try {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    } catch (_) {}
   });
 }
 
@@ -295,15 +328,15 @@ class AppStateProvider extends InheritedWidget {
   }
 }
 
-class SmartXAcademyApp extends StatefulWidget {
+class SmartLearnEthiopianApp extends StatefulWidget {
   final SharedPreferences? prefs;
-  const SmartXAcademyApp({super.key, this.prefs});
+  const SmartLearnEthiopianApp({super.key, this.prefs});
 
   @override
-  State<SmartXAcademyApp> createState() => _SmartXAcademyAppState();
+  State<SmartLearnEthiopianApp> createState() => _SmartLearnEthiopianAppState();
 }
 
-class _SmartXAcademyAppState extends State<SmartXAcademyApp> {
+class _SmartLearnEthiopianAppState extends State<SmartLearnEthiopianApp> {
   late bool _isDarkMode;
   late String _languageCode; // 'en' or 'am' (Amharic)
 
@@ -342,7 +375,7 @@ class _SmartXAcademyAppState extends State<SmartXAcademyApp> {
       onToggleTheme: toggleTheme,
       onToggleLanguage: toggleLanguage,
       child: MaterialApp(
-        title: 'Ethio Concept Center',
+        title: 'Smart Learn Ethiopian',
         debugShowCheckedModeBanner: false,
         
         // Modern palette for light & dark modes

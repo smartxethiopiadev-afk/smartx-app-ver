@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 /// Top-level convenience function to log screen views manually across the app.
 Future<void> logScreen(String screenName, {String? screenClass}) async {
@@ -18,21 +19,61 @@ Future<void> logEvent({
   await AnalyticsService.logEvent(name: name, parameters: parameters);
 }
 
-/// Standalone, privacy-focused application event dispatcher and observer.
-/// Completely decoupled from external telemetry/Firebase services.
+/// Comprehensive, production-grade application event dispatcher and observer,
+/// integrated with Firebase Analytics with graceful fallbacks.
 class AnalyticsService {
   AnalyticsService._();
 
   static NavigatorObserver? _observerInstance;
   static bool _collectionEnabled = true;
+  static FirebaseAnalytics? _analyticsInstance;
+
+  /// Lazily get FirebaseAnalytics instance with error safety
+  static FirebaseAnalytics? get _analytics {
+    try {
+      _analyticsInstance ??= FirebaseAnalytics.instance;
+      return _analyticsInstance;
+    } catch (e) {
+      debugPrint('[AnalyticsService] FirebaseAnalytics instance notice: $e');
+      return null;
+    }
+  }
 
   /// Analytics service status
   static bool get isAvailable => true;
 
-  /// Lightweight [NavigatorObserver] for route tracking in [MaterialApp].
+  /// NavigatorObserver for route tracking in [MaterialApp].
+  /// Uses FirebaseAnalyticsObserver if available, falling back to lightweight observer.
   static NavigatorObserver get observer {
-    _observerInstance ??= _AppNavigatorObserver();
+    if (_observerInstance != null) return _observerInstance!;
+    try {
+      final fa = _analytics;
+      if (fa != null) {
+        _observerInstance = FirebaseAnalyticsObserver(analytics: fa);
+        return _observerInstance!;
+      }
+    } catch (e) {
+      debugPrint('[AnalyticsService] FirebaseAnalyticsObserver fallback: $e');
+    }
+    _observerInstance = _AppNavigatorObserver();
     return _observerInstance!;
+  }
+
+  /// Lightweight internal health check method: logs an app_open event and confirms analytics ping.
+  static Future<bool> checkFirebaseHealth() async {
+    try {
+      final fa = _analytics;
+      if (fa != null) {
+        await fa.logAppOpen();
+        debugPrint('[AnalyticsService] Firebase Health Check OK: app_open logged.');
+        return true;
+      }
+      debugPrint('[AnalyticsService] Firebase Health Check: Firebase instance not initialized yet.');
+      return false;
+    } catch (e) {
+      debugPrint('[AnalyticsService] Firebase Health Check warning: $e');
+      return false;
+    }
   }
 
   /// Sanitizes an event or screen name
@@ -73,19 +114,27 @@ class AnalyticsService {
   // CORE TRACKING METHODS
   // ===========================================================================
 
-  /// Manually logs a screen view transition.
+  /// Manually logs a screen view transition to Firebase Analytics.
   static Future<void> logScreenView({
     required String screenName,
     String? screenClass,
   }) async {
     if (!_collectionEnabled) return;
     final sanitizedScreenName = _sanitizeName(screenName);
+    try {
+      await _analytics?.logScreenView(
+        screenName: sanitizedScreenName,
+        screenClass: screenClass,
+      );
+    } catch (e) {
+      debugPrint('[AnalyticsService] logScreenView note: $e');
+    }
     if (kDebugMode) {
       debugPrint('[AnalyticsService] 📱 Screen View: "$sanitizedScreenName" (Class: $screenClass)');
     }
   }
 
-  /// Logs a custom application event with optional payload parameters.
+  /// Logs a custom application event with optional payload parameters to Firebase Analytics.
   static Future<void> logEvent({
     required String name,
     Map<String, Object>? parameters,
@@ -93,13 +142,24 @@ class AnalyticsService {
     if (!_collectionEnabled) return;
     final sanitizedEventName = _sanitizeName(name);
     final sanitizedParams = _sanitizeParameters(parameters);
+    try {
+      await _analytics?.logEvent(
+        name: sanitizedEventName,
+        parameters: sanitizedParams,
+      );
+    } catch (e) {
+      debugPrint('[AnalyticsService] logEvent note: $e');
+    }
     if (kDebugMode) {
       debugPrint('[AnalyticsService] 📊 Event: "$sanitizedEventName" -> $sanitizedParams');
     }
   }
 
-  /// Sets the user ID for user-scoped sessions.
+  /// Sets the user ID for user-scoped sessions in Firebase Analytics.
   static Future<void> setUserId(String? userId) async {
+    try {
+      await _analytics?.setUserId(id: userId);
+    } catch (_) {}
     if (kDebugMode) {
       debugPrint('[AnalyticsService] 👤 User ID: $userId');
     }
@@ -110,6 +170,9 @@ class AnalyticsService {
     required String name,
     required String value,
   }) async {
+    try {
+      await _analytics?.setUserProperty(name: name, value: value);
+    } catch (_) {}
     if (kDebugMode) {
       debugPrint('[AnalyticsService] 🏷️ User Property: $name = $value');
     }
@@ -118,6 +181,9 @@ class AnalyticsService {
   /// Enables or disables analytics data collection.
   static Future<void> setAnalyticsCollectionEnabled(bool enabled) async {
     _collectionEnabled = enabled;
+    try {
+      await _analytics?.setAnalyticsCollectionEnabled(enabled);
+    } catch (_) {}
     if (kDebugMode) {
       debugPrint('[AnalyticsService] Analytics collection enabled: $enabled');
     }
@@ -125,6 +191,9 @@ class AnalyticsService {
 
   /// Resets analytics data for the current app instance.
   static Future<void> resetAnalyticsData() async {
+    try {
+      await _analytics?.resetAnalyticsData();
+    } catch (_) {}
     if (kDebugMode) {
       debugPrint('[AnalyticsService] Analytics data reset.');
     }

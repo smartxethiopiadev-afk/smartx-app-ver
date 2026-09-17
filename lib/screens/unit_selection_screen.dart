@@ -122,7 +122,19 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       return;
     }
 
-    // Unit 2+ locked: Show the Telegram pop-up with video tutorial
+    // Query active subscription from Supabase user_subscriptions with device binding
+    final bool isAllowed = await SubscriptionService.checkSubscriptionAccess(
+      grade: widget.grade,
+      subject: widget.enTitle,
+      unitNumber: activeUnitNum,
+    );
+    if (isAllowed) {
+      _checkRegistrationStatus();
+      onSuccess();
+      return;
+    }
+
+    // Unit 2+ locked: Show the Telegram pop-up
     LockedUnitDialog.show(
       context,
       grade: widget.grade,

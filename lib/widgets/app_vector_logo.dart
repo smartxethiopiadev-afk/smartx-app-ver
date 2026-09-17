@@ -75,9 +75,9 @@ class AppVectorLogo extends StatelessWidget {
           spacing: 6,
           children: [
             Text(
-              'Ethio Concept',
+              'Smart Learn',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: size * 0.22,
+                fontSize: size * 0.20,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.2,
                 color: const Color(0xFF0F172A),
@@ -92,7 +92,7 @@ class AppVectorLogo extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                'Center',
+                'Ethiopian',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: size * 0.18,
                   fontWeight: FontWeight.w900,
