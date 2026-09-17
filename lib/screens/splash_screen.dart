@@ -9,9 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_config.dart';
 import '../services/offline_manager.dart';
 import 'home_screen.dart';
-import 'onboarding_screen.dart';
 import 'registration_screen.dart';
-import 'login_activation_screen.dart';
 import '../services/credential_auth_service.dart';
 import '../services/analytics_service.dart';
 import '../main.dart';
@@ -148,12 +146,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     debugPrint('[Splash] Evaluating non-blocking offline-first app launch flow...');
 
     SharedPreferences? prefs;
-    bool hasSeenOnboarding = false;
 
     // 1. Read local preferences safely
     try {
       prefs = await SharedPreferences.getInstance();
-      hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
     } catch (e) {
       debugPrint('[Splash] SharedPreferences read warning: $e');
     }
@@ -243,49 +239,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       PageRouteBuilder(
         settings: const RouteSettings(name: '/registration'),
         pageBuilder: (context, animation, secondaryAnimation) => RegistrationScreen(
-          isDarkMode: widget.isDarkMode,
-          languageCode: widget.languageCode,
-          onToggleTheme: widget.onToggleTheme,
-          onToggleLanguage: widget.onToggleLanguage,
-        ),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation.drive(CurveTween(curve: Curves.easeOutCubic)),
-            child: child,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 500),
-      ),
-    );
-  }
-
-  void _navigateToLogin({bool isOffline = false}) {
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        settings: const RouteSettings(name: '/login'),
-        pageBuilder: (context, animation, secondaryAnimation) => LoginActivationScreen(
-          isDarkMode: widget.isDarkMode,
-          languageCode: widget.languageCode,
-          isOfflineWelcomeBack: isOffline,
-        ),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation.drive(CurveTween(curve: Curves.easeOutCubic)),
-            child: child,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 500),
-      ),
-    );
-  }
-
-  void _navigateToOnboarding() {
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        settings: const RouteSettings(name: '/onboarding'),
-        pageBuilder: (context, animation, secondaryAnimation) => OnboardingScreen(
           isDarkMode: widget.isDarkMode,
           languageCode: widget.languageCode,
           onToggleTheme: widget.onToggleTheme,

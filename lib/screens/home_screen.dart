@@ -19,8 +19,6 @@ import '../widgets/video_slider_carousel.dart';
 import '../widgets/how_to_start_banner.dart';
 import '../widgets/subject_vector_widgets.dart';
 import '../widgets/interactive_subject_card.dart';
-import 'login_activation_screen.dart';
-import 'upgrade_registration_screen.dart';
 import '../widgets/locked_unit_dialog.dart';
 import '../services/subscription_service.dart';
 import '../services/device_service.dart';
