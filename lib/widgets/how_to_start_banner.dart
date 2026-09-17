@@ -30,7 +30,7 @@ class HowToStartBanner extends StatelessWidget {
         'color': const Color(0xFF0284C7),
         'text': isAm
             ? 'በመተግበሪያው የመነሻ ገጽ ላይ ከ 9ኛ እስከ 12ኛ ክፍል የሚፈልጉትን ክፍል ይምረጡ። ከዚያም ሂሳብ፣ ፊዚክስ፣ ኬሚስትሪ፣ ባዮሎጂ ወይም ሌሎች የትምህርት አይነቶችን ይክፈቱ።'
-            : 'Choose your enrolled grade level (Grade 9 to 12) from the home page header. Browse Mathematics, Physics, Chemistry, Biology, English and other subjects.',
+            : 'Choose your enrolled grade level (Grade 9 to 12) from the home page. Browse Mathematics, Physics, Chemistry, Biology, English and other subjects.',
       },
       {
         'num': '2',
@@ -43,12 +43,12 @@ class HowToStartBanner extends StatelessWidget {
       },
       {
         'num': '3',
-        'title': isAm ? '3. ቀጣይ ክፍሎችን ለመክፈት አድሚኑን ያነጋግሩ' : '3. Contact Admin for Package Unlock',
+        'title': isAm ? '3. ቀጣይ ክፍሎችን በ50 ብር ብቻ ይክፈቱ' : '3. Unlock Chapters for Only 50 ETB',
         'icon': Icons.admin_panel_settings_rounded,
         'color': const Color(0xFF0088CC),
         'text': isAm
-            ? 'ክፍል 2 እና ቀጣዮቹን (Unit 2+) ሙሉ በሙሉ ለመክፈት አድሚኑን በቴሌግራም ቀጥታ ያነጋግሩ (@EthioconceptcenterAdmin)። የተከፈተልዎት ፓኬጅ በስልክዎ ላይ በደህንነት ይዘጋጃል።'
-            : 'To unlock Unit 2 and all remaining chapters, contact the official Telegram Admin directly (@EthioconceptcenterAdmin). The admin will instantly unlock your single-device package.',
+            ? 'ክፍል 2 እና ቀጣዮቹን (Unit 2+) ሙሉ በሙሉ ለመክፈት በ 50 ብር ክፍያ ብቻ አድሚኑን በቴሌግራም ቀጥታ ያነጋግሩ (@smart_x_help)። ክፍያውን እንዳጠናቀቁ ፓኬጁ በስልክዎ ላይ በቋሚነት ይከፈትልዎታል።'
+            : 'To unlock Unit 2 and all remaining chapters for only 50 ETB, contact our official Telegram Admin (@smart_x_help). Your package will be unlocked for your device lifetime.',
       },
       {
         'num': '4',
@@ -94,7 +94,7 @@ class HowToStartBanner extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isAm ? 'እንዴት ልጀምር? (ሙሉ ረዘም ያለ መመሪያ)' : 'How to Start? (Detailed Guide)',
+                          isAm ? 'እንዴት ልጀምር? (ግልፅ መመሪያ)' : 'How to Start? (Clear Guide)',
                           style: GoogleFonts.notoSansEthiopic(
                             fontSize: 15.5,
                             fontWeight: FontWeight.w900,
@@ -124,7 +124,7 @@ class HowToStartBanner extends StatelessWidget {
               const Divider(height: 1),
               const SizedBox(height: 18),
 
-              // Steps List in Dialog with Admin Contact emphasis
+              // Steps List
               ...steps.map((step) {
                 final Color itemColor = step['color'] as Color;
                 return Padding(
@@ -181,30 +181,55 @@ class HowToStartBanner extends StatelessWidget {
                 );
               }),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
-              // Single Direct Action Button: Direct Telegram Admin Contact (@EthioconceptcenterAdmin)
+              // Pricing highlight box (50 ETB / 50 ብር)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.monetization_on_rounded, color: Color(0xFF10B981), size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        isAm
+                            ? 'የክፍያ ዋጋ፡ ለእያንዳንዱ ትምህርት / ዩኒት 50 ብር ብቻ! ለመክፈል አድሚኑን @smart_x_help ያነጋግሩ።'
+                            : 'Price: Only 50 ETB per subject / unit! Contact admin @smart_x_help to unlock.',
+                        style: GoogleFonts.notoSansEthiopic(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF10B981),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // Contact Admin Button (@smart_x_help)
               SizedBox(
-                height: 50,
+                height: 48,
                 child: ElevatedButton.icon(
                   onPressed: () async {
                     Navigator.of(ctx).pop();
-                    final Uri adminUri = Uri.parse('https://t.me/EthioconceptcenterAdmin');
+                    final Uri adminUri = Uri.parse('https://t.me/smart_x_help');
                     if (await canLaunchUrl(adminUri)) {
                       await launchUrl(adminUri, mode: LaunchMode.externalApplication);
-                    } else {
-                      final Uri fallbackAdminUri = Uri.parse('https://t.me/Ethioconceptcenter');
-                      if (await canLaunchUrl(fallbackAdminUri)) {
-                        await launchUrl(fallbackAdminUri, mode: LaunchMode.externalApplication);
-                      }
                     }
                   },
                   icon: const Icon(Icons.person_outline_rounded, size: 20, color: Colors.white),
                   label: Text(
-                    isAm ? 'አድሚኑን በቴሌግራም ያነጋግሩ (Contact Admin)' : 'Contact Admin on Telegram',
+                    isAm ? 'አድሚኑን በቴሌግራም ያነጋግሩ (@smart_x_help)' : 'Contact Admin on Telegram (@smart_x_help)',
                     style: GoogleFonts.notoSansEthiopic(
                       fontWeight: FontWeight.w900,
-                      fontSize: 13.5,
+                      fontSize: 13,
                       color: Colors.white,
                     ),
                   ),
@@ -213,6 +238,35 @@ class HowToStartBanner extends StatelessWidget {
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Join Community Channel Button (https://t.me/SmartX_Discussion)
+              SizedBox(
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    Navigator.of(ctx).pop();
+                    final Uri channelUri = Uri.parse('https://t.me/SmartX_Discussion');
+                    if (await canLaunchUrl(channelUri)) {
+                      await launchUrl(channelUri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  icon: const Icon(Icons.groups_rounded, size: 18, color: Color(0xFF0088CC)),
+                  label: Text(
+                    isAm ? 'የቴሌግራም ቻናላችንን ይቀላቀሉ' : 'Join Telegram Discussion Channel',
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12.5,
+                      color: const Color(0xFF0088CC),
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF0088CC), width: 1.2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
               ),
@@ -272,7 +326,7 @@ class HowToStartBanner extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    isAm ? 'እንዴት ልጀምር? (ሙሉ መመሪያ)' : 'How to Start? (Usage Guide)',
+                    isAm ? 'እንዴት ልጀምር? (ሙሉ ግልፅ መመሪያ)' : 'How to Start? (Clear Usage Guide)',
                     style: GoogleFonts.notoSansEthiopic(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,

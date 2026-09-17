@@ -400,14 +400,14 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
                       onPressed: () async {
-                        final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
+                        final Uri telegramUri = Uri.parse('https://t.me/SmartX_Discussion');
                         if (await canLaunchUrl(telegramUri)) {
                           await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
                         }
                       },
                       icon: const Icon(Icons.send_rounded, size: 18),
                       label: Text(
-                        isAm ? 'ቴሌግራም ቻናል ተቀላቀል (@EthioconceptcenterAcademy)' : 'Join Telegram Channel',
+                        isAm ? 'ቴሌግራም ቻናል ተቀላቀል (@SmartX_Discussion)' : 'Join Telegram Channel (@SmartX_Discussion)',
                         style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
                       ),
                       style: OutlinedButton.styleFrom(

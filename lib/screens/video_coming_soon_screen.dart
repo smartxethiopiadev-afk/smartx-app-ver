@@ -22,21 +22,21 @@ class VideoComingSoonScreen extends StatelessWidget {
 
   Future<void> _launchTelegram(BuildContext context) async {
     final String msg = Uri.encodeComponent(
-      'ሰላም Smart Learn Ethiopian, Grade $grade $subject Unit $unitNumber የቪዲዮ ትምህርት መቼ እንደሚለቀቅ ለማወቅ እና ቻናሉን ለመቀላቀል ፈልጌ ነው።',
+      'ሰላም Smart Learn Ethiopia, Grade $grade $subject Unit $unitNumber የቪዲዮ ትምህርት መቼ እንደሚለቀቅ ለማወቅ እና ቻናሉን ለመቀላቀል ፈልጌ ነው።',
     );
-    final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy?text=$msg');
+    final Uri telegramUri = Uri.parse('https://t.me/SmartX_Discussion');
     try {
       if (await canLaunchUrl(telegramUri)) {
         await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
       } else {
-        final Uri fallbackUri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
+        final Uri fallbackUri = Uri.parse('https://t.me/SmartX_Discussion');
         await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
       }
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Could not open Telegram. Please visit @EthioconceptcenterAcademy'),
+            content: Text('Could not open Telegram. Please visit @SmartX_Discussion'),
             backgroundColor: Color(0xFFEF4444),
           ),
         );

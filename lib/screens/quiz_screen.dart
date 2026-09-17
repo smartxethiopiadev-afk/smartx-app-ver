@@ -5,6 +5,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/question_model.dart';
 import '../services/quiz_service.dart';
 import '../services/offline_manager.dart';
@@ -947,42 +948,158 @@ class _QuizScreenState extends State<QuizScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_errorMessage != null) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.blueAccent),
-              const SizedBox(height: 16),
-              Text(
-                _errorMessage!,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: CircularProgressIndicator(
+                strokeWidth: 3.5,
+                valueColor: AlwaysStoppedAnimation<Color>(_getSubjectThemeColor()),
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _loadQuestions,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text("Retry"),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              AppStateProvider.of(context).languageCode == 'am'
+                  ? "ጥያቄዎችን በመጫን ላይ..."
+                  : "Loading quiz questions...",
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
-    if (_questions.isEmpty) {
-      return const Center(
-        child: Text(
-          "No questions found.",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.grey),
+    if (_errorMessage != null || _questions.isEmpty) {
+      final bool isLight = Theme.of(context).brightness == Brightness.light;
+      final bool isAm = AppStateProvider.of(context).languageCode == 'am';
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 480),
+            padding: const EdgeInsets.all(24.0),
+            decoration: BoxDecoration(
+              color: isLight ? Colors.white : const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Error / Info Icon
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.info_outline_rounded,
+                    size: 32,
+                    color: Color(0xFFEF4444),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  isAm ? "ጥያቄዎችን ማግኘት አልተቻለም" : "Could Not Load Questions",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  isAm
+                      ? "የኢንተርኔት ግንኙነትዎን ያረጋግጡ ወይም ይህንን ክፍል አስቀድመው ያውርዱ። ያለ ክፍያ ክፍል 1 ሁልጊዜ ክፍት ነው።"
+                      : "Please check your internet connection or make sure this unit is downloaded for offline study. Unit 1 is always free.",
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    height: 1.5,
+                    color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                // Action: Retry Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: _loadQuestions,
+                    icon: const Icon(Icons.refresh_rounded, size: 20),
+                    label: Text(
+                      isAm ? "እንደገና ሞክር (Retry)" : "Try Again",
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _getSubjectThemeColor(),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Action: Contact Admin on Telegram (@smart_x_help)
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final Uri uri = Uri.parse('https://t.me/smart_x_help');
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    icon: const Icon(Icons.send_rounded, size: 16, color: Color(0xFF0088CC)),
+                    label: Text(
+                      isAm ? "አድሚን ያነጋግሩ (@smart_x_help)" : "Contact Admin (@smart_x_help)",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        color: Color(0xFF0088CC),
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF0088CC), width: 1.2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Action: Go Back
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    isAm ? "ተመለስ (Go Back)" : "Go Back",
+                    style: TextStyle(
+                      color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }

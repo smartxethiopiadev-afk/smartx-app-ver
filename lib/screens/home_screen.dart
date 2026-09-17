@@ -460,12 +460,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                   _buildDrawerTile(
                     icon: Icons.send_rounded,
-                    title: widget.languageCode == 'en' ? 'Contact Telegram' : 'ቴሌግራም አግኙን',
+                    title: widget.languageCode == 'en' ? 'Contact Admin (@smart_x_help)' : 'አድሚኑን ያነጋግሩ (@smart_x_help)',
                     isSelected: false,
                     isLight: isLight,
                     onTap: () async {
                       Navigator.pop(context);
-                      final Uri uri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
+                      final Uri uri = Uri.parse('https://t.me/smart_x_help');
                       if (await canLaunchUrl(uri)) {
                         await launchUrl(uri, mode: LaunchMode.externalApplication);
                       }
@@ -1340,8 +1340,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             onPressed: () async {
                               final unitStr = _selectedUnitForVideosTab > 0 ? 'Unit $_selectedUnitForVideosTab' : '';
                               final msg = Uri.encodeComponent(
-                                  'ሰላም ኢትዮ ኮንሴፕት ሴንተር፣ Grade $_selectedGradeForVideosTab $_selectedSubjectForVideosTab $unitStr ቪዲዮ እንዲጫንልኝ እፈልጋለሁ።');
-                              final uri = Uri.parse('https://t.me/EthioconceptcenterAcademy?text=$msg');
+                                  'ሰላም ስማርት ለርን አድሚን (@smart_x_help)፣ Grade $_selectedGradeForVideosTab $_selectedSubjectForVideosTab $unitStr ቪዲዮ እንዲጫንልኝ እፈልጋለሁ።');
+                              final uri = Uri.parse('https://t.me/smart_x_help?text=$msg');
                               if (await canLaunchUrl(uri)) {
                                 await launchUrl(uri, mode: LaunchMode.externalApplication);
                               }
@@ -1665,8 +1665,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           GestureDetector(
                             onTap: () async {
                               final msg = Uri.encodeComponent(
-                                  'ሰላም ኢትዮ ኮንሴፕት ሴንተር፣ ስለ Grade ${video.grade} ${video.subject} Unit ${video.unitNumber} (${video.title}) ጥያቄ አለኝ።');
-                              final uri = Uri.parse('https://t.me/EthioconceptcenterAcademy?text=$msg');
+                                  'ሰላም ስማርት ለርን አድሚን (@smart_x_help)፣ ስለ Grade ${video.grade} ${video.subject} Unit ${video.unitNumber} (${video.title}) ጥያቄ አለኝ።');
+                              final uri = Uri.parse('https://t.me/smart_x_help?text=$msg');
                               if (await canLaunchUrl(uri)) {
                                 await launchUrl(uri, mode: LaunchMode.externalApplication);
                               }
@@ -4099,10 +4099,10 @@ class HelpSupportScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10.0),
             
-            // Community Card (@EthioconceptcenterAcademy)
+            // Community Card (@SmartX_Discussion)
             InkWell(
               onTap: () async {
-                final uri = Uri.parse('https://t.me/EthioconceptcenterAcademy');
+                final uri = Uri.parse('https://t.me/SmartX_Discussion');
                 if (await canLaunchUrl(uri)) {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }
@@ -4139,7 +4139,7 @@ class HelpSupportScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Ethio Concept Center Academy',
+                            'Smart Learn Ethiopia Community',
                             style: TextStyle(
                               fontSize: 14.5,
                               fontWeight: FontWeight.w900,
@@ -4148,7 +4148,7 @@ class HelpSupportScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 2.0),
                           const Text(
-                            '@EthioconceptcenterAcademy',
+                            '@SmartX_Discussion',
                             style: TextStyle(
                               fontSize: 12.0,
                               color: Color(0xFF0088CC),

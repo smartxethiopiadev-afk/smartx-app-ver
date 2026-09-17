@@ -1179,6 +1179,35 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                   ),
                 ),
 
+              if (!_isPackageUnlocked)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.stars_rounded, color: Color(0xFF10B981), size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          languageCode == 'am'
+                              ? 'ክፍል 1 ነፃ ነው! ክፍል 2 እና ቀጣዮቹን በ 50 ብር ብቻ ይክፈቱ (አድሚን: @smart_x_help)'
+                              : 'Unit 1 is free! Unlock remaining units for 50 ETB (Admin: @smart_x_help)',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF10B981),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               if (filteredUnits.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
@@ -1340,6 +1369,25 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                                       color: descColor,
                                                     ),
                                                   ),
+                                                  if (isLocked) ...[
+                                                    const SizedBox(height: 4),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                                        borderRadius: BorderRadius.circular(6),
+                                                        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                                                      ),
+                                                      child: Text(
+                                                        languageCode == 'am' ? '🔒 50 ብር • ለመክፈት ይንኩ' : '🔒 50 ETB • Tap to unlock',
+                                                        style: const TextStyle(
+                                                          fontSize: 10,
+                                                          fontWeight: FontWeight.w800,
+                                                          color: Color(0xFF10B981),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                   if (progress != null) ...[
                                                     const SizedBox(height: 8),
                                                     Column(

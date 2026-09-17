@@ -110,13 +110,12 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
     }
 
     final String message =
-        'ሰላም Ethio Concept Center Admin, በመተግበሪያው ላይ መመዝገብ እና መለያ መክፈት እፈልጋለሁ:\n'
+        'ሰላም Smart Learn Admin (@smart_x_help), በመተግበሪያው ላይ በ 50 ብር ክፍያ ፓኬጅ ማስከፈት እፈልጋለሁ:\n'
         '• የተመረጠው ፓኬጅ: $tierName\n'
         '• የተማሪ ስም: $name\n'
-        '• ስልክ ቁጥር: $phone\n'
-        'እባክዎ የይለፍ ቃል (Password) ይስጡኝ።';
+        '• ስልክ ቁጥር: $phone';
 
-    final Uri telegramUri = Uri.parse('https://t.me/EthioconceptcenterAcademy?text=${Uri.encodeComponent(message)}');
+    final Uri telegramUri = Uri.parse('https://t.me/smart_x_help?text=${Uri.encodeComponent(message)}');
 
     try {
       if (await canLaunchUrl(telegramUri)) {
@@ -129,7 +128,7 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
         Clipboard.setData(ClipboardData(text: message));
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('የምዝገባ መረጃው ተቀድቷል! ቴሌግራም ላይ @EthioconceptcenterAcademy ይላኩ።'),
+            content: Text('የምዝገባ መረጃው ተቀድቷል! ቴሌግራም ላይ @smart_x_help ይላኩ።'),
             backgroundColor: Color(0xFF0088CC),
           ),
         );

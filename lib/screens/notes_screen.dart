@@ -61,7 +61,7 @@ class _NotesScreenState extends State<NotesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  static const String _telegramChannelUrl = 'https://t.me/EthioconceptcenterAcademy';
+  static const String _telegramChannelUrl = 'https://t.me/SmartX_Discussion';
 
   @override
   void initState() {
@@ -793,17 +793,6 @@ class _NotesScreenState extends State<NotesScreen> {
             ),
             tooltip: "Bookmark",
             onPressed: _toggleBookmark,
-          ),
-
-          // 3. Share
-          IconButton(
-            icon: Icon(
-              Icons.share_outlined,
-              size: 21,
-              color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
-            ),
-            tooltip: "Share",
-            onPressed: _shareNote,
           ),
           const SizedBox(width: 8),
         ],

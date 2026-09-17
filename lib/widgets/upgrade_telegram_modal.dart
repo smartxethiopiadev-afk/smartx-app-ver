@@ -135,10 +135,10 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
     final String selectedPkgTitle = _selectedPackage.title;
 
     final String message =
-        "ሰላም ኢትዮ ኮንሴፕት ሴንተር አድሚን፣ $selectedPkgTitle መክፈት እፈልጋለሁ። የተማሪ ስም: $cleanName፣ ስልክ ቁጥር: $cleanPhone። እባክዎ የይለፍ ቃል (Password) ይስጡኝ።";
+        "ሰላም ስማርት ለርን አድሚን (@smart_x_help)፣ $selectedPkgTitle በ 50 ብር ክፍያ ማስከፈት እፈልጋለሁ። የተማሪ ስም: $cleanName፣ ስልክ ቁጥር: $cleanPhone።";
 
     final encodedMsg = Uri.encodeComponent(message);
-    final Uri directTelegramUri = Uri.parse("https://t.me/EthioconceptcenterAcademy?text=$encodedMsg");
+    final Uri directTelegramUri = Uri.parse("https://t.me/smart_x_help?text=$encodedMsg");
 
     try {
       if (await canLaunchUrl(directTelegramUri)) {
@@ -153,8 +153,8 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
         SnackBar(
           content: Text(
             widget.languageCode == 'am'
-                ? 'የቴሌግራም መልእክት ተቀድቷል! ቴሌግራም ላይ ይለጥፉት (@EthioconceptcenterAcademy)'
-                : 'Message copied to clipboard! Paste it to @EthioconceptcenterAcademy on Telegram.',
+                ? 'የቴሌግራም መልእክት ተቀድቷል! ቴሌግራም ላይ ይለጥፉት (@smart_x_help)'
+                : 'Message copied to clipboard! Paste it to @smart_x_help on Telegram.',
           ),
           backgroundColor: const Color(0xFF0084FF),
           behavior: SnackBarBehavior.floating,
@@ -228,8 +228,8 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
         SnackBar(
           content: Text(
             widget.languageCode == 'am'
-                ? 'ምንም ንቁ ክፍያ አልተገኘም። በቴሌግራም አስተዳዳሪውን ያነጋግሩ (@EthioconceptcenterAcademy)'
-                : 'No active subscription found. Please contact admin on Telegram (@EthioconceptcenterAcademy)',
+                ? 'ምንም ንቁ ክፍያ አልተገኘም። በቴሌግራም አስተዳዳሪውን ያነጋግሩ (@smart_x_help)'
+                : 'No active subscription found. Please contact admin on Telegram (@smart_x_help)',
           ),
           backgroundColor: Colors.orangeAccent,
           action: SnackBarAction(
