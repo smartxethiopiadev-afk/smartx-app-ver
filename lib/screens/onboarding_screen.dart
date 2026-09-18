@@ -32,7 +32,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<Map<String, dynamic>> _slides = [
     {
-      'image': 'assets/images/student_laptop.png',
+      'icon': Icons.quiz_rounded,
       'color': const Color(0xFF00BFFF), // Deep Sky Blue
       'titleEn': 'Interactive Quizzes',
       'titleAm': 'አሳታፊ ጥያቄዎች',
@@ -40,7 +40,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'descAm': 'ከእያንዳንዱ ጥያቄ በኋላ በቅጽበት በሚሰጥ ግብረ-መልስ፣ ዝርዝር ማብራሪያዎች እና የክንውን ትንተናዎች ብቃትዎን ያሳድጉ።',
     },
     {
-      'image': 'assets/images/student_tablet.png',
+      'icon': Icons.auto_stories_rounded,
       'color': const Color(0xFF10B981), // Emerald Green
       'titleEn': 'Smart Short Notes',
       'titleAm': 'ስማርት አጫጭር ማስታወሻዎች',
@@ -48,7 +48,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'descAm': 'ፈጣን ክለሳ ለማድረግ እና ለፈተና ለመዘጋጀት እንዲረዳዎት በየምዕራፉ የተደራጁ አጠቃላይና አጫጭር የጥናት ጽሑፎችን ያግኙ።',
     },
     {
-      'image': 'assets/images/student_phone.png',
+      'icon': Icons.offline_bolt_rounded,
       'color': const Color(0xFFF59E0B), // Warm Amber
       'titleEn': 'Realistic Exams & Offline Study',
       'titleAm': 'ትክክለኛ ፈተናዎችና የባለሙሉ ማህደር ጥናት',
@@ -149,16 +149,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               },
               itemBuilder: (context, index) {
                 final slide = _slides[index];
-                final String primaryImg = slide['image']!;
+                final IconData icon = slide['icon']!;
+                final Color accentColor = slide['color']!;
 
                 return Stack(
                   fit: StackFit.expand,
                   children: [
-                    // Immersive Full-Screen Cover Background Image
-                    Image.asset(
-                      primaryImg,
-                      fit: BoxFit.cover,
-                      alignment: Alignment.center,
+                    // Decorative Background with Large Icon
+                    Container(
+                      color: const Color(0xFF0F172A),
+                      child: Center(
+                        child: Opacity(
+                          opacity: 0.1,
+                          child: Icon(
+                            icon,
+                            size: 280,
+                            color: accentColor,
+                          ),
+                        ),
+                      ),
                     ),
 
                     // Atmospheric gradient overlay ensuring top header & bottom panel contrast

@@ -291,43 +291,33 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                             ),
                           ),
                           child: Container(
-                            width: 116,
-                            height: 116,
-                            padding: const EdgeInsets.all(10),
+                            width: 120,
+                            height: 120,
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0B132B),
+                              color: Colors.black,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: const Color(0xFF0284C7).withValues(alpha: 0.5),
-                                width: 2,
+                                color: const Color(0xFF0284C7).withValues(alpha: 0.8),
+                                width: 1.5,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF0284C7).withValues(alpha: 0.35),
-                                  blurRadius: 36,
-                                  spreadRadius: 4,
+                                  color: const Color(0xFF0284C7).withValues(alpha: 0.4),
+                                  blurRadius: 40,
+                                  spreadRadius: 2,
                                 ),
                               ],
                             ),
                             child: ClipOval(
                               child: Image.asset(
-                                'assets/images/smart_x_logo.png',
+                                'assets/images/app_logo.png',
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.school_rounded,
-                                      color: Colors.white,
-                                      size: 56,
-                                    ),
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(
+                                    Icons.school_rounded,
+                                    color: Colors.white,
+                                    size: 56,
                                   ),
                                 ),
                               ),
@@ -338,34 +328,38 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                         const SizedBox(height: 28),
 
                         // Main Title typography: Smart Learn Ethiopian
-                        Row(
+                        Column(
                           mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
                           children: [
                             Text(
-                              'Smart Learn ',
+                              'Smart Learn',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 28,
+                                fontSize: 32,
                                 fontWeight: FontWeight.w800,
-                                letterSpacing: -0.5,
+                                letterSpacing: -0.8,
                                 color: Colors.white,
                               ),
                             ),
+                            const SizedBox(height: 4),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                               decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF0284C7), Color(0xFF0284C7)],
-                                ),
+                                color: const Color(0xFF0284C7),
                                 borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF0284C7).withValues(alpha: 0.3),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
                               child: Text(
                                 'Ethiopian',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 21,
+                                  fontSize: 22,
                                   fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.5,
+                                  letterSpacing: 1.2,
                                   color: Colors.white,
                                 ),
                               ),

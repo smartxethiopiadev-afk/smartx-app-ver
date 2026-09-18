@@ -24,7 +24,6 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
 
   final List<Map<String, dynamic>> _videoBanners = [
     {
-      'assetPath': 'assets/images/student_laptop.png',
       'titleEn': 'Curriculum Video Lessons',
       'titleAm': 'የክፍል ቪዲዮ ትምህርቶች (Grade 9-12)',
       'descEn': 'Crystal clear explanations organized by Grade, Subject, and Unit breakdown.',
@@ -35,7 +34,6 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
       'icon': Icons.play_circle_fill_rounded,
     },
     {
-      'assetPath': 'assets/images/student_tablet.png',
       'titleEn': 'Step-by-Step Problem Solving',
       'titleAm': 'የፈተና ጥያቄዎች ደረጃ በደረጃ አሰራር',
       'descEn': 'Learn smart exam problem solving techniques with experienced top tutors.',
@@ -46,7 +44,6 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
       'icon': Icons.lightbulb_rounded,
     },
     {
-      'assetPath': 'assets/images/student_phone.png',
       'titleEn': 'Concept Walkthroughs & Formulas',
       'titleAm': 'የቁልፍ ፎርሙላዎች እና ፅንሰ ሀሳቦች ዳሰሳ',
       'descEn': 'Grasp foundational science rules and derivations in fast 15-30 min sessions.',
@@ -55,17 +52,6 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
       'tagEn': 'CONCEPT CLARITY',
       'tagAm': 'ፈጣን ግንዛቤ',
       'icon': Icons.auto_stories_rounded,
-    },
-    {
-      'assetPath': 'assets/images/student_laptop.png',
-      'titleEn': 'National & Matric Exam Revisions',
-      'titleAm': 'የማትሪክ እና ሞዴል ፈተናዎች ትንታኔ',
-      'descEn': 'In-depth past matric exam revisions and model test walkthroughs.',
-      'descAm': 'ያለፉት ዓመታት የማትሪክ ፈተናዎች ትንታኔ እና ሙሉ አሰራር ማብራሪያ።',
-      'accentColor': Color(0xFF8B5CF6),
-      'tagEn': 'MATRIC REVISION',
-      'tagAm': 'የማትሪክ ክለሳ',
-      'icon': Icons.military_tech_rounded,
     },
   ];
 
@@ -115,14 +101,29 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
                 borderRadius: BorderRadius.circular(16.0),
                 child: Stack(
                   children: [
-                    // Background Image
+                    // Decorative Background Gradient with Icon
                     Positioned.fill(
-                      child: Image.asset(
-                        slide['assetPath']!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: isLight ? const Color(0xFFEDF2F7) : const Color(0xFF1E293B),
-                          child: Icon(icon, size: 40, color: accentColor.withValues(alpha: 0.5)),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              accentColor.withValues(alpha: 0.8),
+                              accentColor.withValues(alpha: 0.4),
+                              Colors.black,
+                            ],
+                          ),
+                        ),
+                        child: Center(
+                          child: Opacity(
+                            opacity: 0.15,
+                            child: Icon(
+                              icon,
+                              size: 140,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     ),

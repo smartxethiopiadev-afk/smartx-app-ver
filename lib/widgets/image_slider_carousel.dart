@@ -31,16 +31,6 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
       'tagAm': 'ስማርት ለርን ኢትዮጵያ',
     },
     {
-      'assetPath': 'assets/images/home_banner2.png',
-      'titleEn': 'Curriculum Video Masterclasses',
-      'titleAm': 'የቪዲዮ ትምህርቶች እና ማብራሪያዎች',
-      'descEn': 'Crystal clear chapter walkthroughs, formulas, and verified solutions.',
-      'descAm': 'ከ9-12ኛ ክፍል ያሉትን ሁሉንም የትምህርት ምዕራፎች በቪዲዮ ማብራሪያ በቀላሉ ይረዱ።',
-      'accentColor': const Color(0xFF10B981),
-      'tagEn': 'VIDEO LESSONS',
-      'tagAm': 'የቪዲዮ ማብራሪያዎች',
-    },
-    {
       'assetPath': 'assets/images/home_banner3.png',
       'titleEn': 'National Matric Exam Excellence',
       'titleAm': 'ለማትሪክ ፈተና ከፍተኛ ውጤት',
@@ -49,16 +39,6 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
       'accentColor': const Color(0xFFF59E0B),
       'tagEn': 'MATRIC READY',
       'tagAm': 'ለፈተና ዝግጁ',
-    },
-    {
-      'assetPath': 'assets/images/home_banner4.png',
-      'titleEn': '100% Offline Study Hub',
-      'titleAm': 'ያለ ኢንተርኔት በየትኛውም ቦታ ያጥኑ',
-      'descEn': 'Download short notes and practice quizzes to learn anywhere offline.',
-      'descAm': 'አጫጭር ማስታወሻዎችን እና የልምምድ ፈተናዎችን አውርደው ያለ ኢንተርኔት ይጠቀሙ።',
-      'accentColor': const Color(0xFF8B5CF6),
-      'tagEn': 'OFFLINE ACCESS',
-      'tagAm': 'ከመስመር ውጭ ዝግጁ',
     },
     {
       'assetPath': 'assets/images/home_banner5.png',
