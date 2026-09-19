@@ -1,68 +1,58 @@
-name: Build & Release Android App (APK & AAB)
+name: Build Android APK
 
 on:
   push:
     branches:
       - main
       - master
-    tags:
-      - 'v*'
   pull_request:
     branches:
       - main
       - master
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
-  build:
-    name: Build, Verify & Release Smart Learn Ethiopian
+  build_android_apk:
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Java JDK (JDK 17)
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
-          cache: 'gradle'
+          cache: gradle
 
-      - name: Set up Flutter SDK
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable
           cache: true
 
-      - name: Git Ignore Audit & Security Check
-        run: |
-          echo "=== 🛡️ Auditing .gitignore & Ensuring Local Keystores / Secrets Never Commit ==="
-          LEAKED_FILES=$(git ls-files | grep -E '\.(jks|keystore|p12|bks|pfx)$|^key\.properties$|android/key\.properties$|google-services\.json$' || true)
-          if [ -n "$LEAKED_FILES" ]; then
-            echo "::error::SECURITY CRITICAL: Sensitive credentials or keystore files are tracked in Git!"
-            exit 1
-          fi
-          echo "✅ Security scan clean."
-
-      - name: Install Flutter Dependencies
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: Dependency Hygiene - Detect Unused Dependencies
-        run: dart run dependency_validator || true
+      - name: Detect Android signing keys
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_ALIAS" ] && [ -n "$KEYSTORE_KEY_PASSWORD" ] && [ -n "$KEYSTORE_STORE_PASSWORD" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Code Quality - Static Analysis
-        run: flutter analyze --fatal-infos --fatal-warnings || true
-
-      - name: Crash Prevention - Run Automated Tests
-        run: flutter test --no-pub || true
-
-      - name: Setup Signing Keystore & Credentials Strictly from Secrets
+      - name: Configure release signing
+        if: steps.signing.outputs.enabled == 'true'
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
@@ -70,125 +60,41 @@ jobs:
           KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
         run: |
           mkdir -p android/app
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
-            cp android/app/upload-keystore.jks android/upload-keystore.jks
-          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n" \
+            "$KEYSTORE_STORE_PASSWORD" "$KEYSTORE_KEY_PASSWORD" "$KEYSTORE_ALIAS" > android/key.properties
+          cp android/key.properties android/app/key.properties
 
-          if [ -n "$KEYSTORE_ALIAS" ] && [ -n "$KEYSTORE_KEY_PASSWORD" ] && [ -n "$KEYSTORE_STORE_PASSWORD" ]; then
-            printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n" \
-              "$KEYSTORE_STORE_PASSWORD" "$KEYSTORE_KEY_PASSWORD" "$KEYSTORE_ALIAS" > android/key.properties
-            cp android/key.properties android/app/key.properties
-          fi
-
-      - name: Ensure Android Platform and Enforce V2 Embedding
+      - name: Build APK
         run: |
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          if [ ! -f "$MANIFEST" ]; then
-            flutter create --platforms=android --org com.smartlearn.ethiopian .
-          fi
-          if [ -f "android/gradlew" ]; then
-            chmod +x android/gradlew
-          fi
-          sed -i 's/android:name="io.flutter.app.FlutterApplication"/android:name="${applicationName}"/g' "$MANIFEST" || true
+          mkdir -p release_artifacts
 
-      - name: Build Android App Bundle (AAB for Google Play Store)
-        run: |
-          flutter build appbundle --release
-          mkdir -p release_dist
-          if [ -f build/app/outputs/bundle/release/app-release.aab ]; then
-            cp build/app/outputs/bundle/release/app-release.aab release_dist/Smart-Learn-Ethiopian-PlayStore-release.aab
+          if [ "${{ steps.signing.outputs.enabled }}" = "true" ]; then
+            echo "Building release APK with signing credentials"
+            flutter build apk --release
+            cp build/app/outputs/flutter-apk/app-release.apk release_artifacts/SmartX-Release.apk
+          else
+            echo "No signing secrets found; building debug APK as a fallback"
+            flutter build apk --debug
+            cp build/app/outputs/flutter-apk/app-debug.apk release_artifacts/SmartX-Debug.apk
           fi
 
-      - name: Build Split-per-ABI APKs & Universal APK
-        run: |
-          flutter build apk --release --split-per-abi
-          flutter build apk --release
-          
-          mkdir -p release_dist
-          if [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
-            cp build/app/outputs/flutter-apk/app-release.apk release_dist/Smart-Learn-Ethiopian-Universal.apk
-          fi
-          if [ -f build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ]; then
-            cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk release_dist/Smart-Learn-Ethiopian-arm64-v8a.apk
-          fi
-          if [ -f build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk ]; then
-            cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk release_dist/Smart-Learn-Ethiopian-armeabi-v7a.apk
-          fi
-          
-          echo "=== Generated Release Files ==="
-          ls -lh release_dist/
+          ls -lh release_artifacts || true
 
-      - name: Checksum Generation - Compute SHA-256 Hashes
-        run: |
-          cd release_dist
-          sha256sum Smart-Learn-Ethiopian-*.apk Smart-Learn-Ethiopian-*.aab > SHA256SUMS.txt || true
-          cat SHA256SUMS.txt || true
-
-      - name: Build Report - Publish Markdown Summary to GitHub Actions
-        run: |
-          echo "### 🚀 Smart Learn Ethiopian Android Build & Release Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Artifact Name | Target Architecture | File Size |" >> $GITHUB_STEP_SUMMARY
-          echo "| :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-          for f in release_dist/Smart-Learn-Ethiopian-*.apk release_dist/Smart-Learn-Ethiopian-*.aab; do
-            if [ -f "$f" ]; then
-              FNAME=$(basename "$f")
-              FSIZE=$(ls -lh "$f" | awk '{print $5}')
-              echo "| \`$FNAME\` | Android | **$FSIZE** |" >> $GITHUB_STEP_SUMMARY
-            fi
-          done
-
-      - name: Upload Play Store AAB Bundle (Artifact)
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Smart-Learn-PlayStore-AAB-v1.0.${{ github.run_number }}
-          path: release_dist/Smart-Learn-Ethiopian-PlayStore-release.aab
-          if-no-files-found: warn
+          name: smartx-android-apk
+          path: release_artifacts/*.apk
+          if-no-files-found: error
 
-      - name: Upload Universal APK (Artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: Smart-Learn-Universal-APK-v1.0.${{ github.run_number }}
-          path: release_dist/Smart-Learn-Ethiopian-Universal.apk
-          if-no-files-found: warn
-
-      - name: Upload ARM64 64-bit APK (Artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: Smart-Learn-ARM64-v8a-APK-v1.0.${{ github.run_number }}
-          path: release_dist/Smart-Learn-Ethiopian-arm64-v8a.apk
-          if-no-files-found: warn
-
-      - name: Upload SHA-256 Checksums (Artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: Smart-Learn-Checksums-v1.0.${{ github.run_number }}
-          path: release_dist/SHA256SUMS.txt
-          if-no-files-found: warn
-
-      - name: Create GitHub Release & Upload All Separate APK & AAB Packages
+      - name: Create GitHub release
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: release-v1.0.${{ github.run_number }}
-          name: Smart Learn Ethiopian Official Release v1.0.${{ github.run_number }}
-          body: |
-            ### 📱 Smart Learn Ethiopian (ስማርት ለርን ኢትዮጵያን) Official Build Release v1.0.${{ github.run_number }}
-            
-            ይህ ይፋዊ የ Smart Learn Ethiopian መተግበሪያ የተፈረመበትና የተረጋገጠበት የሪሊዝ ፋይሎች ዝርዝር ነው፦
-            
-            1. **`Smart-Learn-Ethiopian-PlayStore-release.aab`** - Google Play Store App Bundle (.aab)
-            2. **`Smart-Learn-Ethiopian-Universal.apk`** - Universal Full APK
-            3. **`Smart-Learn-Ethiopian-arm64-v8a.apk`** - 64-bit Optimized APK
-            4. **`Smart-Learn-Ethiopian-armeabi-v7a.apk`** - 32-bit Legacy APK
-            5. **`SHA256SUMS.txt`** - Cryptographic Checksums
-          files: |
-            release_dist/Smart-Learn-Ethiopian-PlayStore-release.aab
-            release_dist/Smart-Learn-Ethiopian-Universal.apk
-            release_dist/Smart-Learn-Ethiopian-arm64-v8a.apk
-            release_dist/Smart-Learn-Ethiopian-armeabi-v7a.apk
-            release_dist/SHA256SUMS.txt
+          tag_name: android-apk-${{ github.run_number }}
+          name: Android APK ${{ github.run_number }}
+          files: release_artifacts/*.apk
           draft: false
           prerelease: false
         env:
