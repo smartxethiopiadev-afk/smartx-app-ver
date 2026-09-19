@@ -88,6 +88,21 @@ class PackageModel {
     'qualitative_tier': qualitativeTier,
   };
 
+  /// Generates deterministic standard subject package ID
+  static String getSubjectPackageId(int grade, String subject) {
+    final String subjectSlug = subject.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+    return 'pkg_g${grade}_$subjectSlug';
+  }
+
+  /// Generates deterministic grade package ID
+  static String getGradePackageId(int grade) {
+    return 'pkg_grade_$grade';
+  }
+
+  /// All grades package ID
+  static const String allGradesPackageId = 'pkg_all_grades';
+  static const String allInclusivePackageId = 'pkg_all_inclusive';
+
   /// Generates the 3 qualitative package tiers for a given Grade and optional Subject
   static List<PackageModel> getPackagesForGrade(int grade, {String? subject}) {
     final String subjectName = (subject != null && subject.trim().isNotEmpty) ? subject.trim() : 'Mathematics';

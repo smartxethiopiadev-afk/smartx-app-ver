@@ -48,15 +48,15 @@ flutter_launcher_icons:
   min_sdk_android: 21
   web:
     generate: false
-    background_color: "#080E1E"
-    theme_color: "#0284C7"
+    background_color: "#000000"
+    theme_color: "#000000"
 
 flutter_native_splash:
-  color: "#080E1E"
+  color: "#000000"
   fullscreen: true
   android_12:
-    color: "#080E1E"
-    icon_background_color: "#080E1E"
+    color: "#000000"
+    icon_background_color: "#000000"
 
 flutter:
   uses-material-design: true

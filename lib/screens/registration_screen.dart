@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/device_service.dart';
+import '../services/subscription_service.dart';
 import 'home_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
@@ -96,18 +97,51 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       final supabase = Supabase.instance.client;
       final String nowIso = DateTime.now().toUtc().toIso8601String();
 
-      // Upsert into unified 'students' table
-      final defaultPackages = ['pkg_grade_$_selectedGrade', 'grade_$_selectedGrade'];
+      // Check if student already exists in 'students' table
+      List<String> unlockedPackages = [];
       try {
+        final existing = await supabase
+            .from('students')
+            .select('unlocked_packages, device_id')
+            .eq('phone_number', formattedPhone)
+            .maybeSingle()
+            .timeout(const Duration(seconds: 5));
+
+        if (existing != null) {
+          final existingDev = (existing['device_id'] as String?)?.trim();
+          if (existingDev != null && existingDev.isNotEmpty && existingDev != currentDeviceId) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(widget.languageCode == 'am'
+                      ? 'ይህ ስልክ ቁጥር አስቀድሞ በሌላ ስልክ ላይ ተመዝግቧል። መለያ ማጋራት በጥብቅ የተከለከለ ነው።'
+                      : 'This phone number is already registered on another device. Account sharing is strictly prohibited.'),
+                  backgroundColor: const Color(0xFFEF4444),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+            setState(() => _isLoading = false);
+            return;
+          }
+          final raw = existing['unlocked_packages'] as List<dynamic>?;
+          if (raw != null) {
+            unlockedPackages = raw.map((e) => e.toString()).toList();
+          }
+        }
+
+        // Upsert into unified 'students' table without giving away free packages
         await supabase.from('students').upsert({
           'full_name': fullName,
           'phone_number': formattedPhone,
           'grade': _selectedGrade,
           'device_id': currentDeviceId,
           'is_active': true,
-          'unlocked_packages': defaultPackages,
+          'unlocked_packages': unlockedPackages,
           'updated_at': nowIso,
         }, onConflict: 'phone_number').timeout(const Duration(seconds: 8));
+
+        await SubscriptionService.setUnlockedPackages(unlockedPackages);
       } catch (err) {
         debugPrint('[Registration] students upsert notice: $err');
       }

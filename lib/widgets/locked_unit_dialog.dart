@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'account_upgrade_dialog.dart';
 
 class LockedUnitDialog extends StatelessWidget {
   final int grade;
@@ -197,6 +198,43 @@ class LockedUnitDialog extends StatelessWidget {
                     backgroundColor: const Color(0xFF0088CC),
                     foregroundColor: Colors.white,
                     elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Verify Telegram Purchase / Upgrade button
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    final res = await AccountUpgradeDialog.show(
+                      context,
+                      isDarkMode: isDarkMode,
+                      languageCode: languageCode,
+                      onSuccess: onUnlocked,
+                    );
+                    if (res == true) {
+                      onUnlocked?.call();
+                    }
+                  },
+                  icon: const Icon(Icons.verified_user_rounded, size: 18, color: Color(0xFF0284C7)),
+                  label: Text(
+                    'በቴሌግራም ከፍለዋል? አካውንትዎን ያረጋግጡ',
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12.5,
+                      color: const Color(0xFF0284C7),
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF0284C7), width: 1.5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),

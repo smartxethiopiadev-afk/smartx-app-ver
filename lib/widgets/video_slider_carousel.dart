@@ -24,24 +24,26 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
 
   final List<Map<String, dynamic>> _videoBanners = [
     {
-      'titleEn': 'Curriculum Video Lessons',
+      'titleEn': 'Curriculum Video Masterclasses',
       'titleAm': 'የክፍል ቪዲዮ ትምህርቶች (Grade 9-12)',
-      'descEn': 'Crystal clear explanations organized by Grade, Subject, and Unit breakdown.',
+      'descEn': 'High-definition chapter walkthroughs tailored for Ethiopian national curricula.',
       'descAm': 'በአዲሱ ሥርዓተ ትምህርት መሠረት በክፍል፣ በትምህርት ዓይነት እና በዩኒት የተደራጁ።',
-      'accentColor': Color(0xFFEF4444),
-      'tagEn': 'CURRICULUM MASTERY',
+      'accentColor': Color(0xFF0284C7),
+      'secondaryColor': Color(0xFF0369A1),
+      'tagEn': 'CURRICULUM LECTURES',
       'tagAm': 'የቪዲዮ ማብራሪያ',
-      'icon': Icons.play_circle_fill_rounded,
+      'icon': Icons.ondemand_video_rounded,
     },
     {
       'titleEn': 'Step-by-Step Problem Solving',
       'titleAm': 'የፈተና ጥያቄዎች ደረጃ በደረጃ አሰራር',
-      'descEn': 'Learn smart exam problem solving techniques with experienced top tutors.',
+      'descEn': 'Master tricky physics derivations, math proofs, and chemistry reactions.',
       'descAm': 'አስቸጋሪ የሂሳብ፣ ፊዚክስ እና ኬሚስትሪ ጥያቄዎችን በቀላሉ የማስላት ዘዴዎች።',
-      'accentColor': Color(0xFF0284C7),
-      'tagEn': 'EXAM TACTICS',
+      'accentColor': Color(0xFF6366F1),
+      'secondaryColor': Color(0xFF4338CA),
+      'tagEn': 'EXAM STRATEGIES',
       'tagAm': 'የጥያቄ አሰራር',
-      'icon': Icons.lightbulb_rounded,
+      'icon': Icons.psychology_rounded,
     },
     {
       'titleEn': 'Concept Walkthroughs & Formulas',
@@ -49,7 +51,8 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
       'descEn': 'Grasp foundational science rules and derivations in fast 15-30 min sessions.',
       'descAm': 'ቁልፍ የሳይንስ ፎርሙላዎችን እና ህጎችን በአጭር ጊዜ ውስጥ በግልጽ ይረዱ።',
       'accentColor': Color(0xFF10B981),
-      'tagEn': 'CONCEPT CLARITY',
+      'secondaryColor': Color(0xFF047857),
+      'tagEn': 'CONCEPT RECAP',
       'tagAm': 'ፈጣን ግንዛቤ',
       'icon': Icons.auto_stories_rounded,
     },
@@ -65,9 +68,9 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
           carouselController: _carouselController,
           itemCount: _videoBanners.length,
           options: CarouselOptions(
-            height: 132.0,
+            height: 146.0,
             autoPlay: true,
-            autoPlayInterval: const Duration(seconds: 5),
+            autoPlayInterval: const Duration(seconds: 6),
             autoPlayAnimationDuration: const Duration(milliseconds: 700),
             autoPlayCurve: Curves.easeInOutCubic,
             enlargeCenterPage: false,
@@ -83,25 +86,26 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
             final String title = widget.languageCode == 'en' ? slide['titleEn']! : slide['titleAm']!;
             final String desc = widget.languageCode == 'en' ? slide['descEn']! : slide['descAm']!;
             final Color accentColor = slide['accentColor']!;
+            final Color secondaryColor = slide['secondaryColor']!;
             final IconData icon = slide['icon']!;
 
             return Container(
               margin: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 1.0),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16.0),
+                borderRadius: BorderRadius.circular(18.0),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isLight ? 0.07 : 0.28),
-                    blurRadius: 10.0,
-                    offset: const Offset(0, 4),
+                    color: accentColor.withValues(alpha: isLight ? 0.20 : 0.35),
+                    blurRadius: 16.0,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16.0),
+                borderRadius: BorderRadius.circular(18.0),
                 child: Stack(
                   children: [
-                    // Decorative Background Gradient with Icon
+                    // Deep Rich Gradient Base
                     Positioned.fill(
                       child: Container(
                         decoration: BoxDecoration(
@@ -109,104 +113,132 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              accentColor.withValues(alpha: 0.8),
-                              accentColor.withValues(alpha: 0.4),
-                              Colors.black,
+                              accentColor,
+                              secondaryColor,
+                              const Color(0xFF0B1329),
                             ],
-                          ),
-                        ),
-                        child: Center(
-                          child: Opacity(
-                            opacity: 0.15,
-                            child: Icon(
-                              icon,
-                              size: 140,
-                              color: Colors.white,
-                            ),
+                            stops: const [0.0, 0.45, 1.0],
                           ),
                         ),
                       ),
                     ),
-                    // High-contrast gradient overlay
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withValues(alpha: 0.15),
-                              Colors.black.withValues(alpha: 0.45),
-                              Colors.black.withValues(alpha: 0.88),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Play icon watermark in top-right
+
+                    // Soft Ambient Glow Circles
                     Positioned(
-                      top: 10,
-                      right: 12,
+                      right: -25,
+                      top: -25,
                       child: Container(
-                        padding: const EdgeInsets.all(7),
+                        width: 140,
+                        height: 140,
                         decoration: BoxDecoration(
-                          color: accentColor.withValues(alpha: 0.85),
                           shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.10),
                         ),
+                      ),
+                    ),
+
+                    // Giant Elegant Icon Watermark on the right
+                    Positioned(
+                      right: 12,
+                      bottom: -10,
+                      child: Opacity(
+                        opacity: 0.18,
                         child: Icon(
                           icon,
+                          size: 130,
                           color: Colors.white,
-                          size: 16,
                         ),
                       ),
                     ),
+
+                    // Modern Play Button Pill on Top Right
+                    Positioned(
+                      top: 14,
+                      right: 14,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.35),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+
                     // Content details
                     Positioned(
-                      left: 14,
-                      bottom: 12,
-                      right: 14,
+                      left: 18,
+                      bottom: 16,
+                      right: 64,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Badge Chip
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: accentColor.withValues(alpha: 0.3),
+                              color: Colors.black.withValues(alpha: 0.28),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: accentColor, width: 1),
-                            ),
-                            child: Text(
-                              widget.languageCode == 'en' 
-                                  ? (slide['tagEn'] ?? 'VIDEO HUB') 
-                                  : (slide['tagAm'] ?? 'የቪዲዮ ማዕከል'),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.5,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.25),
+                                width: 0.8,
                               ),
                             ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF38BDF8),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  widget.languageCode == 'en' 
+                                      ? (slide['tagEn'] ?? 'VIDEO HUB') 
+                                      : (slide['tagAm'] ?? 'የቪዲዮ ማዕከል'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9.0,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 6),
                           Text(
                             title,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 14.5,
+                              fontSize: 15.5,
                               fontWeight: FontWeight.w900,
-                              letterSpacing: -0.2,
+                              letterSpacing: -0.3,
+                              height: 1.2,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 3),
                           Text(
                             desc,
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.88),
-                              fontSize: 10.5,
-                              height: 1.2,
+                              fontSize: 11.0,
+                              height: 1.25,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -219,7 +251,7 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
             );
           },
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         // Dots Indicator
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -231,13 +263,13 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
               onTap: () => _carouselController.animateToPage(index),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
-                width: isActive ? 16.0 : 6.0,
+                width: isActive ? 20.0 : 6.0,
                 height: 5.0,
                 margin: const EdgeInsets.symmetric(horizontal: 3.0),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(3.0),
                   color: isActive
-                      ? const Color(0xFFEF4444)
+                      ? const Color(0xFF0284C7)
                       : (isLight ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
                 ),
               ),

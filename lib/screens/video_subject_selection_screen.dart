@@ -169,31 +169,85 @@ class VideoSubjectSelectionScreen extends StatelessWidget {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           children: [
-            // Header Info Pill styled exactly like Quiz & Short Notes
+            // Header Info Banner with High Visual Polish
             Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              margin: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF0084FF).withValues(alpha: isLight ? 0.08 : 0.16),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: const Color(0xFF0084FF).withValues(alpha: isLight ? 0.2 : 0.35),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF0284C7).withValues(alpha: isLight ? 0.12 : 0.22),
+                    const Color(0xFF6366F1).withValues(alpha: isLight ? 0.08 : 0.16),
+                  ],
                 ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFF0284C7).withValues(alpha: isLight ? 0.25 : 0.4),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0284C7).withValues(alpha: isLight ? 0.06 : 0.18),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.play_circle_fill_rounded, color: Color(0xFF0084FF), size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      isEn
-                          ? 'Select a subject to watch chapter video walkthroughs aligned with Quiz & Short Notes.'
-                          : 'ከፈተና እና ማስታወሻዎች ጋር የተጣጣሙ የዩኒት የቪዲዮ ማብራሪያዎችን ለማየት ትምህርት ይምረጡ።',
-                      style: GoogleFonts.notoSansEthiopic(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0284C7).withValues(alpha: 0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isEn ? 'CURRICULUM VIDEO LESSONS' : 'የክፍል ቪዲዮ ትምህርቶች',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.5,
+                            color: const Color(0xFF0284C7),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          isEn
+                              ? 'Watch step-by-step unit breakdowns aligned with Quiz & Short Notes.'
+                              : 'ከፈተና እና ማስታወሻዎች ጋር የተጣጣሙ የዩኒት የቪዲዮ ማብራሪያዎችን በቀላሉ ይመልከቱ።',
+                          style: GoogleFonts.notoSansEthiopic(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            height: 1.35,
+                            color: textColor,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

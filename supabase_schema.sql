@@ -32,7 +32,25 @@ CREATE TABLE IF NOT EXISTS public.packages (
 );
 
 -- ---------------------------------------------------------------------
--- 2. STUDENT CREDENTIALS TABLE (Admin-Issued Login & Device Lock)
+-- 2. STUDENTS TABLE (Primary Source of Truth for Accounts & Subscriptions)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.students (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    phone_number TEXT NOT NULL UNIQUE,
+    full_name TEXT NOT NULL,
+    grade INTEGER NOT NULL DEFAULT 9,
+    stream TEXT DEFAULT 'Natural',
+    device_id TEXT, -- Bound to first device hardware ID (anti-account sharing)
+    unlocked_packages TEXT[] DEFAULT '{}', -- Array of package/subject IDs (e.g. 'pkg_g12_mathematics', 'pkg_grade_12')
+    subscription_status TEXT DEFAULT 'free', -- 'free', 'active', 'expired'
+    subscription_expires_at TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- ---------------------------------------------------------------------
+-- 3. STUDENT CREDENTIALS TABLE (Admin-Issued Login & Device Lock)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.student_credentials (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -46,7 +64,7 @@ CREATE TABLE IF NOT EXISTS public.student_credentials (
 );
 
 -- ---------------------------------------------------------------------
--- 3. USER SUBSCRIPTIONS & SINGLE-DEVICE BINDING
+-- 4. USER SUBSCRIPTIONS & SINGLE-DEVICE BINDING (Legacy Support)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.user_subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -60,16 +78,18 @@ CREATE TABLE IF NOT EXISTS public.user_subscriptions (
 );
 
 -- ---------------------------------------------------------------------
--- 4. ACTIVATION CODES TABLE
+-- 5. ACTIVATION CODES TABLE (Anti-Tamper & Concurrency Protected)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.activation_codes (
     code TEXT PRIMARY KEY,
     package_id TEXT NOT NULL,
     grade INT NOT NULL,
     subject TEXT,
+    duration_days INT DEFAULT 365,
     is_used BOOLEAN DEFAULT false,
     used_by_phone TEXT,
     used_by_device TEXT,
+    used_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -187,6 +207,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- 10. ROW LEVEL SECURITY (RLS) POLICIES
 -- ---------------------------------------------------------------------
 ALTER TABLE public.packages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_credentials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activation_codes ENABLE ROW LEVEL SECURITY;
@@ -224,6 +245,16 @@ CREATE POLICY "Public Read Question Options" ON public.question_options FOR SELE
 DROP POLICY IF EXISTS "Public Read Videos" ON public.videos;
 CREATE POLICY "Public Read Videos" ON public.videos FOR SELECT USING (true);
 
+-- Students Table RLS Policies
+DROP POLICY IF EXISTS "Public Read Students" ON public.students;
+CREATE POLICY "Public Read Students" ON public.students FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public Insert Students" ON public.students;
+CREATE POLICY "Public Insert Students" ON public.students FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Update Students Device And Profile" ON public.students;
+CREATE POLICY "Public Update Students Device And Profile" ON public.students FOR UPDATE USING (true);
+
 -- Allow student authentication & single device binding
 DROP POLICY IF EXISTS "Public Read Student Credentials" ON public.student_credentials;
 CREATE POLICY "Public Read Student Credentials" ON public.student_credentials FOR SELECT USING (true);
@@ -234,11 +265,131 @@ CREATE POLICY "Public Update Student Credentials Device" ON public.student_crede
 DROP POLICY IF EXISTS "Public Subscriptions Access" ON public.user_subscriptions;
 CREATE POLICY "Public Subscriptions Access" ON public.user_subscriptions FOR ALL USING (true);
 
-DROP POLICY IF EXISTS "Public Activation Codes Access" ON public.activation_codes;
-CREATE POLICY "Public Activation Codes Access" ON public.activation_codes FOR ALL USING (true);
+DROP POLICY IF EXISTS "Public Read Activation Codes" ON public.activation_codes;
+CREATE POLICY "Public Read Activation Codes" ON public.activation_codes FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public Update Activation Codes" ON public.activation_codes;
+CREATE POLICY "Public Update Activation Codes" ON public.activation_codes FOR UPDATE USING (true);
 
 DROP POLICY IF EXISTS "Public Profiles Access" ON public.profiles;
 CREATE POLICY "Public Profiles Access" ON public.profiles FOR ALL USING (true);
+
+-- ---------------------------------------------------------------------
+-- 10B. ATOMIC ACTIVATION CODE REDEMPTION RPC FUNCTION
+-- Concurrency-safe, prevents race conditions, binds device atomically
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.redeem_activation_code(
+    p_code TEXT,
+    p_phone TEXT,
+    p_name TEXT,
+    p_device_id TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_code_record RECORD;
+    v_pkg_id TEXT;
+    v_grade INT;
+    v_subject TEXT;
+    v_duration INT;
+    v_expires_at TIMESTAMPTZ;
+    v_clean_phone TEXT := regexp_replace(trim(p_phone), '\s+', '', 'g');
+    v_clean_code TEXT := upper(regexp_replace(trim(p_code), '\s+', '', 'g'));
+BEGIN
+    -- 1. Lock the row to prevent race conditions
+    SELECT * INTO v_code_record
+    FROM public.activation_codes
+    WHERE upper(code) = v_clean_code
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'status', 'invalid_code',
+            'message', 'የተሳሳተ የማግበሪያ ኮድ። እባክዎ በትክክል ያረጋግጡ። / Invalid activation code.'
+        );
+    END IF;
+
+    v_pkg_id := v_code_record.package_id;
+    v_grade := v_code_record.grade;
+    v_subject := v_code_record.subject;
+    v_duration := COALESCE(v_code_record.duration_days, 365);
+    v_expires_at := now() + (v_duration || ' days')::interval;
+
+    -- 2. If code is already used
+    IF v_code_record.is_used THEN
+        IF v_code_record.used_by_device = p_device_id OR v_code_record.used_by_phone = v_clean_phone THEN
+            -- Restore / re-sync on the same device
+            UPDATE public.students
+            SET unlocked_packages = array_append(array_remove(unlocked_packages, v_pkg_id), v_pkg_id),
+                subscription_status = 'active',
+                device_id = COALESCE(device_id, p_device_id),
+                updated_at = now()
+            WHERE phone_number = v_clean_phone;
+
+            RETURN jsonb_build_object(
+                'success', true,
+                'status', 'already_used_same_device',
+                'package_id', v_pkg_id,
+                'grade', v_grade,
+                'subject', v_subject,
+                'message', 'ይህ ኮድ ቀደም ሲል ለዚህ ስልክ የተከፈተ ነው። መዳረሻው ታድሷል!'
+            );
+        ELSE
+            -- Mismatch / used on another device
+            RETURN jsonb_build_object(
+                'success', false,
+                'status', 'device_mismatch',
+                'message', 'ይህ የማግበሪያ ኮድ በሌላ ስልክ ላይ አገልግሎት ላይ ውሏል! የደህንነት ስርዓቱ አንድን ኮድ ለአንድ ስልክ ብቻ ይፈቅዳል።'
+            );
+        END IF;
+    END IF;
+
+    -- 3. Mark code as used
+    UPDATE public.activation_codes
+    SET is_used = true,
+        used_by_phone = v_clean_phone,
+        used_by_device = p_device_id,
+        used_at = now()
+    WHERE upper(code) = v_clean_code;
+
+    -- 4. Upsert student record
+    INSERT INTO public.students (
+        phone_number, full_name, grade, device_id,
+        unlocked_packages, subscription_status, subscription_expires_at, is_active, updated_at
+    )
+    VALUES (
+        v_clean_phone, p_name, v_grade, p_device_id,
+        ARRAY[v_pkg_id], 'active', v_expires_at, true, now()
+    )
+    ON CONFLICT (phone_number) DO UPDATE SET
+        unlocked_packages = array_append(array_remove(public.students.unlocked_packages, v_pkg_id), v_pkg_id),
+        subscription_status = 'active',
+        subscription_expires_at = v_expires_at,
+        device_id = COALESCE(public.students.device_id, p_device_id),
+        updated_at = now();
+
+    -- Legacy support: user_subscriptions table
+    INSERT INTO public.user_subscriptions (phone_number, package_id, device_id, is_active, activated_at)
+    VALUES (v_clean_phone, v_pkg_id, p_device_id, true, now())
+    ON CONFLICT (phone_number, package_id) DO UPDATE SET
+        is_active = true,
+        device_id = p_device_id,
+        activated_at = now();
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'status', 'success',
+        'package_id', v_pkg_id,
+        'grade', v_grade,
+        'subject', v_subject,
+        'expires_at', v_expires_at,
+        'message', 'እንኳን ደስ አለዎት! ይዘቱ በተሳካ ሁኔታ ተከፍቷል!'
+    );
+END;
+$$;
 
 -- ---------------------------------------------------------------------
 -- 11. SEED DATA - PACKAGES
@@ -262,8 +413,16 @@ ON CONFLICT (id) DO UPDATE SET
     features = EXCLUDED.features;
 
 -- ---------------------------------------------------------------------
--- 12. SEED DATA - SAMPLE ADMIN-ISSUED CREDENTIALS (For Demo & Testing)
+-- 12. SEED DATA - SAMPLE ADMIN-ISSUED CREDENTIALS & STUDENTS
 -- ---------------------------------------------------------------------
+INSERT INTO public.students (full_name, phone_number, grade, stream, unlocked_packages, subscription_status, is_active)
+VALUES
+    ('Habtamu Yifiru', '0978254242', 12, 'Natural', ARRAY['pkg_all_inclusive_g12', 'all_grades'], 'active', true),
+    ('Abebe Bikila', '0911223344', 12, 'Natural', ARRAY['pkg_grade_12'], 'active', true),
+    ('Tirunesh Dibaba', '0922334455', 11, 'Natural', ARRAY['pkg_g11_mathematics'], 'active', true),
+    ('Free Demo Student', '0900000000', 12, 'Natural', ARRAY[]::text[], 'free', true)
+ON CONFLICT (phone_number) DO NOTHING;
+
 INSERT INTO public.student_credentials (full_name, phone_number, password, package_id, is_active)
 VALUES
     ('Habtamu Yifiru', '0978254242', 'smartx2026', 'pkg_all_inclusive_g12', true),
@@ -272,6 +431,18 @@ VALUES
     ('Kenenisa Bekele', '0933445566', 'ken2026', 'pkg_grade_10', true),
     ('Derartu Tulu', '0944556677', 'derartu99', 'pkg_grade_9', true)
 ON CONFLICT (phone_number) DO NOTHING;
+
+-- Seed Sample Activation Codes
+INSERT INTO public.activation_codes (code, package_id, grade, subject, duration_days, is_used)
+VALUES
+    ('SMARTX-G12-MATH', 'pkg_g12_mathematics', 12, 'Mathematics', 365, false),
+    ('SMARTX-G12-PHYS', 'pkg_g12_physics', 12, 'Physics', 365, false),
+    ('SMARTX-G12-FULL', 'pkg_grade_12', 12, NULL, 365, false),
+    ('SMARTX-G11-FULL', 'pkg_grade_11', 11, NULL, 365, false),
+    ('SMARTX-G10-FULL', 'pkg_grade_10', 10, NULL, 365, false),
+    ('SMARTX-G9-FULL', 'pkg_grade_9', 9, NULL, 365, false),
+    ('SMARTX-MATRIC-VIP', 'pkg_all_inclusive_g12', 12, NULL, 365, false)
+ON CONFLICT (code) DO NOTHING;
 
 -- ---------------------------------------------------------------------
 -- 13. SEED DATA - SHORT NOTES SAMPLES
@@ -337,6 +508,112 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
     -- Ignore duplicate on re-run
 END $$;
+
+-- ---------------------------------------------------------------------
+-- 10C. ATOMIC STUDENT TELEGRAM UPGRADE & HARDWARE BINDING RPC FUNCTION
+-- Validates student phone/name, enforces single physical device binding,
+-- prevents multi-phone sharing, and returns granted packages.
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.verify_and_upgrade_student(
+    p_phone TEXT,
+    p_name TEXT,
+    p_device_id TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_clean_phone TEXT;
+    v_student RECORD;
+    v_bound_device TEXT;
+    v_unlocked_pkgs JSONB;
+BEGIN
+    -- Normalize Ethiopian phone format
+    v_clean_phone := REGEXP_REPLACE(p_phone, '[^0-9+]', '', 'g');
+    IF v_clean_phone LIKE '+251%' THEN
+        v_clean_phone := '0' || SUBSTRING(v_clean_phone FROM 5);
+    ELSIF v_clean_phone LIKE '251%' THEN
+        v_clean_phone := '0' || SUBSTRING(v_clean_phone FROM 4);
+    END IF;
+
+    -- Look up student by phone number
+    SELECT * INTO v_student
+    FROM public.students
+    WHERE phone_number = v_clean_phone;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'status', 'not_found',
+            'message', 'በዚህ ስልክ ቁጥር የተመዘገበ ተማሪ አልተገኘም። እባክዎ በቴሌግራም (@smart_x_help) ክፍያ ፈጽመው ደረሰኝ ይላኩ።'
+        );
+    END IF;
+
+    -- Check if student account is active
+    IF v_student.is_active = false THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'status', 'account_disabled',
+            'message', 'ይህ መለያ በአስተዳዳሪው ታግዷል። እባክዎ ድጋፍ ያነጋግሩ (@smart_x_help)።'
+        );
+    END IF;
+
+    -- Check if subscription expired
+    IF v_student.subscription_expires_at IS NOT NULL AND v_student.subscription_expires_at < NOW() THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'status', 'expired',
+            'message', 'የደንበኝነት ምዝገባዎ ጊዜ አልቋል። እባክዎ በቴሌግራም ያድሱ (@smart_x_help)።'
+        );
+    END IF;
+
+    -- Check single-device hardware protection
+    v_bound_device := TRIM(COALESCE(v_student.device_id, ''));
+    IF v_bound_device <> '' AND v_bound_device <> p_device_id THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'status', 'device_mismatch',
+            'message', 'ይህ ስልክ ቁጥር ቀደም ሲል በሌላ ሞባይል ስልክ ላይ ተመዝግቧል! የደህንነት ስርዓቱ አንድን አካውንት ለአንድ ስልክ ብቻ ይፈቅዳል (Single-Device Protection)።'
+        );
+    END IF;
+
+    -- Bind device atomically if not yet bound
+    IF v_bound_device = '' THEN
+        UPDATE public.students
+        SET device_id = p_device_id,
+            full_name = TRIM(p_name),
+            updated_at = NOW()
+        WHERE phone_number = v_clean_phone;
+    ELSE
+        UPDATE public.students
+        SET full_name = TRIM(p_name),
+            updated_at = NOW()
+        WHERE phone_number = v_clean_phone;
+    END IF;
+
+    -- Fetch packages
+    v_unlocked_pkgs := COALESCE(to_jsonb(v_student.unlocked_packages), '[]'::jsonb);
+
+    IF jsonb_array_length(v_unlocked_pkgs) = 0 THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'status', 'no_packages',
+            'message', 'ስልክ ቁጥርዎ ተገኝቷል፤ ነገር ግን እስካሁን የተፈቀደ ንቁ የትምህርት ፓኬጅ የለም። ክፍያ ፈጽመው ከሆነ እባክዎ ደረሰኝዎን በቴሌግራም (@smart_x_help) ለአድሚኑ ይላኩ።'
+        );
+    END IF;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'status', 'upgraded',
+        'message', 'እንኳን ደስ አለዎት! የትምህርት ፈቃድዎ በዚህ ስልክ ላይ በተሳካ ሁኔታ ተረጋግጦ ተከፍቷል!',
+        'student_name', TRIM(p_name),
+        'phone_number', v_clean_phone,
+        'grade', COALESCE(v_student.grade, 12),
+        'unlocked_packages', v_unlocked_pkgs
+    );
+END;
+$$;
 
 -- ---------------------------------------------------------------------
 -- 16. SEED DATA - VIDEOS TABLE

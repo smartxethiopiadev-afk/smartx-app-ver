@@ -26,6 +26,7 @@ import '../services/credential_auth_service.dart';
 import '../widgets/academic_progress_charts.dart';
 import '../main.dart';
 import '../services/analytics_service.dart';
+import '../widgets/account_upgrade_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -204,16 +205,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final cached = await CredentialAuthService.getCachedCredentials();
     final cachedName = cached['fullName'] ?? '';
     final cachedPhone = cached['phoneNumber'] ?? '';
+    final savedName = prefs.getString('user_fullName') ?? prefs.getString('user_name') ?? '';
+    final savedPhone = prefs.getString('user_phoneNumber') ?? prefs.getString('phone_number') ?? '';
+    final bool authState = prefs.getBool('is_authenticated') ?? false;
+
     setState(() {
       _deviceId = devId;
       if (cachedName.isNotEmpty) {
         _isLoggedIn = true;
         _userName = cachedName;
         _userPhoneNumber = cachedPhone;
+      } else if (savedName.isNotEmpty) {
+        _isLoggedIn = authState;
+        _userName = savedName;
+        _userPhoneNumber = savedPhone.isNotEmpty ? savedPhone : '';
       } else {
-        _isLoggedIn = prefs.getBool('is_authenticated') ?? false;
-        _userName = prefs.getString('user_fullName') ?? "Smart Student";
-        _userPhoneNumber = prefs.getString('user_phoneNumber') ?? "+251 911 ...";
+        _isLoggedIn = false;
+        _userName = widget.languageCode == 'am' ? 'ተማሪ (የሙከራ ተጠቃሚ)' : 'Student (Free Trial)';
+        _userPhoneNumber = widget.languageCode == 'am' ? 'ስልክ አልተያያዘም' : 'No Phone Linked';
       }
       String? savedUid = prefs.getString('user_id');
       if (savedUid == null && _isLoggedIn) {
@@ -222,10 +231,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
 
       // Populate text controllers
-      _fullNameController.text = _userName;
-      _phoneController.text = _userPhoneNumber.replaceAll(RegExp(r'^\+251\s*'), '');
+      _fullNameController.text = _isLoggedIn ? _userName : '';
+      _phoneController.text = _isLoggedIn ? _userPhoneNumber.replaceAll(RegExp(r'^\+251\s*'), '') : '';
       
-      debugPrint('Current user: $savedUid, deviceId: $_deviceId');
+      debugPrint('Current user: $savedUid, deviceId: $_deviceId, loggedIn: $_isLoggedIn');
     });
   }
 
@@ -3202,21 +3211,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                          color: unlockedPkgs.isNotEmpty
+                              ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                              : const Color(0xFFF59E0B).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
+                          border: Border.all(
+                            color: unlockedPkgs.isNotEmpty
+                                ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                                : const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF10B981)),
+                            Icon(
+                              unlockedPkgs.isNotEmpty ? Icons.verified_rounded : Icons.lock_clock_rounded,
+                              size: 14,
+                              color: unlockedPkgs.isNotEmpty ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                            ),
                             const SizedBox(width: 4),
                             Text(
-                              isAmharic ? 'ነቃ' : 'Active',
-                              style: const TextStyle(
+                              unlockedPkgs.isNotEmpty
+                                  ? (isAmharic ? 'ተሻሽሏል' : 'Upgraded')
+                                  : (isAmharic ? 'ነጻ ሙከራ' : 'Free Trial'),
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
-                                color: Color(0xFF10B981),
+                                color: unlockedPkgs.isNotEmpty ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
                               ),
                             ),
                           ],
@@ -3288,6 +3309,139 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ----------------------------------------------------
+            // Dedicated "Upgrade Account" Hero Card
+            // ----------------------------------------------------
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18.0),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isLight
+                      ? [const Color(0xFFE0F2FE), const Color(0xFFF0F9FF)]
+                      : [const Color(0xFF0F2942), const Color(0xFF0B1E32)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20.0),
+                border: Border.all(
+                  color: const Color(0xFF0284C7).withValues(alpha: isLight ? 0.35 : 0.6),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0284C7).withValues(alpha: isLight ? 0.10 : 0.25),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0284C7),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0284C7).withValues(alpha: 0.35),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              unlockedPkgs.isEmpty
+                                  ? (isAmharic ? 'አካውንትዎን ያሻሽሉ (Upgrade)' : 'Upgrade Your Account')
+                                  : (isAmharic ? 'የተረጋገጠ የትምህርት ፈቃድ' : 'Verified Subscription'),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: isLight ? const Color(0xFF0369A1) : const Color(0xFF7DD3FC),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              unlockedPkgs.isEmpty
+                                  ? (isAmharic
+                                      ? 'በቴሌግራም የከፈሉትን ስልክ እና ስም በማስገባት የተፈቀደልዎትን ይዘት በዚህ ስልክ ላይ ይክፈቱ።'
+                                      : 'Verify your Telegram payment with Phone & Name to unlock packages.')
+                                  : (isAmharic
+                                      ? 'የትምህርት ፓኬጆችዎ በዚህ ስልክ ላይ በደህንነት ተከፍተዋል (Single Device Protected)።'
+                                      : 'Your learning packages are securely unlocked on this device.'),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: isLight ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final res = await AccountUpgradeDialog.show(
+                          context,
+                          isDarkMode: widget.isDarkMode,
+                          languageCode: widget.languageCode,
+                          onSuccess: () async {
+                            await _loadProfileData();
+                            setState(() {});
+                          },
+                        );
+                        if (res == true) {
+                          await _loadProfileData();
+                          setState(() {});
+                        }
+                      },
+                      icon: Icon(
+                        unlockedPkgs.isEmpty ? Icons.bolt_rounded : Icons.refresh_rounded,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        unlockedPkgs.isEmpty
+                            ? (isAmharic ? 'አካውንት አሻሽል (Upgrade / Verify)' : 'Upgrade Account (Verify)')
+                            : (isAmharic ? 'ፈቃድ አድስ / ተጨማሪ አሻሽል' : 'Re-verify / Upgrade More'),
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
                     ),
                   ),
                 ],

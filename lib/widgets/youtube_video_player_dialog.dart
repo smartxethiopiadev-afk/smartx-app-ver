@@ -112,18 +112,32 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
     final Color subColor =
         isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
 
-    // Responsive embed HTML for YouTube unlisted / embedded player with smooth in-app integration (height reduced by 12%)
-    final String youtubeEmbedHtml = '''
-      <div style="position: relative; padding-bottom: 49.5%; height: 0; overflow: hidden; border-radius: 16px; background-color: #000000; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
-        <iframe 
-          src="https://www.youtube.com/embed/${widget.video.youtubeVideoId}?autoplay=1&playsinline=1&enablejsapi=1&rel=0&modestbranding=1" 
-          frameborder="0" 
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-          allowfullscreen
-          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; border-radius: 16px;">
-        </iframe>
-      </div>
-    ''';
+    // Video player markup: supports direct CDN/Storage video URL (HTML5 player, zero tracking, compliant with privacy) or YouTube fallback
+    final String playerEmbedHtml = widget.video.hasDirectStream
+        ? '''
+          <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 16px; background-color: #000000; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+            <video 
+              controls 
+              playsinline 
+              preload="metadata"
+              poster="${widget.video.thumbnailUrl}"
+              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; border-radius: 16px; background-color: #000000;">
+              <source src="${widget.video.videoUrl}" type="video/mp4">
+              Your browser does not support HTML5 video streaming.
+            </video>
+          </div>
+        '''
+        : '''
+          <div style="position: relative; padding-bottom: 49.5%; height: 0; overflow: hidden; border-radius: 16px; background-color: #000000; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+            <iframe 
+              src="https://www.youtube.com/embed/${widget.video.youtubeVideoId}?autoplay=1&playsinline=1&enablejsapi=1&rel=0&modestbranding=1" 
+              frameborder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+              allowfullscreen
+              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; border-radius: 16px;">
+            </iframe>
+          </div>
+        ''';
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.88,
@@ -213,11 +227,11 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // YouTube Embedded Player
+                  // In-App Privacy-Friendly Video Player (Direct CDN / HTML5 or Embedded)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: HtmlWidget(
-                      youtubeEmbedHtml,
+                      playerEmbedHtml,
                       renderMode: RenderMode.column,
                     ),
                   ),

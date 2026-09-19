@@ -9,8 +9,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_config.dart';
 import '../services/offline_manager.dart';
 import 'home_screen.dart';
-import 'registration_screen.dart';
-import '../services/credential_auth_service.dart';
 import '../services/analytics_service.dart';
 import '../main.dart';
 
@@ -69,12 +67,11 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 
   // Animation Controllers
-  late AnimationController _ambientController;
-  late AnimationController _pulseController;
   late AnimationController _entranceController;
   
   late Animation<double> _titleFadeAnimation;
   late Animation<Offset> _titleSlideAnimation;
+  late Animation<double> _subtitleFadeAnimation;
   late Animation<double> _spinnerFadeAnimation;
 
   Timer? _autoNavigateTimer;
@@ -84,45 +81,40 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     super.initState();
     logScreen('SplashScreen');
 
-    // Continuous smooth ambient rotation for geometric abstract background
-    _ambientController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 20),
-    )..repeat();
-
-    // Gentle breathing pulse
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2400),
-    )..repeat(reverse: true);
-
-    // Entrance animation for typography and spinner
+    // Smooth refined entrance animation for clean typography and spinner
     _entranceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1200),
     );
 
     _titleFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _entranceController,
-        curve: const Interval(0.1, 0.75, curve: Curves.easeOutCubic),
+        curve: const Interval(0.0, 0.65, curve: Curves.easeOutCubic),
       ),
     );
 
     _titleSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.15),
+      begin: const Offset(0, 0.20),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
         parent: _entranceController,
-        curve: const Interval(0.1, 0.85, curve: Curves.easeOutCubic),
+        curve: const Interval(0.0, 0.70, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _subtitleFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: const Interval(0.35, 0.85, curve: Curves.easeOutCubic),
       ),
     );
 
     _spinnerFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _entranceController,
-        curve: const Interval(0.6, 1.0, curve: Curves.easeIn),
+        curve: const Interval(0.60, 1.0, curve: Curves.easeIn),
       ),
     );
 
@@ -135,8 +127,6 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   @override
   void dispose() {
     _autoNavigateTimer?.cancel();
-    _ambientController.dispose();
-    _pulseController.dispose();
     _entranceController.dispose();
     super.dispose();
   }
@@ -193,21 +183,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       debugPrint('[Splash] Non-blocking network check/sync warning: $netErr');
     }
 
-    final bool isAuth = await CredentialAuthService.isAuthenticated();
-
-    if (!mounted) return;
-
-    // 4. Navigate to destination after smooth splash timing
+    // 4. Navigate directly to HomeScreen - Open Exploration mode without mandatory registration barrier
     _autoNavigateTimer?.cancel();
     _autoNavigateTimer = Timer(const Duration(milliseconds: 2100), () {
       if (!mounted) return;
-      if (isAuth) {
-        debugPrint('[Splash] Authenticated session -> HomeScreen');
-        _navigateToHomeScreen();
-      } else {
-        debugPrint('[Splash] Unauthenticated session -> Mandatory Registration/Login Auth Gate');
-        _navigateToRegistration();
-      }
+      debugPrint('[Splash] Direct entry -> HomeScreen (Immediate Learning Access)');
+      _navigateToHomeScreen();
     });
   }
 
@@ -233,37 +214,15 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     );
   }
 
-  void _navigateToRegistration() {
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        settings: const RouteSettings(name: '/registration'),
-        pageBuilder: (context, animation, secondaryAnimation) => RegistrationScreen(
-          isDarkMode: widget.isDarkMode,
-          languageCode: widget.languageCode,
-          onToggleTheme: widget.onToggleTheme,
-          onToggleLanguage: widget.onToggleLanguage,
-        ),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation.drive(CurveTween(curve: Curves.easeOutCubic)),
-            child: child,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 500),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: const Color(0xFF090D16),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
-          systemNavigationBarColor: Color(0xFF000000),
+          systemNavigationBarColor: Color(0xFF090D16),
           systemNavigationBarIconBrightness: Brightness.light,
         ),
         child: SafeArea(
@@ -274,7 +233,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               children: [
                 const Spacer(flex: 10),
 
-                // Central App Logo & Title: "Smart Learn Ethiopian"
+                // Clean Minimalist Typography Header (NO IMAGE)
                 SlideTransition(
                   position: _titleSlideAnimation,
                   child: FadeTransition(
@@ -282,112 +241,80 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // App Icon Badge with Smooth Pulsing Animation
-                        ScaleTransition(
-                          scale: Tween<double>(begin: 0.95, end: 1.05).animate(
-                            CurvedAnimation(
-                              parent: _pulseController,
-                              curve: Curves.easeInOut,
+                        // Top Subtle Tag
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0284C7).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFF0284C7).withValues(alpha: 0.35),
+                              width: 1,
                             ),
                           ),
-                          child: Container(
-                            width: 120,
-                            height: 120,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.black,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFF0284C7).withValues(alpha: 0.8),
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF0284C7).withValues(alpha: 0.4),
-                                  blurRadius: 40,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                'assets/images/app_logo.png',
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Center(
-                                  child: Icon(
-                                    Icons.school_rounded,
-                                    color: Colors.white,
-                                    size: 56,
-                                  ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF38BDF8),
+                                  shape: BoxShape.circle,
                                 ),
                               ),
-                            ),
+                              const SizedBox(width: 7),
+                              Text(
+                                'ETHIOPIAN CURRICULUM',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 2.0,
+                                  color: const Color(0xFF38BDF8),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
 
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 24),
 
-                        // Main Title typography: Smart Learn Ethiopian
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Smart Learn',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.8,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0284C7),
-                                borderRadius: BorderRadius.circular(8),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF0284C7).withValues(alpha: 0.3),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Text(
-                                'Ethiopian',
+                        // Main Typography: Smart Learn
+                        RichText(
+                          textAlign: TextAlign.center,
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Smart ',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1.2,
+                                  fontSize: 38,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -1.0,
                                   color: Colors.white,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        // Platform Subtitle Message (Amharic & English)
-                        Text(
-                          'ስማርት ለርን ኢትዮጵያን - የሁለተኛ ደረጃ የትምህርት መድረክ',
-                          style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.3,
-                            color: const Color(0xFF38BDF8),
+                              TextSpan(
+                                text: 'Learn',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 38,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -1.0,
+                                  color: const Color(0xFF38BDF8),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
 
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 10),
 
+                        // Secondary Clean Typography: Ethiopia
                         Text(
-                          'GRADES 9 - 12 LEARNING PLATFORM',
+                          'ETHIOPIA',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 2.5,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 6.0,
                             color: const Color(0xFF94A3B8),
                           ),
                         ),
@@ -396,17 +323,33 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   ),
                 ),
 
-                const SizedBox(height: 42),
+                const SizedBox(height: 22),
 
-                // Smooth Minimalist Cyan Blue Loading Spinner
+                // Clean Amharic Subtitle with Fade
+                FadeTransition(
+                  opacity: _subtitleFadeAnimation,
+                  child: Text(
+                    'የሁለተኛ ደረጃ ትምህርት እና የፈተና ዝግጅት መድረክ',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.2,
+                      color: const Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 48),
+
+                // Smooth Minimalist Cyan Loading Indicator
                 FadeTransition(
                   opacity: _spinnerFadeAnimation,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    padding: const EdgeInsets.all(2),
-                    child: const CircularProgressIndicator(
-                      strokeWidth: 2.5,
+                  child: const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
                       strokeCap: StrokeCap.round,
                       valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF38BDF8)),
                     ),

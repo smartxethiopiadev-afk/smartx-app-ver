@@ -194,7 +194,9 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
 
     if (result.isAllowed) {
       await SubscriptionService.unlockPackage(_selectedPackage.id);
-      await SubscriptionService.unlockGrade(widget.grade);
+      if (_selectedPackage.tier != PackageTier.singleSubject) {
+        await SubscriptionService.unlockGrade(widget.grade);
+      }
 
       if (mounted) {
         Navigator.of(context).pop();

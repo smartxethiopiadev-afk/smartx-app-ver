@@ -81,6 +81,70 @@ class ActivationService {
     try {
       final supabase = Supabase.instance.client;
 
+      // Primary Flow: Call atomic PostgreSQL RPC function redeem_activation_code
+      try {
+        final rpcResult = await supabase.rpc('redeem_activation_code', params: {
+          'p_code': cleanCode,
+          'p_phone': cleanPhone,
+          'p_name': cleanName,
+          'p_device_id': currentDeviceId,
+        });
+
+        if (rpcResult is Map) {
+          final bool success = rpcResult['success'] == true;
+          final String? rpcMsg = rpcResult['message'] as String?;
+          final String? rpcError = rpcResult['error'] as String?;
+          final String? packageId = rpcResult['package_id'] as String?;
+          final int grade = (rpcResult['grade'] as num?)?.toInt() ?? 12;
+          final String? subject = rpcResult['subject'] as String?;
+
+          if (success && packageId != null) {
+            await _applyActivationLocally(
+              name: cleanName,
+              phone: cleanPhone,
+              packageId: packageId,
+              grade: grade,
+              subject: subject,
+              deviceId: currentDeviceId,
+            );
+
+            final readablePkg = _getHumanReadablePackageName(grade, subject, packageId, isAmharic);
+            return ActivationResult(
+              status: ActivationStatus.success,
+              isSuccess: true,
+              packageId: packageId,
+              grade: grade,
+              subject: subject,
+              packageName: readablePkg,
+              message: rpcMsg ?? (isAmharic
+                  ? 'እንኳን ደስ አለዎት! $readablePkg በተሳካ ሁኔታ ተከፍቷል!'
+                  : 'Congratulations! $readablePkg has been unlocked and bound to this device.'),
+            );
+          } else if (rpcError != null) {
+            if (rpcError.contains('different device') || rpcError.contains('already used')) {
+              return ActivationResult(
+                status: ActivationStatus.alreadyUsedDifferentDevice,
+                isSuccess: false,
+                message: isAmharic
+                    ? 'ይህ የማግበሪያ ኮድ በሌላ ስልክ ላይ አገልግሎት ላይ ውሏል። የደህንነት ስርዓቱ አንድን ኮድ ለአንድ ስልክ ብቻ ይፈቅዳል!'
+                    : 'This activation code has already been redeemed on another device. Codes are strictly single-device bound.',
+              );
+            } else if (rpcError.contains('Invalid activation code')) {
+              return ActivationResult(
+                status: ActivationStatus.invalidCode,
+                isSuccess: false,
+                message: isAmharic
+                    ? 'የተሳሳተ የማግበሪያ ኮድ። እባክዎ በትክክል ያረጋግጡ ወይም አስተዳዳሪውን በቴሌግራም ያነጋግሩ (@smart_x_help)'
+                    : 'Invalid activation code. Please verify your code or contact Smart Learn Admin on Telegram (@smart_x_help).',
+              );
+            }
+          }
+        }
+      } catch (rpcErr) {
+        debugPrint('[ActivationService] RPC fallback notice: $rpcErr');
+      }
+
+      // Fallback Direct Supabase Flow
       // 1. Query the activation_codes table
       final response = await supabase
           .from('activation_codes')
@@ -150,27 +214,68 @@ class ActivationService {
         }
       }
 
+      final nowIso = DateTime.now().toUtc().toIso8601String();
+
       // 3. Mark code as used in Supabase
       await supabase.from('activation_codes').update({
         'is_used': true,
         'used_by_phone': cleanPhone,
         'used_by_device': currentDeviceId,
+        'used_at': nowIso,
       }).eq('code', cleanCode);
 
-      // 4. Record active subscription in user_subscriptions table
+      // 4. Update students table with unlocked_packages and device binding
+      try {
+        final existingStudent = await supabase
+            .from('students')
+            .select('unlocked_packages')
+            .eq('phone_number', cleanPhone)
+            .maybeSingle();
+
+        List<String> pkgs = [];
+        if (existingStudent != null && existingStudent['unlocked_packages'] != null) {
+          pkgs = (existingStudent['unlocked_packages'] as List<dynamic>).map((e) => e.toString()).toList();
+        }
+        if (!pkgs.contains(packageId)) {
+          pkgs.add(packageId);
+        }
+        if (subject != null && subject.trim().isNotEmpty) {
+          final slug = SubscriptionService.normalizeSubjectSlug(subject);
+          final subjectPkg = 'pkg_g${grade}_$slug';
+          if (!pkgs.contains(subjectPkg)) pkgs.add(subjectPkg);
+        } else {
+          final gradePkg = 'pkg_grade_$grade';
+          if (!pkgs.contains(gradePkg)) pkgs.add(gradePkg);
+        }
+
+        await supabase.from('students').upsert({
+          'phone_number': cleanPhone,
+          'full_name': cleanName,
+          'grade': grade,
+          'device_id': currentDeviceId,
+          'is_active': true,
+          'subscription_status': 'active',
+          'unlocked_packages': pkgs,
+          'updated_at': nowIso,
+        }, onConflict: 'phone_number');
+      } catch (e) {
+        debugPrint('[ActivationService] Student table update notice: $e');
+      }
+
+      // 5. Record active subscription in user_subscriptions table
       try {
         await supabase.from('user_subscriptions').upsert({
           'phone_number': cleanPhone,
           'package_id': packageId,
           'device_id': currentDeviceId,
           'is_active': true,
-          'activated_at': DateTime.now().toUtc().toIso8601String(),
+          'activated_at': nowIso,
         });
       } catch (e) {
         debugPrint('[ActivationService] Upsert subscription notice: $e');
       }
 
-      // 5. Apply local unlock and device binding
+      // 6. Apply local unlock and device binding
       await _applyActivationLocally(
         name: cleanName,
         phone: cleanPhone,

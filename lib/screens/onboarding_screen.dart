@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'registration_screen.dart';
+import 'home_screen.dart';
 import '../services/analytics_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -99,7 +99,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (!mounted) return;
 
-    final Widget targetScreen = RegistrationScreen(
+    final Widget targetScreen = HomeScreen(
       isDarkMode: widget.isDarkMode,
       languageCode: widget.languageCode,
       onToggleTheme: widget.onToggleTheme,
