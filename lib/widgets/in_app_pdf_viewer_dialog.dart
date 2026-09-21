@@ -190,6 +190,7 @@ class _InAppPdfViewerDialogState extends State<InAppPdfViewerDialog> {
                         onPressed: _isDownloading
                             ? null
                             : () async {
+                                final messenger = ScaffoldMessenger.of(context);
                                 setState(() => _isDownloading = true);
                                 await Future.delayed(const Duration(milliseconds: 600));
                                 if (mounted) {
@@ -197,7 +198,7 @@ class _InAppPdfViewerDialogState extends State<InAppPdfViewerDialog> {
                                     _isDownloading = false;
                                     _isDownloaded = true;
                                   });
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     SnackBar(
                                       content: Text(
                                         'ፒዲኤፉ ለ offline ጥናት በስኬት ወርዷል!',
@@ -292,10 +293,10 @@ class _InAppPdfViewerDialogState extends State<InAppPdfViewerDialog> {
                 ),
                 child: Column(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.article_rounded,
                       size: 52,
-                      color: const Color(0xFF2563EB),
+                      color: Color(0xFF2563EB),
                     ),
                     const SizedBox(height: 12),
                     Text(

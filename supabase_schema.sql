@@ -246,6 +246,9 @@ CREATE TABLE IF NOT EXISTS public.short_notes (
     unit_number INTEGER NOT NULL,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
+    summary TEXT,
+    pdf_url TEXT,
+    file_size_mb NUMERIC(5, 2) DEFAULT 2.50,
     page_number INTEGER DEFAULT 1,
     order_index INTEGER DEFAULT 1,
     key_takeaways JSONB DEFAULT '[]'::jsonb,
@@ -811,3 +814,52 @@ VALUES
     ('SMARTX-G9-FULL', 'pkg_grade_9', 9, NULL, 365, false),
     ('SMARTX-MATRIC-VIP', 'pkg_all_inclusive_g12', 12, NULL, 365, false)
 ON CONFLICT (code) DO NOTHING;
+
+-- =====================================================================
+-- 18. SEED DATA - CURRICULUM SHORT NOTES & WORKSHEET MATERIALS
+-- =====================================================================
+INSERT INTO public.short_notes (
+    grade, subject, unit_number, title, content, summary, pdf_url, file_size_mb, page_number, order_index, key_takeaways, formulas
+)
+VALUES
+    -- Grade 12 Mathematics Unit 1
+    (12, 'Mathematics', 1, 'Sequences and Series (አከታተልና ተከታታይ)', 
+    'A sequence is a function whose domain is the set of positive integers. Unit 1 covers Arithmetic & Geometric Sequences and Series, convergence/divergence rules, and infinite geometric sums.',
+    'ይህ ምዕራፍ ስለ አከታተል (Sequences) እና ተከታታይ (Series) ጽንሰ-ሀሳቦችን ያብራራል። የአርቲሜቲክ (Arithmetic) እና ጂኦሜትሪክ (Geometric) ቀመሮችን፣ የአጠቃላይ ተርም (n-th term) አወጣጥን፣ እንዲሁም ተከታታዮች መቼ ኮንቨርጅ (converge) ወይም ዳይቨርጅ (diverge) እንደሚያደርጉ በዝርዝር ያስተምራል።',
+    'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', 1.85, 1, 1,
+    '["A sequence is a ordered list of numbers with a defined term pattern.", "An Arithmetic Progression increases by a constant common difference (d).", "A Geometric Progression multiplies by a constant common ratio (r).", "An infinite geometric series converges if and only if |r| < 1."]'::jsonb,
+    '["Arithmetic general term: a_n = a_1 + (n-1)d", "Arithmetic series sum: S_n = (n/2)(2a_1 + (n-1)d)", "Geometric general term: a_n = a_1 * r^(n-1)", "Infinite geometric sum: S_inf = a_1 / (1 - r) for |r| < 1"]'::jsonb),
+
+    -- Grade 12 Physics Unit 1
+    (12, 'Physics', 1, 'Thermodynamics (ቴርሞዳይናሚክስ - የሙቀት ህጎች)',
+    'Thermodynamics is the study of heat, work, and the associated conversion of energy. Unit 1 details the First and Second Laws of Thermodynamics, thermodynamic processes (isobaric, isothermal, isochoric, adiabatic), and Carnot Heat Engine efficiency.',
+    'ቴርሞዳይናሚክስ ስለ ሙቀት፣ ስራ እና የሃይል ልውውጦች የሚያጠና የፊዚክስ ክፍል ነው። ይህ ምዕራፍ አንደኛውንና ሁለተኛውን የቴርሞዳይናሚክስ ህጎች፣ አራቱን ዋና ዋና የሙቀት ሂደቶች (ኢሶባሪክ፣ ኢሶተርማል፣ ኢሶኮሪክ፣ አዲያባቲክ)፣ እና የካርኖት ሂት ኢንጂን (Carnot Heat Engine) ቅልጥፍናን ያብራራል።',
+    'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', 2.10, 1, 1,
+    '["The First Law states energy cannot be created or destroyed: dU = Q - W.", "Isobaric process occurs at constant pressure.", "Isothermal process occurs at constant temperature (dU = 0).", "Adiabatic process has no heat exchange with surroundings (Q = 0).", "Entropy of any closed system always increases over time."]'::jsonb,
+    '["First Law of Thermodynamics: dU = Q - W", "Work done in Gas Expansion: W = P * dV", "Carnot Engine Ideal Efficiency: n_Carnot = 1 - (T_C / T_H)", "Entropy change: dS = dQ / T"]'::jsonb),
+
+    -- Grade 11 Chemistry Unit 1
+    (11, 'Chemistry', 1, 'Atomic Structure and Periodicity (አቶሚክ መዋቅርና ወቅታዊነት)',
+    'Unit 1 covers quantum numbers, electron configurations, rules of Aufbau, Hund, and Pauli exclusion principle, and chemical periodicity trends across the periodic table.',
+    'ይህ ምዕራፍ ስለ አቶም መዋቅር፣ የኳንተም ቁጥሮች (Quantum Numbers)፣ የኤሌክትሮን ውቅር አጻጻፍ ደንቦች (Aufbau Principle, Hund''s Rule, Pauli Exclusion) እና የፔሬዲክ ቴብል ኬሚካዊ ባህሪያት ለውጥን (Periodicity) ይተነትናል።',
+    'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', 3.20, 1, 1,
+    '["Principal quantum number (n) specifies orbital energy level.", "Angular momentum (l) determines the shape of the orbital.", "Magnetic quantum number (m) determines spatial orientation.", "Aufbau Principle states electrons fill lower energy levels first."]'::jsonb,
+    '["Planck''s energy equation: E = h * v", "de Broglie wavelength: lambda = h / (m * v)", "Maximum electrons in shell: 2n^2", "Heisenberg Uncertainty Principle: dx * dp >= h / 4pi"]'::jsonb),
+
+    -- Grade 10 Mathematics Unit 1
+    (10, 'Mathematics', 1, 'Polynomial Functions (ፖሊኖሚያል ፈንክሽኖች)',
+    'A polynomial function is a function of the form f(x) = a_n*x^n + ... + a_0. This unit covers synthetic division, remainder and factor theorems, and finding rational zeros.',
+    'ይህ ምዕራፍ ስለ ፖሊኖሚያል ፈንክሽኖች፣ የባለብዙ-ተርም ስሌቶች፣ ሲንቴቲክ ሲንቴቲክ አካፋፈል (Synthetic Division)፣ የቀሪ ቲዎረምና የፋክተር ቲዎረም (Remainder & Factor Theorems) እና የፈንክሽኖቹን ዜሮዎች ስለማውጣት ያስተምራል።',
+    'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', 1.45, 1, 1,
+    '["The degree of a polynomial is the highest power of x.", "Remainder Theorem: If f(x) is divided by x - c, the remainder is f(c).", "Factor Theorem: x - c is a factor of f(x) if and only if f(c) = 0."]'::jsonb,
+    '["General Polynomial Form: f(x) = a_n * x^n + a_{n-1} * x^{n-1} + ... + a_0", "Remainder Theorem Form: f(x) = (x - c)q(x) + f(c)", "Synthetic Division Coefficients Matrix"]'::jsonb),
+
+    -- Grade 9 Biology Unit 1
+    (9, 'Biology', 1, 'Introduction to Biology and Cell Study (የባዮሎጂ መግቢያና የሴል ጥናት)',
+    'Biology is the study of life. Unit 1 explores branches of biology, microscopic techniques, and cell structures including comparison between prokaryotes and eukaryotes.',
+    'ባዮሎጂ ስለ ህይወት እና ህይወት ያላቸው ነገሮች የሚያጠና የሳይንስ ዘርፍ ነው። ይህ ምዕራፍ የባዮሎጂን ቅርንጫፎች፣ የማይክሮስኮፕ አጠቃቀምን፣ እንዲሁም የፕሮካርዮቲክና ዩካርዮቲክ ሴሎችን መዋቅርና ልዩነት በዝርዝር ያሳያል።',
+    'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', 2.80, 1, 1,
+    '["Cells are the basic structural and functional unit of life.", "Prokaryotic cells lack a membrane-bound nucleus (e.g. Bacteria).", "Eukaryotic cells have a true nucleus and organelles.", "Mitochondria is the power house of the cell generating ATP."]'::jsonb,
+    '["Total Magnification = Eyepiece Lens Mag * Objective Lens Mag", "Cell Theory Principles", "Prokaryotic vs Eukaryotic organelles comparison matrix"]'::jsonb)
+ON CONFLICT (id) DO NOTHING;
+
