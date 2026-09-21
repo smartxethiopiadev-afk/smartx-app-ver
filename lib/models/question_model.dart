@@ -9,7 +9,7 @@ class MatchingPair {
   final String left;
   final String right;
 
-  MatchingPair({required this.left, required this.right});
+  const MatchingPair({required this.left, required this.right});
 
   factory MatchingPair.fromJson(Map<String, dynamic> json) {
     return MatchingPair(

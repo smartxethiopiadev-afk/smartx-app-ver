@@ -396,24 +396,19 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 
   Future<void> _openPdf(String pdfUrl) async {
-    if (pdfUrl.isEmpty) {
-      _showFloatingSnackbar(
-        widget.languageCode == 'am'
-            ? 'የፒዲኤፍ ማስፈንጠሪያ አልተገኘም'
-            : 'PDF link not available for this note',
-        isError: true,
-      );
-      return;
-    }
-
     final currentNote = _notesList.isNotEmpty ? _notesList[_currentPageIndex] : {};
     final title = currentNote['title']?.toString() ?? widget.unitTitle;
+    final summary = currentNote['summary']?.toString() ?? currentNote['content']?.toString();
 
     await InAppPdfViewerDialog.show(
       context,
       pdfUrl: pdfUrl,
       title: title,
       isDark: _isDarkMode,
+      summary: summary,
+      grade: widget.grade,
+      subject: widget.subjectId,
+      unit: widget.unitNumber,
     );
   }
 
@@ -781,9 +776,9 @@ class _NotesScreenState extends State<NotesScreen> {
                       flex: 3,
                       child: ElevatedButton.icon(
                         onPressed: () => _openPdf(pdfUrl),
-                        icon: const Icon(Icons.open_in_new_rounded, size: 18, color: Color(0xFF0F172A)),
+                        icon: const Icon(Icons.chrome_reader_mode_rounded, size: 18, color: Color(0xFF0F172A)),
                         label: Text(
-                          isAmharic ? 'PDF ክፈት (Open PDF)' : 'Open PDF File',
+                          isAmharic ? 'ማስታወሻውን አንብብ (Read Note)' : 'Read Note',
                           style: GoogleFonts.plusJakartaSans(
                             fontWeight: FontWeight.w800,
                             fontSize: 13,

@@ -19,6 +19,7 @@ class QuizScreen extends StatefulWidget {
   final bool isOffline;
   final String? offlineUnitId;
   final QuizMode mode;
+  final String initialQuestionType;
 
   const QuizScreen({
     super.key,
@@ -28,6 +29,7 @@ class QuizScreen extends StatefulWidget {
     this.isOffline = false,
     this.offlineUnitId,
     this.mode = QuizMode.practice,
+    this.initialQuestionType = 'all',
   });
 
   @override
@@ -38,10 +40,12 @@ class _QuizScreenState extends State<QuizScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<QuestionModel> _questions = [];
+  late String _selectedTypeFilter;
   
   int _currentIndex = 0;
   final Map<int, int> _selectedAnswers = {}; // For MCQ and True/False (option index)
   final Map<int, String> _blankInputAnswers = {}; // For Blank Space (typed string)
+  final Map<int, Map<int, String>> _matchingAnswers = {}; // For Matching (question index -> pair index -> chosen right item)
   final Map<int, TextEditingController> _blankControllers = {};
   final Set<int> _revealedHints = {};
   final Set<int> _submittedQuestions = {}; // Only for practice mode (already checked)
@@ -83,6 +87,7 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedTypeFilter = widget.initialQuestionType;
     logScreen('QuizScreen');
     _checkAndRestoreProgress();
   }
@@ -145,21 +150,34 @@ class _QuizScreenState extends State<QuizScreen> {
           subject: widget.subject ?? 'unknown',
           unit: widget.unit ?? 1,
           mode: widget.mode,
+          questionType: _selectedTypeFilter,
         );
       }
 
-      if (fetched.isEmpty) {
+      // Local type filtering if needed
+      List<QuestionModel> typeFiltered = fetched;
+      if (_selectedTypeFilter != 'all' && widget.mode == QuizMode.practice) {
+        typeFiltered = fetched.where((q) {
+          if (_selectedTypeFilter == 'multiple_choice') return q.isMultipleChoice;
+          if (_selectedTypeFilter == 'true_false') return q.isTrueFalse;
+          if (_selectedTypeFilter == 'blank_space') return q.isBlankSpace;
+          if (_selectedTypeFilter == 'matching') return q.questionType == QuestionType.matching;
+          return true;
+        }).toList();
+      }
+
+      if (typeFiltered.isEmpty) {
         setState(() {
           _questions = [];
           _isLoading = false;
-          _errorMessage = "No questions available for this unit.";
+          _errorMessage = "No questions found for this selected question type.";
         });
         return;
       }
 
       final List<QuestionModel> selectedQuestions = await QuizService.filterAndSelectQuestions(
         unitId: _getUnitId(),
-        allQuestions: fetched,
+        allQuestions: typeFiltered,
       );
 
       final List<QuestionModel> sequentialQuestions = List<QuestionModel>.from(selectedQuestions);
@@ -258,6 +276,9 @@ class _QuizScreenState extends State<QuizScreen> {
     if (q.isBlankSpace) {
       final text = _blankInputAnswers[_currentIndex]?.trim() ?? '';
       if (text.isEmpty) return;
+    } else if (q.questionType == QuestionType.matching) {
+      final userPairs = _matchingAnswers[_currentIndex];
+      if (userPairs == null || userPairs.length < q.matchingPairs.length) return;
     } else {
       final selectedIdx = _selectedAnswers[_currentIndex];
       if (selectedIdx == null) return;
@@ -276,6 +297,11 @@ class _QuizScreenState extends State<QuizScreen> {
     final q = _questions[index];
     if (q.isBlankSpace) {
       return (_blankInputAnswers[index]?.trim().isNotEmpty ?? false);
+    }
+    if (q.questionType == QuestionType.matching) {
+      final userPairs = _matchingAnswers[index];
+      if (userPairs == null || userPairs.isEmpty) return false;
+      return userPairs.length >= q.matchingPairs.length;
     }
     return _selectedAnswers.containsKey(index);
   }
@@ -717,6 +743,17 @@ class _QuizScreenState extends State<QuizScreen> {
         if (q.checkBlankAnswer(userInput)) {
           score++;
         }
+      } else if (q.questionType == QuestionType.matching) {
+        final userPairs = _matchingAnswers[i] ?? {};
+        int correctCount = 0;
+        for (int pIdx = 0; pIdx < q.matchingPairs.length; pIdx++) {
+          if (userPairs[pIdx] == q.matchingPairs[pIdx].right) {
+            correctCount++;
+          }
+        }
+        if (q.matchingPairs.isNotEmpty && correctCount == q.matchingPairs.length) {
+          score++;
+        }
       } else {
         if (_selectedAnswers.containsKey(i)) {
           final selectedIdx = _selectedAnswers[i]!;
@@ -956,6 +993,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
     return Column(
       children: [
+        _buildQuestionTypeFilterBar(),
         _buildQuestionNumberStrip(),
         Expanded(
           child: ListView.builder(
@@ -1187,7 +1225,9 @@ class _QuizScreenState extends State<QuizScreen> {
                 else if (q.questionType == QuestionType.trueFalse)
                   _buildTrueFalseContent(q, index, isActive, showFeedback, isLight, isAm)
                 else if (q.questionType == QuestionType.blankSpace)
-                  _buildBlankSpaceContent(q, index, isActive, showFeedback, isLight, isAm),
+                  _buildBlankSpaceContent(q, index, isActive, showFeedback, isLight, isAm)
+                else if (q.questionType == QuestionType.matching)
+                  _buildMatchingContent(q, index, isActive, showFeedback, isLight, isAm),
               ],
             ),
           ),
@@ -1833,6 +1873,241 @@ class _QuizScreenState extends State<QuizScreen> {
       text,
       style: baseStyle,
       textAlign: align,
+    );
+  }
+
+  Widget _buildQuestionTypeFilterBar() {
+    if (widget.mode != QuizMode.practice) return const SizedBox.shrink();
+
+    final bool isLight = Theme.of(context).brightness == Brightness.light;
+    final isAm = AppStateProvider.of(context).languageCode == 'am';
+
+    final filters = [
+      {'key': 'all', 'label': isAm ? 'ሁሉም (All)' : 'All Types'},
+      {'key': 'multiple_choice', 'label': isAm ? 'ምርጫ' : 'Multiple Choice'},
+      {'key': 'true_false', 'label': isAm ? 'እውነት/ሐሰት' : 'True/False'},
+      {'key': 'blank_space', 'label': isAm ? 'ባዶ ቦታ' : 'Fill Blank'},
+      {'key': 'matching', 'label': isAm ? 'አዛምድ' : 'Matching'},
+    ];
+
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: filters.length,
+        separatorBuilder: (ctx, i) => const SizedBox(width: 8),
+        itemBuilder: (ctx, idx) {
+          final f = filters[idx];
+          final key = f['key']!;
+          final label = f['label']!;
+          final isSelected = _selectedTypeFilter == key;
+
+          return ChoiceChip(
+            label: Text(label),
+            selected: isSelected,
+            onSelected: (selected) {
+              if (selected && _selectedTypeFilter != key) {
+                setState(() {
+                  _selectedTypeFilter = key;
+                });
+                _loadQuestions();
+              }
+            },
+            selectedColor: _getSubjectThemeColor(),
+            labelStyle: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: isSelected
+                  ? Colors.white
+                  : (isLight ? const Color(0xFF334155) : const Color(0xFF94A3B8)),
+            ),
+            backgroundColor: isLight ? Colors.white : const Color(0xFF1E293B),
+            elevation: 0,
+            pressElevation: 0,
+            side: BorderSide(
+              color: isSelected
+                  ? _getSubjectThemeColor()
+                  : (isLight ? const Color(0xFFCBD5E1) : const Color(0xFF334155)),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMatchingContent(
+    QuestionModel q,
+    int index,
+    bool isActive,
+    bool showFeedback,
+    bool isLight,
+    bool isAm,
+  ) {
+    if (q.matchingPairs.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Text(
+          isAm ? "ማዛመጃ አልተዘጋጀም" : "No matching pairs provided.",
+          style: TextStyle(color: isLight ? Colors.black54 : Colors.white60),
+        ),
+      );
+    }
+
+    final userAnswers = _matchingAnswers[index] ?? {};
+    final List<String> rightOptions = q.matchingPairs.map((p) => p.right).toSet().toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: Text(
+            isAm ? "እባክዎ በምድብ ሀ (Column A) ያሉትን ከምድብ ለ (Column B) ጋር ያዛምዱ:" : "Match Column A with Column B:",
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8),
+            ),
+          ),
+        ),
+        ...q.matchingPairs.asMap().entries.map((entry) {
+          final pairIdx = entry.key;
+          final pair = entry.value;
+          final selectedRight = userAnswers[pairIdx];
+          final isCorrect = selectedRight == pair.right;
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isLight ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: showFeedback
+                    ? (isCorrect ? const Color(0xFF10B981) : const Color(0xFFEF4444))
+                    : (selectedRight != null
+                        ? _getSubjectThemeColor()
+                        : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155))),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: _getSubjectThemeColor().withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${pairIdx + 1}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: _getSubjectThemeColor(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        pair.left,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isLight ? Colors.white : const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isLight ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+                    ),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      hint: Text(
+                        isAm ? "-- ከምድብ ለ ይምረጡ --" : "-- Select Match from Column B --",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isLight ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                        ),
+                      ),
+                      value: rightOptions.contains(selectedRight) ? selectedRight : null,
+                      onChanged: (isActive && !showFeedback)
+                          ? (val) {
+                              if (val == null) return;
+                              setState(() {
+                                if (!_matchingAnswers.containsKey(index)) {
+                                  _matchingAnswers[index] = {};
+                                }
+                                _matchingAnswers[index]![pairIdx] = val;
+                              });
+                              _saveProgress();
+                            }
+                          : null,
+                      items: rightOptions.map((opt) {
+                        return DropdownMenuItem<String>(
+                          value: opt,
+                          child: Text(
+                            opt,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                if (showFeedback) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        isCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                        size: 16,
+                        color: isCorrect ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          isCorrect
+                              ? (isAm ? "ትክክለኛ ማዛመጃ!" : "Correct match!")
+                              : (isAm ? "ትክክለኛው መልስ: ${pair.right}" : "Correct match: ${pair.right}"),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isCorrect ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 }

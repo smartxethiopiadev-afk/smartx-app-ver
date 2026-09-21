@@ -237,6 +237,24 @@ class QuizService {
           hint: 'The sequence formed by inverting harmonic fractions is the most fundamental linear sequence.',
           explanation: 'By definition, \$h_1, h_2, h_3, ...\$ is a Harmonic Progression if \$\\frac{1}{h_1}, \\frac{1}{h_2}, \\frac{1}{h_3}, ...\$ forms an Arithmetic Progression (AP).',
         ),
+        QuestionModel(
+          id: 'fb_prac_m4',
+          grade: grade,
+          subject: subject,
+          unitNumber: unit,
+          topic: 'Mathematical Terms Matching',
+          questionType: QuestionType.matching,
+          questionNumber: 4,
+          orderIndex: 4,
+          questionText: 'Match each mathematical term in Column A with its correct definition in Column B (አዛምድ):',
+          options: const [],
+          matchingPairs: const [
+            MatchingPair(left: 'Arithmetic Mean', right: '(a + b) / 2'),
+            MatchingPair(left: 'Geometric Mean', right: 'sqrt(a * b)'),
+            MatchingPair(left: 'Common Difference', right: 'a_n - a_{n-1}'),
+          ],
+          explanation: 'Arithmetic Mean is the average (a+b)/2, Geometric Mean is sqrt(a*b), Common Difference is a_n - a_{n-1}.',
+        ),
       ];
     } else if (subject.contains('Phys')) {
       return [
