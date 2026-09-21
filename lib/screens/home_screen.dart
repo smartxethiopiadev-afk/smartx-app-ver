@@ -106,8 +106,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Dictionary for dynamic translation matching 'EN/አማርኛ'
   final Map<String, Map<String, String>> _localizedValues = {
     'en': {
-      'title': 'Smart Learn Ethiopia',
-      'tutorial_desc': 'Watch tutorial: Getting started with Smart Learn Ethiopia',
+      'title': 'Smart Learn Ethiopian',
+      'tutorial_desc': 'Watch tutorial: Getting started with Smart Learn Ethiopian',
       'explore_title': 'Explore Your Learning Path',
       'explore_sub': 'Select your grade to access courses and resources.',
       'g9_title': 'Grade 9',
@@ -3504,7 +3504,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               Icon(Icons.info_outline_rounded, size: 48, color: isLight ? const Color(0xFF0D2353) : Colors.white),
               const SizedBox(height: 12),
               Text(
-                'Smart X ET',
+                'Smart Learn Ethiopian',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,

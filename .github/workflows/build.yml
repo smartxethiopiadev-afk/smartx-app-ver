@@ -53,6 +53,11 @@ jobs:
       - name: Install Flutter Dependencies
         run: flutter pub get
 
+      - name: Auto-Generate Android Launcher Icons from Base Asset
+        run: |
+          echo "=== 🎨 Generating Android Launcher Mipmaps & Icons Automatically from assets/images/app_logo.png ==="
+          dart run flutter_launcher_icons
+
       - name: Dependency Hygiene - Detect Unused Dependencies
         run: dart run dependency_validator || true
 

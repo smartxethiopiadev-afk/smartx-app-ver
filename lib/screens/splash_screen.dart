@@ -12,6 +12,9 @@ import 'home_screen.dart';
 import '../services/analytics_service.dart';
 import '../main.dart';
 
+/// 100% Redesigned Splash Screen featuring pure Message Animations without any static logo.
+/// Seamlessly animates through sequential Ethiopian curriculum educational messages
+/// and a fluid progress indicator before transitioning to the Home Screen.
 class SplashScreen extends StatefulWidget {
   final bool isDarkMode;
   final String languageCode;
@@ -66,128 +69,154 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     }
   }
 
-  // Animation Controllers
-  late AnimationController _entranceController;
-  
-  late Animation<double> _titleFadeAnimation;
-  late Animation<Offset> _titleSlideAnimation;
-  late Animation<double> _subtitleFadeAnimation;
-  late Animation<double> _spinnerFadeAnimation;
+  // Sequential message items for dynamic animation
+  final List<Map<String, dynamic>> _educationalMessages = [
+    {
+      'badge': 'SMART LEARN ETHIOPIAN',
+      'badgeAm': 'ስማርት ለርን ኢትዮጵያን',
+      'title': 'Smart Learn Ethiopian',
+      'titleAm': 'ስማርት ለርን ኢትዮጵያን',
+      'subtitle': 'Comprehensive Ethiopian High School Curriculum Platform',
+      'subtitleAm': 'የኢትዮጵያ ሁለተኛ ደረጃ ትምህርት እና የፈተና ዝግጅት መድረክ',
+      'accent': const Color(0xFF38BDF8),
+    },
+    {
+      'badge': 'CURRICULUM SHORT NOTES',
+      'badgeAm': 'የካሪኩለም ማጠቃለያዎች',
+      'title': 'Concise Unit Notes & Formulas',
+      'titleAm': 'የአዲሱ ካሪኩለም ማጠቃለያ ማስታወሻዎች',
+      'subtitle': 'Master key physics laws, math proofs, and chemistry reactions',
+      'subtitleAm': 'ዋና ዋና ቀመሮች፣ ህጎች እና ማጠቃለያዎች በአጭሩ',
+      'accent': const Color(0xFF0284C7),
+    },
+    {
+      'badge': 'NATIONAL EXAM MASTERY',
+      'badgeAm': 'የብሔራዊ ፈተና ዝግጅት',
+      'title': 'National Exam Bank & Model Tests',
+      'titleAm': 'የ9-12ኛ ክፍል የፈተና ጥያቄዎች እና ማብራሪያዎች',
+      'subtitle': 'Timed practice quizzes with verified step-by-step solutions',
+      'subtitleAm': 'የተረጋገጡ የፈተና ጥያቄዎች ከዝርዝር ማብራሪያ ጋር',
+      'accent': const Color(0xFF10B981),
+    },
+    {
+      'badge': '100% OFFLINE ACCESS',
+      'badgeAm': 'ከመስመር ውጭ (100% OFFLINE)',
+      'title': 'Study Anywhere Without Internet',
+      'titleAm': 'ያለ ኢንተርኔት በየትኛውም ቦታና ሰዓት ማጥናት',
+      'subtitle': 'Download units once and study completely offline',
+      'subtitleAm': 'አንዴ ዳውንሎድ በማድረግ ያለ ዳታ ወይም ዋይፋይ ይጠቀሙ',
+      'accent': const Color(0xFF8B5CF6),
+    },
+    {
+      'badge': 'EXCELLENCE & SUCCESS',
+      'badgeAm': 'የትምህርት ውጤታማነት',
+      'title': 'Empowering Ethiopian Students',
+      'titleAm': 'የትምህርት ጉዞዎን በብልሃት ይጀምሩ...',
+      'subtitle': 'Learn • Practice • Succeed',
+      'subtitleAm': 'ተማር • ተለማመድ • ከፍተኛ ውጤት አስመዘግብ!',
+      'accent': const Color(0xFFF59E0B),
+    },
+  ];
 
-  Timer? _autoNavigateTimer;
+  int _currentMessageIndex = 0;
+  Timer? _messageTimer;
+  Timer? _navigationTimer;
+
+  // Controllers for animation
+  late AnimationController _pulseController;
+  late AnimationController _progressController;
+  late Animation<double> _progressAnimation;
 
   @override
   void initState() {
     super.initState();
     logScreen('SplashScreen');
 
-    // Smooth refined entrance animation for clean typography and spinner
-    _entranceController = AnimationController(
+    // Ambient background pulse
+    _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 3000),
+    )..repeat(reverse: true);
+
+    // Progress bar controller from 0 to 100%
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2700),
     );
 
-    _titleFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.0, 0.65, curve: Curves.easeOutCubic),
-      ),
+    _progressAnimation = CurvedAnimation(
+      parent: _progressController,
+      curve: Curves.easeInOutCubic,
     );
 
-    _titleSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.20),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.0, 0.70, curve: Curves.easeOutCubic),
-      ),
-    );
+    _progressController.forward();
 
-    _subtitleFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.35, 0.85, curve: Curves.easeOutCubic),
-      ),
-    );
+    // Start cycling through the message animation sequence every 550ms
+    _messageTimer = Timer.periodic(const Duration(milliseconds: 540), (timer) {
+      if (mounted) {
+        setState(() {
+          if (_currentMessageIndex < _educationalMessages.length - 1) {
+            _currentMessageIndex++;
+          }
+        });
+      }
+    });
 
-    _spinnerFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.60, 1.0, curve: Curves.easeIn),
-      ),
-    );
-
-    _entranceController.forward();
-
-    // Start App Initialization Pipeline
+    // Start background app initialization
     _evaluateAppLaunchFlow();
   }
 
   @override
   void dispose() {
-    _autoNavigateTimer?.cancel();
-    _entranceController.dispose();
+    _messageTimer?.cancel();
+    _navigationTimer?.cancel();
+    _pulseController.dispose();
+    _progressController.dispose();
     super.dispose();
   }
 
   /// Evaluates app launch flow in a non-blocking, offline-first manner.
   Future<void> _evaluateAppLaunchFlow() async {
-    debugPrint('[Splash] Evaluating non-blocking offline-first app launch flow...');
-
     SharedPreferences? prefs;
 
-    // 1. Read local preferences safely
     try {
       prefs = await SharedPreferences.getInstance();
     } catch (e) {
-      debugPrint('[Splash] SharedPreferences read warning: $e');
+      debugPrint('[Splash] SharedPreferences read notice: $e');
     }
 
-    // 2. Initialize OfflineManager safely
     try {
       await OfflineManager.init();
     } catch (e) {
-      debugPrint('[Splash] OfflineManager init warning: $e');
+      debugPrint('[Splash] OfflineManager init notice: $e');
     }
 
-    // 3. Non-blocking Background Network Check & Sync
-    bool isOnline = false;
+    // Non-blocking network check
     try {
       final connectivityResult = await Connectivity().checkConnectivity().timeout(const Duration(seconds: 2));
-      isOnline = connectivityResult.isNotEmpty && !connectivityResult.contains(ConnectivityResult.none);
+      final bool isOnline = connectivityResult.isNotEmpty && !connectivityResult.contains(ConnectivityResult.none);
 
       if (isOnline) {
-        debugPrint('[Splash] Online connectivity detected. Executing background syncs...');
-
-        // Supabase Client initialization
-        try {
-          if (!Supabase.instance.isInitialized) {
-            await Supabase.initialize(
-              url: AppConfig.supabaseUrl,
-              publishableKey: AppConfig.supabaseAnonKey,
-            ).timeout(const Duration(seconds: 4));
-          }
-        } catch (sbErr) {
-          debugPrint('[Splash] Supabase client init notice: $sbErr');
+        if (!Supabase.instance.isInitialized) {
+          await Supabase.initialize(
+            url: AppConfig.supabaseUrl,
+            publishableKey: AppConfig.supabaseAnonKey,
+          ).timeout(const Duration(seconds: 3));
         }
 
         if (prefs != null) {
           await prefs.setBool('is_first_time_setup_completed', true);
           await prefs.setBool('has_completed_initial_sync', true);
         }
-      } else {
-        debugPrint('[Splash] Offline mode active. Skipping cloud network sync.');
       }
-    } catch (netErr) {
-      debugPrint('[Splash] Non-blocking network check/sync warning: $netErr');
+    } catch (e) {
+      debugPrint('[Splash] Non-blocking setup check notice: $e');
     }
 
-    // 4. Navigate directly to HomeScreen - Open Exploration mode without mandatory registration barrier
-    _autoNavigateTimer?.cancel();
-    _autoNavigateTimer = Timer(const Duration(milliseconds: 2100), () {
+    // Smooth navigation after message sequence plays
+    _navigationTimer?.cancel();
+    _navigationTimer = Timer(const Duration(milliseconds: 2800), () {
       if (!mounted) return;
-      debugPrint('[Splash] Direct entry -> HomeScreen (Immediate Learning Access)');
       _navigateToHomeScreen();
     });
   }
@@ -216,153 +245,307 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    final bool isAmharic = widget.languageCode == 'am';
+    final currentMsg = _educationalMessages[_currentMessageIndex];
+
+    final String badgeText = isAmharic ? currentMsg['badgeAm'] : currentMsg['badge'];
+    final String titleText = isAmharic ? currentMsg['titleAm'] : currentMsg['title'];
+    final String subtitleText = isAmharic ? currentMsg['subtitleAm'] : currentMsg['subtitle'];
+    final Color accentColor = currentMsg['accent'] as Color;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF090D16),
+      backgroundColor: const Color(0xFF070B14),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
-          systemNavigationBarColor: Color(0xFF090D16),
+          systemNavigationBarColor: Color(0xFF070B14),
           systemNavigationBarIconBrightness: Brightness.light,
         ),
-        child: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Spacer(flex: 10),
+        child: Stack(
+          children: [
+            // Ambient Animated Background Glow Orbs
+            Positioned(
+              top: -80,
+              left: -80,
+              child: AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, child) {
+                  return Container(
+                    width: 260 + (_pulseController.value * 40),
+                    height: 260 + (_pulseController.value * 40),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          accentColor.withValues(alpha: 0.22),
+                          accentColor.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Positioned(
+              bottom: -60,
+              right: -60,
+              child: AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, child) {
+                  return Container(
+                    width: 280 + ((1.0 - _pulseController.value) * 50),
+                    height: 280 + ((1.0 - _pulseController.value) * 50),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFF0284C7).withValues(alpha: 0.18),
+                          const Color(0xFF0284C7).withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
 
-                // Clean Minimalist Typography Header (NO IMAGE)
-                SlideTransition(
-                  position: _titleSlideAnimation,
-                  child: FadeTransition(
-                    opacity: _titleFadeAnimation,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Top Subtle Tag
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0284C7).withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: const Color(0xFF0284C7).withValues(alpha: 0.35),
-                              width: 1,
+            // Main Message Animation Content (PURE TYPOGRAPHY & MESSAGE TRANSITION - NO LOGO IMAGE)
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Spacer(flex: 7),
+
+                    // Animated App Name Tag
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 350),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                          color: accentColor.withValues(alpha: 0.35),
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: accentColor.withValues(alpha: 0.15),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: accentColor,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: accentColor,
+                                  blurRadius: 6,
+                                ),
+                              ],
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF38BDF8),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 7),
-                              Text(
-                                'ETHIOPIAN CURRICULUM',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 2.0,
-                                  color: const Color(0xFF38BDF8),
-                                ),
-                              ),
-                            ],
+                          const SizedBox(width: 8),
+                          Text(
+                            badgeText,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
+                              color: Colors.white,
+                            ),
                           ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Dynamic Animated Message Transition Switcher
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 400),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (Widget child, Animation<double> animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0.0, 0.25),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Container(
+                        key: ValueKey<int>(_currentMessageIndex),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Main Animated Message Title
+                            Text(
+                              titleText,
+                              textAlign: TextAlign.center,
+                              style: isAmharic
+                                  ? GoogleFonts.notoSansEthiopic(
+                                      fontSize: 23,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      height: 1.35,
+                                    )
+                                  : GoogleFonts.plusJakartaSans(
+                                      fontSize: 25,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: -0.5,
+                                      height: 1.25,
+                                    ),
+                            ),
+                            const SizedBox(height: 14),
+                            // Subtitle description
+                            Text(
+                              subtitleText,
+                              textAlign: TextAlign.center,
+                              style: isAmharic
+                                  ? GoogleFonts.notoSansEthiopic(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF94A3B8),
+                                      height: 1.45,
+                                    )
+                                  : GoogleFonts.plusJakartaSans(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF94A3B8),
+                                      height: 1.4,
+                                    ),
+                            ),
+                          ],
                         ),
+                      ),
+                    ),
 
-                        const SizedBox(height: 24),
+                    const SizedBox(height: 36),
 
-                        // Main Typography: Smart Learn
-                        RichText(
-                          textAlign: TextAlign.center,
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Smart ',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 38,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -1.0,
-                                  color: Colors.white,
+                    // Step Dots Indicator
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(_educationalMessages.length, (index) {
+                        final bool isCurrent = index == _currentMessageIndex;
+                        final bool isDone = index < _currentMessageIndex;
+
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          margin: const EdgeInsets.symmetric(horizontal: 3.5),
+                          width: isCurrent ? 24.0 : 6.0,
+                          height: 6.0,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(4.0),
+                            color: isCurrent
+                                ? accentColor
+                                : (isDone
+                                    ? Colors.white.withValues(alpha: 0.4)
+                                    : Colors.white.withValues(alpha: 0.12)),
+                            boxShadow: isCurrent
+                                ? [
+                                    BoxShadow(
+                                      color: accentColor.withValues(alpha: 0.5),
+                                      blurRadius: 8,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                        );
+                      }),
+                    ),
+
+                    const Spacer(flex: 8),
+
+                    // Smooth Bottom Loading Progress Bar & Percentage
+                    AnimatedBuilder(
+                      animation: _progressAnimation,
+                      builder: (context, child) {
+                        final double val = _progressAnimation.value.clamp(0.0, 1.0);
+                        final int percent = (val * 100).toInt();
+
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: Container(
+                                  height: 4,
+                                  width: double.infinity,
+                                  color: Colors.white.withValues(alpha: 0.08),
+                                  child: FractionallySizedBox(
+                                    alignment: Alignment.centerLeft,
+                                    widthFactor: val,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            const Color(0xFF0284C7),
+                                            accentColor,
+                                            const Color(0xFF38BDF8),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                              TextSpan(
-                                text: 'Learn',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 38,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -1.0,
-                                  color: const Color(0xFF38BDF8),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  isAmharic ? 'መተግበሪያውን በማዘጋጀት ላይ...' : 'Preparing learning modules...',
+                                  style: GoogleFonts.notoSansEthiopic(
+                                    fontSize: 11.5,
+                                    color: const Color(0xFF64748B),
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        // Secondary Clean Typography: Ethiopia
-                        Text(
-                          'ETHIOPIA',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 6.0,
-                            color: const Color(0xFF94A3B8),
-                          ),
-                        ),
-                      ],
+                                Text(
+                                  '$percent%',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12,
+                                    color: accentColor,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
-                  ),
+
+                    const SizedBox(height: 18),
+                  ],
                 ),
-
-                const SizedBox(height: 22),
-
-                // Clean Amharic Subtitle with Fade
-                FadeTransition(
-                  opacity: _subtitleFadeAnimation,
-                  child: Text(
-                    'የሁለተኛ ደረጃ ትምህርት እና የፈተና ዝግጅት መድረክ',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.2,
-                      color: const Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 48),
-
-                // Smooth Minimalist Cyan Loading Indicator
-                FadeTransition(
-                  opacity: _spinnerFadeAnimation,
-                  child: const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      strokeCap: StrokeCap.round,
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF38BDF8)),
-                    ),
-                  ),
-                ),
-
-                const Spacer(flex: 12),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 }
-

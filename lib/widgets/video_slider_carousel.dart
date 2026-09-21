@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 
+/// Modern, high-impact video carousel banner tailored for Smart Learn Ethiopian
 class VideoSliderCarousel extends StatefulWidget {
   final bool isDarkMode;
   final String languageCode;
@@ -24,14 +25,14 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
 
   final List<Map<String, dynamic>> _videoBanners = [
     {
-      'titleEn': 'Curriculum Video Masterclasses',
-      'titleAm': 'የክፍል ቪዲዮ ትምህርቶች (Grade 9-12)',
+      'titleEn': 'Smart Learn Ethiopian Video Hub',
+      'titleAm': 'ስማርት ለርን የቪዲዮ ትምህርቶች (Grade 9-12)',
       'descEn': 'High-definition chapter walkthroughs tailored for Ethiopian national curricula.',
       'descAm': 'በአዲሱ ሥርዓተ ትምህርት መሠረት በክፍል፣ በትምህርት ዓይነት እና በዩኒት የተደራጁ።',
       'accentColor': Color(0xFF0284C7),
       'secondaryColor': Color(0xFF0369A1),
-      'tagEn': 'CURRICULUM LECTURES',
-      'tagAm': 'የቪዲዮ ማብራሪያ',
+      'tagEn': 'SMART LEARN ETHIOPIAN',
+      'tagAm': 'ስማርት ለርን ኢትዮጵያን',
       'icon': Icons.ondemand_video_rounded,
     },
     {
@@ -52,9 +53,20 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
       'descAm': 'ቁልፍ የሳይንስ ፎርሙላዎችን እና ህጎችን በአጭር ጊዜ ውስጥ በግልጽ ይረዱ።',
       'accentColor': Color(0xFF10B981),
       'secondaryColor': Color(0xFF047857),
-      'tagEn': 'CONCEPT RECAP',
+      'tagEn': 'CURRICULUM RECAP',
       'tagAm': 'ፈጣን ግንዛቤ',
       'icon': Icons.auto_stories_rounded,
+    },
+    {
+      'titleEn': 'National Matric Model Video Analysis',
+      'titleAm': 'የማትሪክ ፈተና ሞዴል ጥያቄዎች ትንታኔ',
+      'descEn': 'In-depth analysis of past national exams with expert tips for maximum score.',
+      'descAm': 'የብሔራዊ ፈተና ጥያቄዎች ትንታኔ እና ለከፍተኛ ውጤት የሚረዱ ጠቃሚ ምክሮች።',
+      'accentColor': Color(0xFFF59E0B),
+      'secondaryColor': Color(0xFFD97706),
+      'tagEn': 'MATRIC MASTERY',
+      'tagAm': 'የማትሪክ ዝግጅት',
+      'icon': Icons.military_tech_rounded,
     },
   ];
 
@@ -68,9 +80,9 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
           carouselController: _carouselController,
           itemCount: _videoBanners.length,
           options: CarouselOptions(
-            height: 146.0,
+            height: 152.0,
             autoPlay: true,
-            autoPlayInterval: const Duration(seconds: 6),
+            autoPlayInterval: const Duration(seconds: 5),
             autoPlayAnimationDuration: const Duration(milliseconds: 700),
             autoPlayCurve: Curves.easeInOutCubic,
             enlargeCenterPage: false,
@@ -95,7 +107,7 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
                 borderRadius: BorderRadius.circular(18.0),
                 boxShadow: [
                   BoxShadow(
-                    color: accentColor.withValues(alpha: isLight ? 0.20 : 0.35),
+                    color: accentColor.withValues(alpha: isLight ? 0.22 : 0.38),
                     blurRadius: 16.0,
                     offset: const Offset(0, 6),
                   ),
@@ -115,7 +127,7 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
                             colors: [
                               accentColor,
                               secondaryColor,
-                              const Color(0xFF0B1329),
+                              const Color(0xFF070C18),
                             ],
                             stops: const [0.0, 0.45, 1.0],
                           ),
@@ -158,10 +170,10 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
+                          color: Colors.white.withValues(alpha: 0.20),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.35),
+                            color: Colors.white.withValues(alpha: 0.4),
                             width: 1.2,
                           ),
                         ),
@@ -184,12 +196,12 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
                         children: [
                           // Badge Chip
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.28),
+                              color: Colors.black.withValues(alpha: 0.32),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.25),
+                                color: Colors.white.withValues(alpha: 0.3),
                                 width: 0.8,
                               ),
                             ),
@@ -207,8 +219,8 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
                                 const SizedBox(width: 5),
                                 Text(
                                   widget.languageCode == 'en' 
-                                      ? (slide['tagEn'] ?? 'VIDEO HUB') 
-                                      : (slide['tagAm'] ?? 'የቪዲዮ ማዕከል'),
+                                      ? (slide['tagEn'] ?? 'SMART LEARN ETHIOPIAN') 
+                                      : (slide['tagAm'] ?? 'ስማርት ለርን ኢትዮጵያን'),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 9.0,
@@ -236,7 +248,7 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.88),
+                              color: Colors.white.withValues(alpha: 0.9),
                               fontSize: 11.0,
                               height: 1.25,
                               fontWeight: FontWeight.w500,
