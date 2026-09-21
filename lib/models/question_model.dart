@@ -2,6 +2,26 @@ enum QuestionType {
   multipleChoice,
   trueFalse,
   blankSpace,
+  matching,
+}
+
+class MatchingPair {
+  final String left;
+  final String right;
+
+  MatchingPair({required this.left, required this.right});
+
+  factory MatchingPair.fromJson(Map<String, dynamic> json) {
+    return MatchingPair(
+      left: json['left']?.toString() ?? json['premise']?.toString() ?? '',
+      right: json['right']?.toString() ?? json['response']?.toString() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'left': left,
+    'right': right,
+  };
 }
 
 class QuestionOption {
@@ -61,6 +81,9 @@ class QuestionModel {
   final bool caseSensitive;
   final String? hint;
 
+  // Matching (አዛምድ) support
+  final List<MatchingPair> matchingPairs;
+
   // Exam Mode Metadata
   final String? year;
   final String? examCategory;
@@ -84,6 +107,7 @@ class QuestionModel {
     this.correctBoolean,
     this.blankAnswer,
     this.acceptedAnswers = const [],
+    this.matchingPairs = const [],
     this.caseSensitive = false,
     this.hint,
     this.year,
@@ -96,6 +120,7 @@ class QuestionModel {
   bool get isMultipleChoice => questionType == QuestionType.multipleChoice;
   bool get isTrueFalse => questionType == QuestionType.trueFalse;
   bool get isBlankSpace => questionType == QuestionType.blankSpace;
+  bool get isMatching => questionType == QuestionType.matching;
 
   /// Validates a user's typed blank input against canonical `blankAnswer` and `acceptedAnswers`
   bool checkBlankAnswer(String userInput) {
@@ -125,6 +150,8 @@ class QuestionModel {
       resolvedType = QuestionType.trueFalse;
     } else if (rawType.contains('blank') || rawType.contains('fill') || rawType == 'space') {
       resolvedType = QuestionType.blankSpace;
+    } else if (rawType.contains('match') || rawType.contains('pair') || rawType.contains('አዛምድ')) {
+      resolvedType = QuestionType.matching;
     }
 
     // 2. Parse Options
@@ -211,6 +238,21 @@ class QuestionModel {
       }
     }
 
+    // 5. Matching Pairs List for Matching Questions (አዛምድ)
+    final List<MatchingPair> parsedMatchingPairs = [];
+    final rawPairs = json['matching_pairs'] ?? json['pairs'];
+    if (rawPairs is List) {
+      for (final p in rawPairs) {
+        if (p is Map<String, dynamic>) {
+          parsedMatchingPairs.add(MatchingPair.fromJson(p));
+        }
+      }
+    } else if (rawPairs is Map<String, dynamic>) {
+      rawPairs.forEach((k, v) {
+        parsedMatchingPairs.add(MatchingPair(left: k, right: v.toString()));
+      });
+    }
+
     return QuestionModel(
       id: json['id']?.toString() ?? '',
       unitId: json['unit_id']?.toString(),
@@ -235,6 +277,7 @@ class QuestionModel {
       correctBoolean: boolVal,
       blankAnswer: json['blank_answer']?.toString() ?? (resolvedType == QuestionType.blankSpace ? json['correct_answer']?.toString() : null),
       acceptedAnswers: accepted,
+      matchingPairs: parsedMatchingPairs,
       caseSensitive: json['case_sensitive'] is bool ? json['case_sensitive'] as bool : false,
       hint: json['hint'] as String?,
       year: json['year'] as String?,
@@ -251,6 +294,7 @@ class QuestionModel {
     String typeStr = 'multiple_choice';
     if (questionType == QuestionType.trueFalse) typeStr = 'true_false';
     if (questionType == QuestionType.blankSpace) typeStr = 'blank_space';
+    if (questionType == QuestionType.matching) typeStr = 'matching';
 
     return {
       'id': id,
@@ -268,6 +312,7 @@ class QuestionModel {
       'correct_boolean': correctBoolean,
       'blank_answer': blankAnswer,
       'accepted_answers': acceptedAnswers,
+      'matching_pairs': matchingPairs.map((e) => e.toJson()).toList(),
       'case_sensitive': caseSensitive,
       'hint': hint,
       'year': year,

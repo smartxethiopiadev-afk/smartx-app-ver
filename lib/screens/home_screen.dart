@@ -435,6 +435,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     },
                   ),
                   _buildDrawerTile(
+                    icon: Icons.code_rounded,
+                    title: widget.languageCode == 'en' ? 'Developer (Habtamu Yifiru)' : 'አልሚው (Habtamu Yifiru)',
+                    isSelected: false,
+                    isLight: isLight,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showAboutAppModal(isLight);
+                    },
+                  ),
+                  _buildDrawerTile(
                     icon: Icons.info_outline_rounded,
                     title: widget.languageCode == 'en' ? 'About App' : 'ስለ መተግበሪያው',
                     isSelected: false,
@@ -3701,12 +3711,12 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
             color: widget.isLight ? Colors.white : const Color(0xFF1E293B),
             borderRadius: BorderRadius.circular(18.0),
             border: Border.all(
-              color: widget.isUnlocked ? Colors.white : const Color(0xFFF59E0B).withValues(alpha: 0.5),
-              width: 2.0,
+              color: widget.btnColor.withValues(alpha: widget.isLight ? 0.25 : 0.4),
+              width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: widget.isLight ? 0.06 : 0.22),
+                color: widget.btnColor.withValues(alpha: widget.isLight ? 0.08 : 0.18),
                 blurRadius: 14.0,
                 offset: const Offset(0, 5),
               ),
@@ -3740,18 +3750,6 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
                                   ),
                                 ),
                               ),
-                              if (!widget.isUnlocked) ...[
-                                const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEF4444).withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
-                                  ),
-                                  child: const Icon(Icons.lock_rounded, size: 11, color: Color(0xFFEF4444)),
-                                ),
-                              ],
                             ],
                           ),
                           const SizedBox(height: 1.0),
@@ -3787,23 +3785,20 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
 
               const SizedBox(height: 6.0),
 
-              // Pill button
+              // Pill button - Clean White Style
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10.0),
+                padding: const EdgeInsets.symmetric(vertical: 9.0),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      widget.isUnlocked ? const Color(0xFF52C29F) : const Color(0xFFF59E0B),
-                      widget.btnColor,
-                    ],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(24.0),
+                  border: Border.all(
+                    color: widget.btnColor,
+                    width: 1.8,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: widget.btnColor.withValues(alpha: 0.24),
+                      color: widget.btnColor.withValues(alpha: 0.15),
                       blurRadius: 8.0,
                       offset: const Offset(0, 3),
                     )
@@ -3815,8 +3810,8 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
                   children: [
                     Text(
                       widget.buttonText,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: widget.btnColor,
                         fontSize: 12.0,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.1,
@@ -3824,8 +3819,8 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
                     ),
                     const SizedBox(width: 4.0),
                     Icon(
-                      widget.isUnlocked ? Icons.chevron_right : Icons.lock_open_rounded,
-                      color: Colors.white,
+                      Icons.arrow_forward_rounded,
+                      color: widget.btnColor,
                       size: 14.0,
                     ),
                   ],

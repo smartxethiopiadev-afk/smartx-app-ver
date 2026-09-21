@@ -1150,10 +1150,10 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 
   Widget _buildErrorView(Color textColor, Color subColor, bool isAmharic) {
-    String title = isAmharic ? 'ማስታወሻ አልተገኘም' : 'No Short Notes Found';
+    String title = isAmharic ? 'በቅርብ ቀን ይጠብቁ (Coming Soon)' : 'Coming Soon';
     String desc = isAmharic
-        ? 'ለዚህ ዩኒት ማስታወሻ በሱፓቤዝ ዳታቤዝ ውስጥ ገና አልተካተተም። እባክዎ በSQL table ላይ የፒዲኤፍ ሊንክ ያስገቡ።'
-        : 'Short notes for this unit have not been added to Supabase database yet.';
+        ? 'የዚህ ዩኒት ማጠቃለያ ፒዲኤፍ (PDF) በቅርቡ ወደ ዳታቤዝ ይካተታል።'
+        : 'The PDF short notes for this unit will be available very soon.';
 
     if (_errorType == NotesErrorType.noInternet) {
       title = isAmharic ? 'የኢንተርኔት ግንኙነት የለም' : 'No Internet Connection';
@@ -1169,26 +1169,26 @@ class _NotesScreenState extends State<NotesScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                color: widget.themeColor.withValues(alpha: 0.1),
+                color: widget.themeColor.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 _errorType == NotesErrorType.noInternet
                     ? Icons.wifi_off_rounded
-                    : Icons.menu_book_rounded,
-                size: 48,
+                    : Icons.hourglass_top_rounded,
+                size: 50,
                 color: widget.themeColor,
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
             Text(
               title,
               textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
                 color: textColor,
               ),
             ),
@@ -1197,12 +1197,12 @@ class _NotesScreenState extends State<NotesScreen> {
               desc,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 13.5,
                 color: subColor,
                 height: 1.45,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
             ElevatedButton.icon(
               onPressed: _fetchNotes,
               icon: const Icon(Icons.refresh_rounded, size: 18, color: Colors.white),
@@ -1212,7 +1212,7 @@ class _NotesScreenState extends State<NotesScreen> {
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.themeColor,
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),

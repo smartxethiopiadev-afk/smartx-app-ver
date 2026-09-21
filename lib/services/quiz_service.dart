@@ -166,11 +166,17 @@ class QuizService {
     required String subject,
     required int unit,
     QuizMode mode = QuizMode.practice,
+    String? questionType,
   }) async {
     if (mode == QuizMode.exam) {
       return fetchExamQuestions(grade: grade, subject: subject, unit: unit);
     } else {
-      return fetchPracticeQuestions(grade: grade, subject: subject, unit: unit);
+      return fetchPracticeQuestions(
+        grade: grade,
+        subject: subject,
+        unit: unit,
+        questionType: questionType,
+      );
     }
   }
 
