@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../screens/login_activation_screen.dart';
+import 'account_upgrade_dialog.dart';
+import 'upgrade_telegram_modal.dart';
 import 'how_to_start_banner.dart';
 
 class LockedUnitDialog extends StatelessWidget {
@@ -93,7 +94,7 @@ class LockedUnitDialog extends StatelessWidget {
                   ),
                 ),
                 child: const Icon(
-                  Icons.lock_outline_rounded,
+                  Icons.lock_rounded,
                   color: Color(0xFFEF4444),
                   size: 34,
                 ),
@@ -103,7 +104,7 @@ class LockedUnitDialog extends StatelessWidget {
 
               // Title
               Text(
-                isAm ? 'ይህ ክፍል ተቆልፏል 🔒' : 'Chapter Locked 🔒',
+                isAm ? 'ይህ ምዕራፍ ተቆልፏል 🔒' : 'Chapter Locked 🔒',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.notoSansEthiopic(
                   fontSize: 18.5,
@@ -128,7 +129,7 @@ class LockedUnitDialog extends StatelessWidget {
                     const Icon(Icons.check_circle_rounded, color: Color(0xFF0284C7), size: 15),
                     const SizedBox(width: 6),
                     Text(
-                      isAm ? 'ክፍል 1 ለሁሉም 100% ነፃ ነው' : 'Unit 1 is 100% Free',
+                      isAm ? 'ምዕራፍ 1 ለሁሉም 100% ነፃ ነው' : 'Unit 1 is 100% Free Trial',
                       style: GoogleFonts.notoSansEthiopic(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
@@ -144,8 +145,8 @@ class LockedUnitDialog extends StatelessWidget {
               // Informative description
               Text(
                 isAm
-                    ? 'ክፍል $unitNumber እና ቀጣዮቹን ክፍሎች ለመክፈት አካውንትዎን ያስገቡ (Login ያድርጉ) ወይም የመተግበሪያውን አጠቃቀም መመሪያ (How to Start) ይመልከቱ።'
-                    : 'To access Unit $unitNumber and subsequent units, please log in with your registered student account or check our usage guide.',
+                    ? 'ክፍል $grade ምዕራፍ $unitNumber እና ቀጣዮቹን ትምህርቶች ለመክፈት አካውንትዎን ያሻሽሉ ወይም የማግበሪያ ኮድ (Activation Code) ያስገቡ።'
+                    : 'To unlock Grade $grade Unit $unitNumber and complete curriculum materials, please upgrade your account or enter your activation code.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.notoSansEthiopic(
                   fontSize: 13,
@@ -157,30 +158,29 @@ class LockedUnitDialog extends StatelessWidget {
 
               const SizedBox(height: 22),
 
-              // 1. Primary Action: Login (ግባ / Login)
+              // 1. Primary Action: Account Upgrade / Activation (አካውንት ያሻሽሉ / Upgrade Account)
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton.icon(
                   onPressed: () async {
                     Navigator.of(context).pop();
-                    final loggedIn = await LoginActivationScreen.push(
+                    final upgraded = await AccountUpgradeDialog.show(
                       context,
                       isDarkMode: isDarkMode,
                       languageCode: languageCode,
-                      preferredGrade: grade,
-                      preferredSubject: subject,
+                      initialGrade: grade,
                     );
-                    if (loggedIn == true) {
+                    if (upgraded == true) {
                       onUnlocked?.call();
                     }
                   },
-                  icon: const Icon(Icons.login_rounded, size: 18, color: Colors.white),
+                  icon: const Icon(Icons.workspace_premium_rounded, size: 20, color: Colors.white),
                   label: Text(
-                    isAm ? 'በአካውንት ይግቡ (Login)' : 'Student Login',
+                    isAm ? 'አካውንት ያሻሽሉ (Account Upgrade)' : 'Upgrade Account & Unlock',
                     style: GoogleFonts.notoSansEthiopic(
                       fontWeight: FontWeight.w900,
-                      fontSize: 14,
+                      fontSize: 13.5,
                       color: Colors.white,
                     ),
                   ),
@@ -197,30 +197,32 @@ class LockedUnitDialog extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              // 2. Secondary Action: How to Start (እንዴት ልጀምር? / How to Start)
+              // 2. Secondary Action: Telegram Payment / Upgrade
               SizedBox(
                 width: double.infinity,
                 height: 46,
                 child: OutlinedButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.of(context).pop();
-                    HowToStartBanner.showUsageGuide(
+                    await UpgradeTelegramModal.show(
                       context,
+                      grade: grade,
                       isDarkMode: isDarkMode,
                       languageCode: languageCode,
                     );
+                    onUnlocked?.call();
                   },
-                  icon: const Icon(Icons.help_outline_rounded, size: 18, color: Color(0xFF10B981)),
+                  icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF0088CC)),
                   label: Text(
-                    isAm ? 'እንዴት ልጀምር? (How to Start)' : 'How to Start Guide',
+                    isAm ? 'በቴሌግራም ይክፈሉ / ያነጋግሩ (@smart_x_help)' : 'Purchase on Telegram (@smart_x_help)',
                     style: GoogleFonts.notoSansEthiopic(
                       fontWeight: FontWeight.w800,
-                      fontSize: 13,
-                      color: const Color(0xFF10B981),
+                      fontSize: 12,
+                      color: const Color(0xFF0088CC),
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF10B981), width: 1.5),
+                    side: const BorderSide(color: Color(0xFF0088CC), width: 1.5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),

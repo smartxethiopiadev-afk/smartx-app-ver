@@ -1,11 +1,9 @@
 // ignore_for_file: prefer_final_fields, prefer_const_constructors, prefer_const_literals_to_create_immutables, use_build_context_synchronously
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/question_model.dart';
 import '../services/quiz_service.dart';
 import '../services/offline_manager.dart';
@@ -13,11 +11,6 @@ import '../main.dart';
 import '../widgets/quiz_result_dialog.dart';
 import '../widgets/math_text.dart';
 import '../services/analytics_service.dart';
-
-enum QuizMode {
-  practice,
-  exam,
-}
 
 class QuizScreen extends StatefulWidget {
   final int grade;
@@ -48,7 +41,10 @@ class _QuizScreenState extends State<QuizScreen> {
   List<QuestionModel> _questions = [];
   
   int _currentIndex = 0;
-  final Map<int, int> _selectedAnswers = {};
+  final Map<int, int> _selectedAnswers = {}; // For MCQ and True/False (option index)
+  final Map<int, String> _blankInputAnswers = {}; // For Blank Space (typed string)
+  final Map<int, TextEditingController> _blankControllers = {};
+  final Set<int> _revealedHints = {};
   final Set<int> _submittedQuestions = {}; // Only for practice mode (already checked)
   bool _showAnswersAndExplanations = false; // Set to true after exam is finished/submitted
 
@@ -96,7 +92,22 @@ class _QuizScreenState extends State<QuizScreen> {
   void dispose() {
     _quizTimer?.cancel();
     _scrollController.dispose();
+    for (final controller in _blankControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
+  }
+
+  TextEditingController _getBlankController(int index) {
+    if (!_blankControllers.containsKey(index)) {
+      final initialText = _blankInputAnswers[index] ?? '';
+      final controller = TextEditingController(text: initialText);
+      controller.addListener(() {
+        _blankInputAnswers[index] = controller.text;
+      });
+      _blankControllers[index] = controller;
+    }
+    return _blankControllers[index]!;
   }
 
   Color _getSubjectThemeColor() {
@@ -113,6 +124,8 @@ class _QuizScreenState extends State<QuizScreen> {
       _isLoading = true;
       _errorMessage = null;
       _selectedAnswers.clear();
+      _blankInputAnswers.clear();
+      _revealedHints.clear();
       _submittedQuestions.clear();
       _showAnswersAndExplanations = false;
       _currentIndex = 0;
@@ -132,6 +145,7 @@ class _QuizScreenState extends State<QuizScreen> {
           grade: widget.grade,
           subject: widget.subject ?? 'unknown',
           unit: widget.unit ?? 1,
+          mode: widget.mode,
         );
       }
 
@@ -139,18 +153,16 @@ class _QuizScreenState extends State<QuizScreen> {
         setState(() {
           _questions = [];
           _isLoading = false;
-          _errorMessage = "No questions available.";
+          _errorMessage = "No questions available for this unit.";
         });
         return;
       }
 
-      // Select quiz questions and sort them sequentially (1, 2, 3...)
       final List<QuestionModel> selectedQuestions = await QuizService.filterAndSelectQuestions(
         unitId: _getUnitId(),
         allQuestions: fetched,
       );
 
-      // Sort the questions sequentially based on order_index or question_number
       final List<QuestionModel> sequentialQuestions = List<QuestionModel>.from(selectedQuestions);
       sequentialQuestions.sort((a, b) {
         if (a.orderIndex != null && b.orderIndex != null) {
@@ -159,47 +171,36 @@ class _QuizScreenState extends State<QuizScreen> {
         if (a.questionNumber != null && b.questionNumber != null) {
           return a.questionNumber!.compareTo(b.questionNumber!);
         }
-        if (a.createdAt != null && b.createdAt != null) {
-          return a.createdAt!.compareTo(b.createdAt!);
-        }
         return a.id.compareTo(b.id);
       });
 
-      final List<QuestionModel> processedQuestions = sequentialQuestions.map((q) {
-        return QuestionModel(
-          id: q.id,
-          unitId: q.unitId,
-          questionText: q.questionText,
-          options: List<QuestionOption>.from(q.options),
-          explanation: q.explanation,
-          createdAt: q.createdAt,
-          questionNumber: q.questionNumber,
-          orderIndex: q.orderIndex,
-        );
-      }).toList();
+      if (mounted) {
+        setState(() {
+          _questions = sequentialQuestions;
+          _questionKeys = List.generate(sequentialQuestions.length, (_) => GlobalKey());
+          _isLoading = false;
+        });
 
-      void startQuizTimerAndFinishLoading() {
-        if (mounted) {
-          setState(() {
-            _questions = processedQuestions;
-            _questionKeys = List.generate(processedQuestions.length, (_) => GlobalKey());
-            _isLoading = false;
-          });
-
-          // Start exam mode countdown automatically
-          if (widget.mode == QuizMode.exam) {
-            _timeLeftSeconds = _questions.length * 60; // 1 minute per question
-            _startTimer();
+        // Initialize blank controllers
+        for (int i = 0; i < sequentialQuestions.length; i++) {
+          if (sequentialQuestions[i].isBlankSpace) {
+            _getBlankController(i);
           }
         }
-      }
 
-      startQuizTimerAndFinishLoading();
+        // Start countdown timer for Exam Mode
+        if (widget.mode == QuizMode.exam) {
+          _timeLeftSeconds = _questions.length * 90; // 90 seconds per question in exam mode
+          _startTimer();
+        }
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
       debugPrint("Error loading questions: $e");
     }
   }
@@ -227,7 +228,7 @@ class _QuizScreenState extends State<QuizScreen> {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("Time has expired! Submitting your quiz..."),
+        content: Text("Time has expired! Submitting your exam..."),
         backgroundColor: Color(0xFFEF4444),
         behavior: SnackBarBehavior.floating,
       ),
@@ -237,8 +238,8 @@ class _QuizScreenState extends State<QuizScreen> {
 
   void _onOptionSelected(int optionIndex) {
     if (_questions.isEmpty || _currentIndex >= _questions.length || _currentIndex < 0) return;
-    if (_showAnswersAndExplanations) return; // Prevent selection in post-exam review
-    if (widget.mode == QuizMode.practice && _submittedQuestions.contains(_currentIndex)) return; // Already checked
+    if (_showAnswersAndExplanations) return;
+    if (widget.mode == QuizMode.practice && _submittedQuestions.contains(_currentIndex)) return;
 
     setState(() {
       _selectedAnswers[_currentIndex] = optionIndex;
@@ -252,8 +253,16 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   void _submitPracticeAnswer() {
-    final selectedIdx = _selectedAnswers[_currentIndex];
-    if (selectedIdx == null) return;
+    if (_questions.isEmpty || _currentIndex >= _questions.length) return;
+    final q = _questions[_currentIndex];
+
+    if (q.isBlankSpace) {
+      final text = _blankInputAnswers[_currentIndex]?.trim() ?? '';
+      if (text.isEmpty) return;
+    } else {
+      final selectedIdx = _selectedAnswers[_currentIndex];
+      if (selectedIdx == null) return;
+    }
     
     setState(() {
       _submittedQuestions.add(_currentIndex);
@@ -261,6 +270,15 @@ class _QuizScreenState extends State<QuizScreen> {
 
     _saveProgress();
     _scrollToExplanation();
+  }
+
+  bool _hasUserAnswered(int index) {
+    if (index >= _questions.length || index < 0) return false;
+    final q = _questions[index];
+    if (q.isBlankSpace) {
+      return (_blankInputAnswers[index]?.trim().isNotEmpty ?? false);
+    }
+    return _selectedAnswers.containsKey(index);
   }
 
   void _jumpToQuestion(int targetIndex) {
@@ -279,9 +297,9 @@ class _QuizScreenState extends State<QuizScreen> {
       if (_currentIndex < _questionKeys.length && _questionKeys[_currentIndex].currentContext != null) {
         Scrollable.ensureVisible(
           _questionKeys[_currentIndex].currentContext!,
-          duration: const Duration(milliseconds: 600),
+          duration: const Duration(milliseconds: 500),
           curve: Curves.easeInOutCubic,
-          alignment: 0.1, // Align near the top of the viewport
+          alignment: 0.08,
         );
       }
     });
@@ -293,9 +311,9 @@ class _QuizScreenState extends State<QuizScreen> {
       if (_currentIndex < _questionKeys.length && _questionKeys[_currentIndex].currentContext != null) {
         Scrollable.ensureVisible(
           _questionKeys[_currentIndex].currentContext!,
-          duration: const Duration(milliseconds: 600),
+          duration: const Duration(milliseconds: 500),
           curve: Curves.easeInOutCubic,
-          alignment: 1.0, // Align to bottom of viewport to reveal explanation block
+          alignment: 0.5,
         );
       }
     });
@@ -309,7 +327,7 @@ class _QuizScreenState extends State<QuizScreen> {
           _questionKeys[_currentIndex].currentContext!,
           duration: const Duration(milliseconds: 500),
           curve: Curves.easeOutCubic,
-          alignment: 0.3, // Scroll slightly up so card and Next button are beautifully framed
+          alignment: 0.25,
         );
       }
     });
@@ -318,7 +336,7 @@ class _QuizScreenState extends State<QuizScreen> {
   void _advanceToNext() {
     if (_currentIndex < _questions.length - 1) {
       final int nextIndex = _currentIndex + 1;
-      if (nextIndex == 19) {
+      if (nextIndex == 20) {
         _showBreakDialog();
         return;
       }
@@ -328,7 +346,6 @@ class _QuizScreenState extends State<QuizScreen> {
       _saveProgress();
       _scrollToActiveQuestion();
     } else {
-      // Reached the end, navigate to submit screen/trigger submit results
       _showResults();
     }
   }
@@ -343,17 +360,12 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
-
   bool _shouldShowExplanation(int index) {
     if (widget.mode == QuizMode.practice) {
       return _submittedQuestions.contains(index);
     } else {
       return _showAnswersAndExplanations;
     }
-  }
-
-  Future<void> _submitScoreToLeaderboard(int score) async {
-    debugPrint("QuizScreen: Score submission is disabled.");
   }
 
   void _showExitConfirmationDialog() {
@@ -408,13 +420,14 @@ class _QuizScreenState extends State<QuizScreen> {
         'questions': _questions.map((q) => q.toJson()).toList(),
         'currentIndex': _currentIndex,
         'selectedAnswers': _selectedAnswers.map((k, v) => MapEntry(k.toString(), v)),
+        'blankInputAnswers': _blankInputAnswers.map((k, v) => MapEntry(k.toString(), v)),
         'submittedQuestions': _submittedQuestions.map((e) => e.toString()).toList(),
+        'revealedHints': _revealedHints.map((e) => e.toString()).toList(),
         'timeLeftSeconds': _timeLeftSeconds,
         'mode': widget.mode.toString(),
       };
       
       await prefs.setString(key, jsonEncode(data));
-      debugPrint("QuizScreen: Progress saved for unit ${_getUnitId()}");
     } catch (e) {
       debugPrint("QuizScreen: Failed to save progress: $e");
     }
@@ -425,7 +438,6 @@ class _QuizScreenState extends State<QuizScreen> {
       final prefs = await SharedPreferences.getInstance();
       final key = 'quiz_session_progress_${_getUnitId()}';
       if (!prefs.containsKey(key)) {
-        // No saved progress, load fresh questions
         await _loadQuestions();
         return;
       }
@@ -438,7 +450,6 @@ class _QuizScreenState extends State<QuizScreen> {
       
       final Map<String, dynamic> data = jsonDecode(dataStr) as Map<String, dynamic>;
       
-      // If widgets mount/state is active, show the restore dialog!
       if (!mounted) return;
       
       final bool isLight = Theme.of(context).brightness == Brightness.light;
@@ -467,7 +478,6 @@ class _QuizScreenState extends State<QuizScreen> {
             actions: [
               TextButton(
                 onPressed: () async {
-                  // Start New Session: clear progress and load questions fresh
                   Navigator.of(ctx).pop();
                   await _clearProgress();
                   await _loadQuestions();
@@ -479,7 +489,6 @@ class _QuizScreenState extends State<QuizScreen> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  // Resume: parse and restore progress
                   Navigator.of(ctx).pop();
                   _restoreSessionFromData(data);
                 },
@@ -511,7 +520,7 @@ class _QuizScreenState extends State<QuizScreen> {
           .toList();
           
       final int savedIndex = data['currentIndex'] as int? ?? 0;
-      final int savedTime = data['timeLeftSeconds'] as int? ?? (restoredQuestions.length * 60);
+      final int savedTime = data['timeLeftSeconds'] as int? ?? (restoredQuestions.length * 90);
       
       final Map<String, dynamic> answersJson = data['selectedAnswers'] as Map<String, dynamic>? ?? {};
       final Map<int, int> restoredAnswers = {};
@@ -521,6 +530,15 @@ class _QuizScreenState extends State<QuizScreen> {
           restoredAnswers[intIndex] = v as int;
         }
       });
+
+      final Map<String, dynamic> blankJson = data['blankInputAnswers'] as Map<String, dynamic>? ?? {};
+      final Map<int, String> restoredBlankAnswers = {};
+      blankJson.forEach((k, v) {
+        final intIndex = int.tryParse(k);
+        if (intIndex != null) {
+          restoredBlankAnswers[intIndex] = v.toString();
+        }
+      });
       
       setState(() {
         _questions = restoredQuestions;
@@ -528,10 +546,11 @@ class _QuizScreenState extends State<QuizScreen> {
         _timeLeftSeconds = savedTime;
         _selectedAnswers.clear();
         _selectedAnswers.addAll(restoredAnswers);
+        _blankInputAnswers.clear();
+        _blankInputAnswers.addAll(restoredBlankAnswers);
         _questionKeys = List.generate(restoredQuestions.length, (_) => GlobalKey());
         _isLoading = false;
         
-        // Populate submitted questions for practice mode
         _submittedQuestions.clear();
         if (data.containsKey('submittedQuestions') && data['submittedQuestions'] is List) {
           final List<dynamic> subList = data['submittedQuestions'] as List<dynamic>;
@@ -543,14 +562,34 @@ class _QuizScreenState extends State<QuizScreen> {
           }
         } else if (widget.mode == QuizMode.practice) {
           _submittedQuestions.addAll(restoredAnswers.keys);
+          _submittedQuestions.addAll(restoredBlankAnswers.keys);
+        }
+
+        _revealedHints.clear();
+        if (data.containsKey('revealedHints') && data['revealedHints'] is List) {
+          final List<dynamic> hintList = data['revealedHints'] as List<dynamic>;
+          for (final item in hintList) {
+            final parsedIdx = int.tryParse(item.toString());
+            if (parsedIdx != null) {
+              _revealedHints.add(parsedIdx);
+            }
+          }
         }
       });
+
+      // Synchronize controllers
+      for (int i = 0; i < restoredQuestions.length; i++) {
+        if (restoredQuestions[i].isBlankSpace) {
+          final controller = _getBlankController(i);
+          if (restoredBlankAnswers.containsKey(i)) {
+            controller.text = restoredBlankAnswers[i]!;
+          }
+        }
+      }
       
       if (widget.mode == QuizMode.exam) {
         _startTimer();
       }
-      
-      debugPrint("QuizScreen: Session restored successfully!");
     } catch (e) {
       debugPrint("QuizScreen: Failed to restore session data: $e. Loading fresh instead.");
       _loadQuestions();
@@ -597,7 +636,7 @@ class _QuizScreenState extends State<QuizScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "You have completed 20 questions! Outstanding effort. Take a deep breath, relax your shoulders, and rest your eyes before continuing.",
+                "You have completed 20 questions! Outstanding effort. Take a deep breath and rest your eyes before continuing.",
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -663,40 +702,37 @@ class _QuizScreenState extends State<QuizScreen> {
     _quizTimer?.cancel();
     if (_questions.isEmpty) return;
 
-    // Mark these questions as answered so consecutive sessions provide remaining unused questions
     await QuizService.markQuestionsAsAnswered(
       unitId: _getUnitId(),
       questions: _questions,
     );
 
-    await _clearProgress(); // Clear saved progress upon successful quiz completion
+    await _clearProgress();
 
     int score = 0;
     
     for (int i = 0; i < _questions.length; i++) {
       final q = _questions[i];
-      if (_selectedAnswers.containsKey(i)) {
-        final selectedIdx = _selectedAnswers[i]!;
-        if (selectedIdx < q.options.length) {
-          final isCorrect = q.options[selectedIdx].isCorrect;
-          if (isCorrect) score++;
+      if (q.isBlankSpace) {
+        final userInput = _blankInputAnswers[i] ?? '';
+        if (q.checkBlankAnswer(userInput)) {
+          score++;
+        }
+      } else {
+        if (_selectedAnswers.containsKey(i)) {
+          final selectedIdx = _selectedAnswers[i]!;
+          if (selectedIdx < q.options.length) {
+            final isCorrect = q.options[selectedIdx].isCorrect;
+            if (isCorrect) score++;
+          }
         }
       }
-    }
-
-    // Submit score in the background without showing any modal
-    if (widget.mode == QuizMode.exam) {
-      _submitScoreToLeaderboard(score).catchError((e) {
-        debugPrint("Error submitting score: $e");
-      });
     }
 
     if (!mounted) return;
 
     final percent = (score / _questions.length * 100).round();
-    final bool isLight = Theme.of(context).brightness == Brightness.light;
 
-    // Log Quiz Completed Event
     logEvent(
       name: 'quiz_completed',
       parameters: {
@@ -719,78 +755,51 @@ class _QuizScreenState extends State<QuizScreen> {
       }
     } catch (_) {}
 
-    // Show celebratory results dialog
-    int selectRandomUnit() {
-      final currentUnit = widget.unit ?? 1;
-      final List<int> unitsPool = [1, 2, 3, 4, 5, 6, 7, 8].where((u) => u != currentUnit).toList();
-      unitsPool.shuffle();
-      return unitsPool.isNotEmpty ? unitsPool.first : currentUnit;
-    }
-
-    void startRandomQuiz() {
-      final int randomUnit = selectRandomUnit();
-      final targetGrade = widget.grade;
-      final targetSubject = widget.subject;
-      final targetMode = widget.mode;
-      final targetIsOffline = widget.isOffline;
-      final targetOfflineUnitId = widget.offlineUnitId;
-
-      void performNavigation() {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => QuizScreen(
-              grade: targetGrade,
-              subject: targetSubject,
-              unit: randomUnit,
-              mode: targetMode,
-              isOffline: targetIsOffline,
-              offlineUnitId: targetOfflineUnitId,
-            ),
+    void restartQuiz() {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => QuizScreen(
+            grade: widget.grade,
+            subject: widget.subject,
+            unit: widget.unit,
+            mode: widget.mode,
+            isOffline: widget.isOffline,
+            offlineUnitId: widget.offlineUnitId,
           ),
-        );
-      }
-
-      performNavigation();
+        ),
+      );
     }
 
     QuizResultDialog.show(
       context,
       score: score,
       totalQuestions: _questions.length,
-      subject: widget.subject,
+      isExam: widget.mode == QuizMode.exam,
       grade: widget.grade,
       unit: widget.unit,
-      isExam: widget.mode == QuizMode.exam,
-      isLight: isLight,
-      subjectColor: _getSubjectThemeColor(),
-      languageCode: AppStateProvider.of(context).languageCode,
-      onReviewAnswers: () {
-        if (widget.mode == QuizMode.exam) {
-          setState(() {
-            _showAnswersAndExplanations = true;
-            _currentIndex = 0; // Return to first question for review
-          });
-          _scrollToActiveQuestion();
-        } else {
-          Navigator.of(context).pop();
-        }
+      subject: widget.subject,
+      languageCode: widget.languageCode,
+      themeColor: widget.themeColor,
+      isDark: !isLight,
+      onReview: () {
+        Navigator.of(context).pop();
+        setState(() {
+          _showAnswersAndExplanations = true;
+          _currentIndex = 0;
+        });
+        _scrollToActiveQuestion();
       },
-      onStartRandomQuiz: startRandomQuiz,
-    );
-  }
-
-  Widget _buildMathText(String text, TextStyle baseStyle, {TextAlign align = TextAlign.center}) {
-    return MathText(
-      text,
-      style: baseStyle,
-      textAlign: align,
+      onDone: () {
+        Navigator.of(context).pop();
+        Navigator.of(context).pop();
+      },
     );
   }
 
   String _formatTime(int totalSeconds) {
     final minutes = totalSeconds ~/ 60;
     final seconds = totalSeconds % 60;
-    return "$minutes:${seconds.toString().padLeft(2, '0')}";
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -840,7 +849,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 child: Text(
                   _showAnswersAndExplanations 
                       ? "REVIEW MODE" 
-                      : (widget.mode == QuizMode.exam ? "EXAM MODE" : "PRACTICE MODE"),
+                      : (widget.mode == QuizMode.exam ? "EXAM MODE (MCQ ONLY)" : "PRACTICE MODE"),
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
@@ -875,73 +884,7 @@ class _QuizScreenState extends State<QuizScreen> {
             const SizedBox(width: 8),
           ],
         ),
-        body: Stack(
-          children: [
-            _buildBody(),
-            if (_isSubmittingScore)
-              Positioned.fill(
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.65),
-                  child: Center(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 36),
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
-                      decoration: BoxDecoration(
-                        color: isLight ? Colors.white : const Color(0xFF1E293B),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: isLight ? 0.08 : 0.4),
-                            blurRadius: 24,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const SizedBox(
-                            width: 44,
-                            height: 44,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 3.5,
-                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            AppStateProvider.of(context).languageCode == 'en'
-                                ? "Syncing Leaderboard..."
-                                : "ውጤት በማመሳሰል ላይ...",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 16,
-                              color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            AppStateProvider.of(context).languageCode == 'en'
-                                ? "Please do not close this screen"
-                                : "እባክዎ ይህንን ገጽ አይዝጉት",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                              color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+        body: _buildBody(),
       ),
     );
   }
@@ -974,6 +917,7 @@ class _QuizScreenState extends State<QuizScreen> {
         ),
       );
     }
+
     if (_errorMessage != null || _questions.isEmpty) {
       final bool isLight = Theme.of(context).brightness == Brightness.light;
       final bool isAm = AppStateProvider.of(context).languageCode == 'am';
@@ -990,111 +934,31 @@ class _QuizScreenState extends State<QuizScreen> {
                 color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
                 width: 1.5,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.2),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
-                ),
-              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Error / Info Icon
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.info_outline_rounded,
-                    size: 32,
-                    color: Color(0xFFEF4444),
-                  ),
-                ),
-                const SizedBox(height: 18),
+                Icon(Icons.quiz_outlined, size: 56, color: _getSubjectThemeColor()),
+                const SizedBox(height: 16),
                 Text(
-                  isAm ? "ጥያቄዎችን ማግኘት አልተቻለም" : "Could Not Load Questions",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                  ),
-                  textAlign: TextAlign.center,
+                  isAm ? "ጥያቄዎች አልተገኙም" : "No Questions Available",
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  isAm
-                      ? "የኢንተርኔት ግንኙነትዎን ያረጋግጡ ወይም ይህንን ክፍል አስቀድመው ያውርዱ። ያለ ክፍያ ክፍል 1 ሁልጊዜ ክፍት ነው።"
-                      : "Please check your internet connection or make sure this unit is downloaded for offline study. Unit 1 is always free.",
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    height: 1.5,
-                    color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                  ),
+                  _errorMessage ?? (isAm ? "ለዚህ ዩኒት እስካሁን የተጫነ የጥያቄ ባንክ የለም።" : "No questions have been published for this unit yet."),
                   textAlign: TextAlign.center,
+                  style: TextStyle(color: isLight ? Colors.black54 : Colors.white60),
                 ),
                 const SizedBox(height: 24),
-                // Action: Retry Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    onPressed: _loadQuestions,
-                    icon: const Icon(Icons.refresh_rounded, size: 20),
-                    label: Text(
-                      isAm ? "እንደገና ሞክር (Retry)" : "Try Again",
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _getSubjectThemeColor(),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                // Action: Contact Admin on Telegram (@smart_x_help)
-                SizedBox(
-                  width: double.infinity,
-                  height: 46,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final Uri uri = Uri.parse('https://t.me/smart_x_help');
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
-                      }
-                    },
-                    icon: const Icon(Icons.send_rounded, size: 16, color: Color(0xFF0088CC)),
-                    label: Text(
-                      isAm ? "አድሚን ያነጋግሩ (@smart_x_help)" : "Contact Admin (@smart_x_help)",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13,
-                        color: Color(0xFF0088CC),
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF0088CC), width: 1.2),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                // Action: Go Back
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
-                    isAm ? "ተመለስ (Go Back)" : "Go Back",
-                    style: TextStyle(
-                      color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
+                ElevatedButton.icon(
+                  onPressed: _loadQuestions,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: Text(isAm ? "እንደገና ሞክር" : "Retry"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _getSubjectThemeColor(),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ],
@@ -1104,512 +968,48 @@ class _QuizScreenState extends State<QuizScreen> {
       );
     }
 
-    return _buildQuizActiveView();
-  }
-
-  Widget _buildCircularCheckbox({
-    required bool isSelected,
-    required bool showFeedback,
-    required bool isCorrect,
-    required Color subjectColor,
-    required bool isLight,
-  }) {
-    Color borderCol;
-    Color bgCol;
-    Widget? icon;
-
-    if (showFeedback) {
-      if (isCorrect) {
-        borderCol = const Color(0xFF10B981);
-        bgCol = const Color(0xFF10B981);
-        icon = const Icon(Icons.check, color: Colors.white, size: 12);
-      } else if (isSelected) {
-        borderCol = const Color(0xFFEF4444);
-        bgCol = const Color(0xFFEF4444);
-        icon = const Icon(Icons.close, color: Colors.white, size: 12);
-      } else {
-        borderCol = isLight ? const Color(0xFFCBD5E1) : const Color(0xFF475569);
-        bgCol = Colors.transparent;
-      }
-    } else {
-      const selectedHighlightColor = Color(0xFFF59E0B);
-      borderCol = isSelected ? selectedHighlightColor : (isLight ? const Color(0xFFCBD5E1) : const Color(0xFF475569));
-      bgCol = isSelected ? selectedHighlightColor : Colors.transparent;
-      if (isSelected) {
-        icon = const Icon(Icons.check, color: Colors.white, size: 12);
-      }
-    }
-
-    return Container(
-      width: 22.0,
-      height: 22.0,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: bgCol,
-        border: Border.all(
-          color: borderCol,
-          width: 2.0,
-        ),
-        boxShadow: isSelected && !showFeedback
-            ? [
-                BoxShadow(
-                  color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                )
-              ]
-            : null,
-      ),
-      child: icon != null ? Center(child: icon) : null,
-    );
-  }
-
-  Widget _buildQuestionBlock(int index, bool isLight, Color cardColor, Color descColor, Color titleTextColor) {
-    final q = _questions[index];
-    final optionsData = q.options;
-    final qText = q.questionText;
-
-    final bool isActive = index == _currentIndex;
-    final bool isExamReview = widget.mode == QuizMode.exam && _showAnswersAndExplanations;
-    final bool isVisible = isActive || isExamReview;
-    final showFeedback = _shouldShowExplanation(index);
-    final isSubmitted = widget.mode == QuizMode.practice && _submittedQuestions.contains(index);
-    final hasSelected = _selectedAnswers.containsKey(index);
-
-    return Container(
-      key: _questionKeys[index],
-      margin: const EdgeInsets.only(bottom: 40.0), // beautiful gap between question blocks
-      child: IgnorePointer(
-        ignoring: isExamReview ? true : !isActive,
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 350),
-          opacity: isVisible ? 1.0 : 0.2,
-          child: ClipRect(
-            child: ImageFiltered(
-              imageFilter: ImageFilter.blur(
-                sigmaX: isVisible ? 0.0 : 5.0,
-                sigmaY: isVisible ? 0.0 : 5.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Question Header Info
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "Question ${index + 1} of ${_questions.length}",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: _getSubjectThemeColor(),
-                        ),
-                      ),
-                      if (widget.mode == QuizMode.exam && isActive)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEF4444).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.timer_rounded, size: 14, color: Color(0xFFEF4444)),
-                              const SizedBox(width: 6),
-                              Text(
-                                _formatTime(_timeLeftSeconds),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFFEF4444),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LinearProgressIndicator(
-                      value: (index + 1) / _questions.length,
-                      backgroundColor: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-                      valueColor: AlwaysStoppedAnimation<Color>(_getSubjectThemeColor()),
-                      minHeight: 6,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Unified white card box containing both question text and options
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16.0),
-                    decoration: BoxDecoration(
-                      color: isLight ? Colors.white : const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(20.0),
-                      border: Border.all(
-                        color: isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.16),
-                          blurRadius: 14.0,
-                          offset: const Offset(0, 4),
-                        )
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Question text (optimized font size for math/physics formulas and clean Inter/Roboto typography)
-                        _buildMathText(
-                          qText,
-                          GoogleFonts.inter(
-                            fontSize: 15.0,
-                            fontWeight: FontWeight.w700,
-                            height: 1.45,
-                            color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                          ).copyWith(
-                            fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Divider(
-                          height: 1,
-                          thickness: 1,
-                          color: isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Options
-                        if (optionsData.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Text(
-                              "No options available.",
-                              style: GoogleFonts.inter(
-                                color: descColor, 
-                                fontStyle: FontStyle.italic,
-                              ).copyWith(
-                                fontFamilyFallback: const ['Roboto', 'sans-serif'],
-                              ),
-                            ),
-                          )
-                        else
-                          ...optionsData.asMap().entries.map((entry) {
-                            final optIdx = entry.key;
-                            final optText = entry.value.text;
-                            final isOptSelected = _selectedAnswers[index] == optIdx;
-
-                            Color borderCol;
-                            Color bgCol;
-                            Color txtCol;
-
-                            if (showFeedback) {
-                              final isCorrect = q.options[optIdx].isCorrect;
-                              if (isCorrect) {
-                                borderCol = const Color(0xFF10B981);
-                                bgCol = isLight ? const Color(0xFFD1FAE5) : const Color(0xFF064E3B).withValues(alpha: 0.5);
-                                txtCol = isLight ? const Color(0xFF065F46) : const Color(0xFFA7F3D0);
-                              } else if (isOptSelected) {
-                                borderCol = const Color(0xFFEF4444);
-                                bgCol = isLight ? const Color(0xFFFEE2E2) : const Color(0xFF7F1D1D).withValues(alpha: 0.5);
-                                txtCol = isLight ? const Color(0xFF991B1B) : const Color(0xFFFECACA);
-                              } else {
-                                borderCol = isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155);
-                                bgCol = isLight ? const Color(0xFFF8FAFC).withValues(alpha: 0.5) : const Color(0xFF0F172A).withValues(alpha: 0.5);
-                                txtCol = isLight ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-                              }
-                            } else {
-                              const selectedAmber = Color(0xFFF59E0B);
-                              borderCol = isOptSelected
-                                  ? selectedAmber
-                                  : (isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155));
-                              bgCol = isOptSelected
-                                  ? selectedAmber.withValues(alpha: isLight ? 0.10 : 0.18)
-                                  : (isLight ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A));
-                              txtCol = isOptSelected 
-                                  ? (isLight ? const Color(0xFFB45309) : const Color(0xFFFDE68A))
-                                  : (isLight ? const Color(0xFF334155) : const Color(0xFFE2E8F0));
-                            }
-
-                            return GestureDetector(
-                              onTap: () {
-                                if (isActive && !showFeedback) {
-                                  _onOptionSelected(optIdx);
-                                }
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                margin: const EdgeInsets.only(bottom: 12.0),
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 13.0),
-                                decoration: BoxDecoration(
-                                  color: bgCol,
-                                  borderRadius: BorderRadius.circular(14.0),
-                                  border: Border.all(
-                                    color: borderCol,
-                                    width: isOptSelected || (showFeedback && q.options[optIdx].isCorrect) ? 2.0 : 1.5,
-                                  ),
-                                  boxShadow: isOptSelected && !showFeedback
-                                      ? [
-                                          BoxShadow(
-                                            color: const Color(0xFFF59E0B).withValues(alpha: isLight ? 0.15 : 0.25),
-                                            blurRadius: 8.0,
-                                            offset: const Offset(0, 3),
-                                          )
-                                        ]
-                                      : null,
-                                ),
-                                child: Row(
-                                  children: [
-                                    // Custom beautifully designed circular checkbox
-                                    _buildCircularCheckbox(
-                                      isSelected: isOptSelected,
-                                      showFeedback: showFeedback,
-                                      isCorrect: q.options[optIdx].isCorrect,
-                                      subjectColor: _getSubjectThemeColor(),
-                                      isLight: isLight,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: _buildMathText(
-                                        optText,
-                                        GoogleFonts.inter(
-                                          fontSize: 14.0,
-                                          fontWeight: FontWeight.w600,
-                                          color: txtCol,
-                                        ).copyWith(
-                                          fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
-                                        ),
-                                        align: TextAlign.left,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }),
-                      ],
-                    ),
-                  ),
-
-                  // Practice Mode check answer button (rendered below the unified card)
-                  if (widget.mode == QuizMode.practice && !isSubmitted && isActive) ...[
-                    const SizedBox(height: 28), // Ample spacing before button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: hasSelected ? _submitPracticeAnswer : null,
-                        icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
-                        label: const Text(
-                          "Check Answer",
-                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _getSubjectThemeColor(),
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-                          disabledForegroundColor: Colors.grey,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          elevation: hasSelected ? 4 : 0,
-                          shadowColor: _getSubjectThemeColor().withValues(alpha: 0.35),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                      ),
-                    ),
-                  ],
-
-                  // Explanations Box
-                  if (showFeedback && q.explanation != null && q.explanation!.trim().isNotEmpty && isActive) ...[
-                    const SizedBox(height: 28), // Ample spacing before explanation
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isLight ? const Color(0xFFF0F7FF) : const Color(0xFF1E293B).withValues(alpha: 0.8),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border(
-                          left: BorderSide(color: _getSubjectThemeColor(), width: 4.0),
-                          top: BorderSide(color: isLight ? const Color(0xFFDBEAFE) : const Color(0xFF334155), width: 1.0),
-                          right: BorderSide(color: isLight ? const Color(0xFFDBEAFE) : const Color(0xFF334155), width: 1.0),
-                          bottom: BorderSide(color: isLight ? const Color(0xFFDBEAFE) : const Color(0xFF334155), width: 1.0),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.lightbulb_outline_rounded, size: 18, color: _getSubjectThemeColor()),
-                              const SizedBox(width: 8),
-                              Text(
-                                "Explanation",
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w900,
-                                  color: _getSubjectThemeColor(),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          _buildMathText(
-                            q.explanation!.trim(),
-                            TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              height: 1.45,
-                              color: isLight ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-                            ),
-                            align: TextAlign.left,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  // Next Question Button / Finish Quiz button (Freely navigable in Practice & Exam modes)
-                  if (!isExamReview && isActive) ...[
-                    const SizedBox(height: 24), // Ample spacing before button
-                    Row(
-                      children: [
-                        if (index > 0) ...[
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _advanceToPrevious,
-                              icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                              label: const Text(
-                                "Back",
-                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF334155),
-                                foregroundColor: isLight ? const Color(0xFF0F172A) : Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  side: BorderSide(
-                                    color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF475569),
-                                    width: 1.5,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                        ],
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              if (index == _questions.length - 1) {
-                                _showResults();
-                              } else {
-                                _advanceToNext();
-                              }
-                            },
-                            icon: Icon(
-                              index == _questions.length - 1
-                                  ? Icons.assignment_turned_in_rounded
-                                  : Icons.arrow_forward_rounded,
-                              size: 16,
-                            ),
-                            label: Text(
-                              index == _questions.length - 1
-                                  ? (_showAnswersAndExplanations ? "Finish Review" : "Finish Quiz")
-                                  : "Next Question",
-                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _getSubjectThemeColor(),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              elevation: 4,
-                              shadowColor: _getSubjectThemeColor().withValues(alpha: 0.35),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
+    return Column(
+      children: [
+        _buildQuestionNumberStrip(),
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            itemCount: _questions.length + 1,
+            itemBuilder: (context, index) {
+              if (index == _questions.length) {
+                return _buildFinishedSection();
+              }
+              return _buildQuestionItem(index);
+            },
           ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildQuizActiveView() {
+  Widget _buildQuestionNumberStrip() {
     final bool isLight = Theme.of(context).brightness == Brightness.light;
-    final cardColor = isLight ? Colors.white : const Color(0xFF1E293B);
-    final descColor = isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8);
-    final titleTextColor = isLight ? const Color(0xFF0F172A) : Colors.white;
-    final bool isExamReview = widget.mode == QuizMode.exam && _showAnswersAndExplanations;
-
-    return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 620),
-        child: Column(
-          children: [
-            // Question Palette / Quick Jump Bar
-            if (_questions.length > 1 && !isExamReview)
-              _buildQuestionPaletteStrip(isLight),
-
-            Expanded(
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ...List.generate(_questions.length, (index) {
-                      return _buildQuestionBlock(index, isLight, cardColor, descColor, titleTextColor);
-                    }),
-                    
-                    // End block when finished
-                    if (_currentIndex == _questions.length || isExamReview) ...[
-                      _buildFinishedSection(),
-                    ] else ...[
-                      // Generous vertical spacing at the bottom so we can center scroll the last question perfectly!
-                      const SizedBox(height: 500),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuestionPaletteStrip(bool isLight) {
     return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      height: 52,
       decoration: BoxDecoration(
-        color: isLight ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
+        color: isLight ? Colors.white : const Color(0xFF1E293B),
         border: Border(
           bottom: BorderSide(
-            color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
-            width: 1.0,
+            color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+            width: 1,
           ),
         ),
       ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         itemCount: _questions.length,
         itemBuilder: (context, idx) {
           final isCurrent = idx == _currentIndex;
-          final isAnswered = _selectedAnswers.containsKey(idx);
-          final isSubmitted = _submittedQuestions.contains(idx);
-          
+          final isAnswered = _hasUserAnswered(idx);
+          final q = _questions[idx];
+
           Color bgColor;
           Color textColor;
           Border? border;
@@ -1617,30 +1017,34 @@ class _QuizScreenState extends State<QuizScreen> {
           if (isCurrent) {
             bgColor = _getSubjectThemeColor();
             textColor = Colors.white;
-            border = Border.all(color: _getSubjectThemeColor(), width: 1.5);
-          } else if (widget.mode == QuizMode.practice && isSubmitted) {
-            final isCorrect = _selectedAnswers[idx] == _questions[idx].correctAnswerIndex;
-            if (isCorrect) {
-              bgColor = isLight ? const Color(0xFFDCFCE7) : const Color(0xFF064E3B);
-              textColor = isLight ? const Color(0xFF166534) : const Color(0xFF6EE7B7);
-              border = Border.all(color: const Color(0xFF22C55E), width: 1.2);
-            } else {
-              bgColor = isLight ? const Color(0xFFFEE2E2) : const Color(0xFF7F1D1D);
-              textColor = isLight ? const Color(0xFF991B1B) : const Color(0xFFFCA5A5);
-              border = Border.all(color: const Color(0xFFEF4444), width: 1.2);
+          } else if (_shouldShowExplanation(idx)) {
+            bool isCorrect = false;
+            if (q.isBlankSpace) {
+              isCorrect = q.checkBlankAnswer(_blankInputAnswers[idx] ?? '');
+            } else if (_selectedAnswers.containsKey(idx)) {
+              final sel = _selectedAnswers[idx]!;
+              if (sel < q.options.length) {
+                isCorrect = q.options[sel].isCorrect;
+              }
             }
+            bgColor = isCorrect
+                ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                : const Color(0xFFEF4444).withValues(alpha: 0.15);
+            textColor = isCorrect ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+            border = Border.all(
+              color: isCorrect ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+              width: 1.5,
+            );
           } else if (isAnswered) {
-            bgColor = isLight ? _getSubjectThemeColor().withValues(alpha: 0.12) : _getSubjectThemeColor().withValues(alpha: 0.25);
-            textColor = _getSubjectThemeColor();
-            border = Border.all(color: _getSubjectThemeColor().withValues(alpha: 0.5), width: 1.0);
+            bgColor = isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155);
+            textColor = isLight ? const Color(0xFF0F172A) : Colors.white;
           } else {
-            bgColor = isLight ? Colors.white : const Color(0xFF1E293B);
-            textColor = isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
-            border = Border.all(color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155), width: 1.0);
+            bgColor = Colors.transparent;
+            textColor = isLight ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
           }
 
           return Padding(
-            padding: const EdgeInsets.only(right: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: InkWell(
               onTap: () => _jumpToQuestion(idx),
               borderRadius: BorderRadius.circular(10),
@@ -1668,49 +1072,740 @@ class _QuizScreenState extends State<QuizScreen> {
     );
   }
 
-  Widget _buildFinishedSection() {
-    if (_questions.isEmpty) return const SizedBox.shrink();
+  Widget _buildQuestionItem(int index) {
+    final q = _questions[index];
+    final bool isActive = index == _currentIndex;
     final bool isLight = Theme.of(context).brightness == Brightness.light;
-    final bool allAnswered = _selectedAnswers.length == _questions.length;
-    
-    if (_showAnswersAndExplanations) {
-      final bool isExam = widget.mode == QuizMode.exam;
-      final String languageCode = AppStateProvider.of(context).languageCode;
+    final bool showFeedback = _shouldShowExplanation(index);
+    final bool isSubmitted = _submittedQuestions.contains(index);
+    final bool isExamReview = _showAnswersAndExplanations && widget.mode == QuizMode.exam;
+    final bool isAm = AppStateProvider.of(context).languageCode == 'am';
 
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 40.0),
-        child: Column(
-          children: [
-            const Icon(Icons.check_circle_rounded, size: 64, color: Color(0xFF10B981)),
-            const SizedBox(height: 16),
-            Text(
-              isExam
-                  ? (languageCode == 'en' ? "Exam Review Complete" : "የፈተና ግምገማ ተጠናቋል")
-                  : (languageCode == 'en' ? "Review Finished!" : "ግምገማው ተጠናቋል!"),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 24),
-            if (isExam) ...[
-              const SizedBox(height: 16),
-            ],
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _getSubjectThemeColor(),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 56),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return Container(
+      key: _questionKeys[index],
+      margin: const EdgeInsets.only(bottom: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header Bar with Question Number & Type Tag
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    "Question ${index + 1} of ${_questions.length}",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: _getSubjectThemeColor(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Question Type Pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _getTypeColor(q.questionType).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      _getTypeLabel(q.questionType, isAm),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: _getTypeColor(q.questionType),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              child: Text(
-                languageCode == 'en' ? "Go Back" : "ተመለስ",
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              if (widget.mode == QuizMode.exam && isActive)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.timer_rounded, size: 14, color: Color(0xFFEF4444)),
+                      const SizedBox(width: 5),
+                      Text(
+                        _formatTime(_timeLeftSeconds),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFFEF4444),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: (index + 1) / _questions.length,
+              backgroundColor: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+              valueColor: AlwaysStoppedAnimation<Color>(_getSubjectThemeColor()),
+              minHeight: 5,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Question Card Box
+          Container(
+            padding: const EdgeInsets.all(18.0),
+            decoration: BoxDecoration(
+              color: isLight ? Colors.white : const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(20.0),
+              border: Border.all(
+                color: isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.16),
+                  blurRadius: 14.0,
+                  offset: const Offset(0, 4),
+                )
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Question text
+                _buildMathText(
+                  q.questionText,
+                  GoogleFonts.inter(
+                    fontSize: 15.0,
+                    fontWeight: FontWeight.w700,
+                    height: 1.45,
+                    color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155),
+                ),
+                const SizedBox(height: 14),
+
+                // Render based on Question Type
+                if (q.questionType == QuestionType.multipleChoice)
+                  _buildMultipleChoiceContent(q, index, isActive, showFeedback, isLight)
+                else if (q.questionType == QuestionType.trueFalse)
+                  _buildTrueFalseContent(q, index, isActive, showFeedback, isLight, isAm)
+                else if (q.questionType == QuestionType.blankSpace)
+                  _buildBlankSpaceContent(q, index, isActive, showFeedback, isLight, isAm),
+              ],
+            ),
+          ),
+
+          // Practice Mode Check Answer Button
+          if (widget.mode == QuizMode.practice && !isSubmitted && isActive) ...[
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _hasUserAnswered(index) ? _submitPracticeAnswer : null,
+                icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+                label: Text(
+                  isAm ? "መልስ አረጋግጥ (Check Answer)" : "Check Answer",
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _getSubjectThemeColor(),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                  disabledForegroundColor: Colors.grey,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
               ),
             ),
           ],
+
+          // Explanations Box
+          if (showFeedback && q.explanation != null && q.explanation!.trim().isNotEmpty && isActive) ...[
+            const SizedBox(height: 20),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isLight ? const Color(0xFFF0F7FF) : const Color(0xFF1E293B).withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(16),
+                border: Border(
+                  left: BorderSide(color: _getSubjectThemeColor(), width: 4.0),
+                  top: BorderSide(color: isLight ? const Color(0xFFDBEAFE) : const Color(0xFF334155), width: 1.0),
+                  right: BorderSide(color: isLight ? const Color(0xFFDBEAFE) : const Color(0xFF334155), width: 1.0),
+                  bottom: BorderSide(color: isLight ? const Color(0xFFDBEAFE) : const Color(0xFF334155), width: 1.0),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.lightbulb_outline_rounded, size: 18, color: _getSubjectThemeColor()),
+                      const SizedBox(width: 8),
+                      Text(
+                        isAm ? "ማብራሪያ (Explanation)" : "Explanation",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: _getSubjectThemeColor(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _buildMathText(
+                    q.explanation!.trim(),
+                    TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      height: 1.45,
+                      color: isLight ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                    ),
+                    align: TextAlign.left,
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // Navigation Back / Next Buttons
+          if (!isExamReview && isActive) ...[
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                if (index > 0) ...[
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _advanceToPrevious,
+                      icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                      label: Text(
+                        isAm ? "ወደ ኋላ" : "Back",
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF334155),
+                        foregroundColor: isLight ? const Color(0xFF0F172A) : Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _advanceToNext,
+                    icon: Icon(
+                      index == _questions.length - 1 ? Icons.check_rounded : Icons.arrow_forward_rounded,
+                      size: 16,
+                    ),
+                    label: Text(
+                      index == _questions.length - 1 
+                          ? (isAm ? "ፈተናውን ጨርስ" : "Finish") 
+                          : (isAm ? "ቀጣይ ጥያቄ" : "Next"),
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _getSubjectThemeColor(),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Color _getTypeColor(QuestionType type) {
+    switch (type) {
+      case QuestionType.multipleChoice:
+        return const Color(0xFF3B82F6); // Blue
+      case QuestionType.trueFalse:
+        return const Color(0xFF10B981); // Emerald
+      case QuestionType.blankSpace:
+        return const Color(0xFF8B5CF6); // Purple
+    }
+  }
+
+  String _getTypeLabel(QuestionType type, bool isAm) {
+    switch (type) {
+      case QuestionType.multipleChoice:
+        return isAm ? "ምርጫ (MCQ)" : "Multiple Choice";
+      case QuestionType.trueFalse:
+        return isAm ? "እውነት / ሐሰት" : "True / False";
+      case QuestionType.blankSpace:
+        return isAm ? "ባዶ ቦታ ሙላ" : "Fill in the Blank";
+    }
+  }
+
+  // 1. Multiple Choice Option List
+  Widget _buildMultipleChoiceContent(
+    QuestionModel q,
+    int index,
+    bool isActive,
+    bool showFeedback,
+    bool isLight,
+  ) {
+    if (q.options.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Text("No options provided for this question.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white60)),
+      );
+    }
+
+    return Column(
+      children: q.options.asMap().entries.map((entry) {
+        final optIdx = entry.key;
+        final opt = entry.value;
+        final isOptSelected = _selectedAnswers[index] == optIdx;
+
+        Color borderCol;
+        Color bgCol;
+        Color txtCol;
+
+        if (showFeedback) {
+          final isCorrect = opt.isCorrect;
+          if (isCorrect) {
+            borderCol = const Color(0xFF10B981);
+            bgCol = isLight ? const Color(0xFFD1FAE5) : const Color(0xFF064E3B).withValues(alpha: 0.5);
+            txtCol = isLight ? const Color(0xFF065F46) : const Color(0xFFA7F3D0);
+          } else if (isOptSelected) {
+            borderCol = const Color(0xFFEF4444);
+            bgCol = isLight ? const Color(0xFFFEE2E2) : const Color(0xFF7F1D1D).withValues(alpha: 0.5);
+            txtCol = isLight ? const Color(0xFF991B1B) : const Color(0xFFFECACA);
+          } else {
+            borderCol = isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155);
+            bgCol = isLight ? const Color(0xFFF8FAFC).withValues(alpha: 0.5) : const Color(0xFF0F172A).withValues(alpha: 0.5);
+            txtCol = isLight ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+          }
+        } else {
+          const selectedAmber = Color(0xFFF59E0B);
+          borderCol = isOptSelected
+              ? selectedAmber
+              : (isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155));
+          bgCol = isOptSelected
+              ? selectedAmber.withValues(alpha: isLight ? 0.10 : 0.18)
+              : (isLight ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A));
+          txtCol = isOptSelected 
+              ? (isLight ? const Color(0xFFB45309) : const Color(0xFFFDE68A))
+              : (isLight ? const Color(0xFF334155) : const Color(0xFFE2E8F0));
+        }
+
+        final optLetter = opt.key ?? String.fromCharCode(65 + optIdx);
+
+        return GestureDetector(
+          onTap: () {
+            if (isActive && !showFeedback) {
+              _onOptionSelected(optIdx);
+            }
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            margin: const EdgeInsets.only(bottom: 12.0),
+            padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
+            decoration: BoxDecoration(
+              color: bgCol,
+              borderRadius: BorderRadius.circular(14.0),
+              border: Border.all(
+                color: borderCol,
+                width: isOptSelected || (showFeedback && opt.isCorrect) ? 2.0 : 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                // Option key pill (A, B, C, D)
+                Container(
+                  width: 28,
+                  height: 28,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isOptSelected ? _getSubjectThemeColor() : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    optLetter,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: isOptSelected ? Colors.white : (isLight ? const Color(0xFF475569) : Colors.white70),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMathText(
+                    opt.text,
+                    GoogleFonts.inter(
+                      fontSize: 14.0,
+                      fontWeight: FontWeight.w600,
+                      color: txtCol,
+                    ),
+                    align: TextAlign.left,
+                  ),
+                ),
+                if (showFeedback && opt.isCorrect)
+                  const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 20)
+                else if (showFeedback && isOptSelected && !opt.isCorrect)
+                  const Icon(Icons.cancel_rounded, color: Color(0xFFEF4444), size: 20),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // 2. True / False Split Option Cards
+  Widget _buildTrueFalseContent(
+    QuestionModel q,
+    int index,
+    bool isActive,
+    bool showFeedback,
+    bool isLight,
+    bool isAm,
+  ) {
+    final isTrueSelected = _selectedAnswers[index] == 0;
+    final isFalseSelected = _selectedAnswers[index] == 1;
+
+    final isCorrectTrue = q.correctBoolean == true || (q.options.isNotEmpty && q.options[0].isCorrect);
+    final isCorrectFalse = q.correctBoolean == false || (q.options.length > 1 && q.options[1].isCorrect);
+
+    Widget buildTFButton({
+      required bool isTrue,
+      required bool isSelected,
+      required bool isCorrectOption,
+      required VoidCallback onTap,
+    }) {
+      Color borderCol;
+      Color bgCol;
+      Color txtCol;
+      Color iconCol;
+
+      if (showFeedback) {
+        if (isCorrectOption) {
+          borderCol = const Color(0xFF10B981);
+          bgCol = isLight ? const Color(0xFFD1FAE5) : const Color(0xFF064E3B).withValues(alpha: 0.5);
+          txtCol = isLight ? const Color(0xFF065F46) : const Color(0xFFA7F3D0);
+          iconCol = const Color(0xFF10B981);
+        } else if (isSelected) {
+          borderCol = const Color(0xFFEF4444);
+          bgCol = isLight ? const Color(0xFFFEE2E2) : const Color(0xFF7F1D1D).withValues(alpha: 0.5);
+          txtCol = isLight ? const Color(0xFF991B1B) : const Color(0xFFFECACA);
+          iconCol = const Color(0xFFEF4444);
+        } else {
+          borderCol = isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155);
+          bgCol = isLight ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A);
+          txtCol = isLight ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+          iconCol = txtCol;
+        }
+      } else {
+        if (isSelected) {
+          final themeColor = isTrue ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+          borderCol = themeColor;
+          bgCol = themeColor.withValues(alpha: isLight ? 0.12 : 0.22);
+          txtCol = isLight ? (isTrue ? const Color(0xFF065F46) : const Color(0xFF991B1B)) : Colors.white;
+          iconCol = themeColor;
+        } else {
+          borderCol = isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155);
+          bgCol = isLight ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A);
+          txtCol = isLight ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+          iconCol = isTrue ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+        }
+      }
+
+      return Expanded(
+        child: GestureDetector(
+          onTap: () {
+            if (isActive && !showFeedback) {
+              onTap();
+            }
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(vertical: 18.0, horizontal: 12.0),
+            decoration: BoxDecoration(
+              color: bgCol,
+              borderRadius: BorderRadius.circular(16.0),
+              border: Border.all(
+                color: borderCol,
+                width: isSelected || (showFeedback && isCorrectOption) ? 2.5 : 1.5,
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  isTrue ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                  color: iconCol,
+                  size: 32,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  isTrue 
+                      ? (isAm ? "እውነት (True)" : "TRUE") 
+                      : (isAm ? "ሐሰት (False)" : "FALSE"),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: txtCol,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        children: [
+          buildTFButton(
+            isTrue: true,
+            isSelected: isTrueSelected,
+            isCorrectOption: isCorrectTrue,
+            onTap: () => _onOptionSelected(0),
+          ),
+          const SizedBox(width: 14),
+          buildTFButton(
+            isTrue: false,
+            isSelected: isFalseSelected,
+            isCorrectOption: isCorrectFalse,
+            onTap: () => _onOptionSelected(1),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 3. Blank Space (Fill in the Blank / ባዶ ቦታ ሙላ) Input Component
+  Widget _buildBlankSpaceContent(
+    QuestionModel q,
+    int index,
+    bool isActive,
+    bool showFeedback,
+    bool isLight,
+    bool isAm,
+  ) {
+    final controller = _getBlankController(index);
+    final isHintRevealed = _revealedHints.contains(index);
+    final userInput = _blankInputAnswers[index] ?? '';
+    final isCorrect = q.checkBlankAnswer(userInput);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Input text field with clear action
+        TextField(
+          controller: controller,
+          enabled: isActive && !showFeedback,
+          onChanged: (val) {
+            setState(() {
+              _blankInputAnswers[index] = val;
+            });
+            _saveProgress();
+          },
+          decoration: InputDecoration(
+            hintText: isAm ? "መልስዎን እዚህ ይጻፉ..." : "Type your answer here...",
+            hintStyle: TextStyle(
+              color: isLight ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+              fontSize: 14,
+            ),
+            filled: true,
+            fillColor: isLight ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
+            prefixIcon: const Icon(Icons.edit_note_rounded, color: Color(0xFF8B5CF6)),
+            suffixIcon: (userInput.isNotEmpty && isActive && !showFeedback)
+                ? IconButton(
+                    icon: const Icon(Icons.clear_rounded, size: 18),
+                    onPressed: () {
+                      controller.clear();
+                      setState(() {
+                        _blankInputAnswers[index] = '';
+                      });
+                      _saveProgress();
+                    },
+                  )
+                : null,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                width: 1.5,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                width: 1.5,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(
+                color: Color(0xFF8B5CF6),
+                width: 2.0,
+              ),
+            ),
+          ),
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: isLight ? const Color(0xFF0F172A) : Colors.white,
+          ),
+        ),
+
+        // Hint button & display
+        if (q.hint != null && q.hint!.trim().isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    if (isHintRevealed) {
+                      _revealedHints.remove(index);
+                    } else {
+                      _revealedHints.add(index);
+                    }
+                  });
+                  _saveProgress();
+                },
+                icon: Icon(
+                  isHintRevealed ? Icons.lightbulb_rounded : Icons.lightbulb_outline_rounded,
+                  color: const Color(0xFFF59E0B),
+                  size: 16,
+                ),
+                label: Text(
+                  isHintRevealed 
+                      ? (isAm ? "ፍንጭ ደብቅ" : "Hide Hint") 
+                      : (isAm ? "ፍንጭ አሳይ (Show Hint)" : "Show Hint"),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFFF59E0B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (isHintRevealed)
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: isLight ? 0.10 : 0.18),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFF59E0B)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      q.hint!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isLight ? const Color(0xFFB45309) : const Color(0xFFFDE68A),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+
+        // Feedback Banner in Practice mode or post-review
+        if (showFeedback) ...[
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isCorrect
+                  ? (isLight ? const Color(0xFFD1FAE5) : const Color(0xFF064E3B).withValues(alpha: 0.4))
+                  : (isLight ? const Color(0xFFFEE2E2) : const Color(0xFF7F1D1D).withValues(alpha: 0.4)),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isCorrect ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      isCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                      color: isCorrect ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isCorrect 
+                          ? (isAm ? "ትክክል ነው! (Correct)" : "Correct Answer!") 
+                          : (isAm ? "ትክክል አይደለም (Incorrect)" : "Incorrect Answer"),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: isCorrect
+                            ? (isLight ? const Color(0xFF065F46) : const Color(0xFFA7F3D0))
+                            : (isLight ? const Color(0xFF991B1B) : const Color(0xFFFECACA)),
+                      ),
+                    ),
+                  ],
+                ),
+                if (!isCorrect && q.blankAnswer != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    isAm 
+                        ? "ትክክለኛው መልስ፡ ${q.blankAnswer}" 
+                        : "Expected Answer: ${q.blankAnswer}",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFinishedSection() {
+    if (_questions.isEmpty) return const SizedBox.shrink();
+    final bool isLight = Theme.of(context).brightness == Brightness.light;
+    final bool isAm = AppStateProvider.of(context).languageCode == 'am';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 40.0),
@@ -1718,28 +1813,37 @@ class _QuizScreenState extends State<QuizScreen> {
         children: [
           const Icon(Icons.check_circle_outline_rounded, size: 64, color: Color(0xFF10B981)),
           const SizedBox(height: 16),
-          const Text(
-            "You've completed all questions!",
+          Text(
+            isAm ? "ሁሉንም ጥያቄዎች አጠናቀዋል!" : "You've completed all questions!",
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: allAnswered ? _showResults : null,
+            onPressed: _showResults,
             style: ElevatedButton.styleFrom(
               backgroundColor: _getSubjectThemeColor(),
               foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 56),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              disabledBackgroundColor: (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
             ),
             child: Text(
-              widget.mode == QuizMode.exam ? "Submit Exam" : "View Results", 
+              widget.mode == QuizMode.exam 
+                  ? (isAm ? "ፈተናውን አስገባ (Submit Exam)" : "Submit Exam") 
+                  : (isAm ? "ውጤት ተመልከት (View Results)" : "View Results"),
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMathText(String text, TextStyle baseStyle, {TextAlign align = TextAlign.left}) {
+    return MathText(
+      text,
+      style: baseStyle,
+      textAlign: align,
     );
   }
 }

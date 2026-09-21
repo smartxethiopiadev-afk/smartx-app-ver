@@ -196,27 +196,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         duration: const Duration(milliseconds: 1200),
     );
 
-    // Replicating tutorial video with standard Youtube embedded controller
     _fadeController.forward();
-
-    // Check & show startup onboarding video popup
-    _checkStartupTutorialPopup();
-  }
-
-  Future<void> _checkStartupTutorialPopup() async {
-    final prefs = await SharedPreferences.getInstance();
-    final bool neverShow = prefs.getBool('never_show_startup_tutorial') ?? false;
-    if (!neverShow && mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          StartupTutorialDialog.show(
-            context,
-            isDarkMode: widget.isDarkMode,
-            languageCode: widget.languageCode,
-          );
-        }
-      });
-    }
   }
 
   Future<void> _loadProfileData() async {
@@ -2293,6 +2273,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   buttonText: _local('start_course_btn'),
                   onTap: () => _navigateToGradeScreen(9),
                   progress: 0.65,
+                  isUnlocked: SubscriptionService.isGradeUnlockedSync(9),
                 ),
               ),
               // Grade 10
@@ -2308,6 +2289,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   buttonText: _local('start_course_btn'),
                   onTap: () => _navigateToGradeScreen(10),
                   progress: 0.40,
+                  isUnlocked: SubscriptionService.isGradeUnlockedSync(10),
                 ),
               ),
               // Grade 11
@@ -2323,6 +2305,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   buttonText: _local('start_course_btn'),
                   onTap: () => _navigateToGradeScreen(11),
                   progress: 0.85,
+                  isUnlocked: SubscriptionService.isGradeUnlockedSync(11),
                 ),
               ),
               // Grade 12
@@ -2338,6 +2321,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   buttonText: _local('start_course_btn'),
                   onTap: () => _navigateToGradeScreen(12),
                   progress: 0.20,
+                  isUnlocked: SubscriptionService.isGradeUnlockedSync(12),
                 ),
               ),
             ],
@@ -2693,6 +2677,59 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ),
                     ),
                   ),
+
+                  if (!SubscriptionService.isGradeUnlockedSync(grade)) ...[
+                    const SizedBox(height: 12),
+                    InkWell(
+                      onTap: () async {
+                        Navigator.of(ctx).pop();
+                        await AccountUpgradeDialog.show(context, initialGrade: grade);
+                        if (mounted) setState(() {});
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0284C7).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFF0284C7).withValues(alpha: 0.35),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF0284C7),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 20),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isAmharic ? 'ክፍል $grade ን ሙሉውን ይክፈቱ (Upgrade)' : 'Upgrade to Unlock Grade $grade',
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    isAmharic ? 'ምዕራፍ 1 ነፃ ሙከራ ነው። ሙሉውን ለመክፈት እዚህ ይጫኑ' : 'Unit 1 is free trial. Tap to unlock full curriculum.',
+                                    style: TextStyle(fontSize: 11.5, color: descColor, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF0284C7), size: 16),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -3618,6 +3655,7 @@ class _InteractiveGradeCard extends StatefulWidget {
   final String statusText;
   final String buttonText;
   final double progress;
+  final bool isUnlocked;
 
   const _InteractiveGradeCard({
     required this.title,
@@ -3629,6 +3667,7 @@ class _InteractiveGradeCard extends StatefulWidget {
     required this.statusText,
     required this.buttonText,
     required this.progress,
+    this.isUnlocked = true,
   });
 
   @override
@@ -3662,7 +3701,7 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
             color: widget.isLight ? Colors.white : const Color(0xFF1E293B),
             borderRadius: BorderRadius.circular(18.0),
             border: Border.all(
-              color: Colors.white,
+              color: widget.isUnlocked ? Colors.white : const Color(0xFFF59E0B).withValues(alpha: 0.5),
               width: 2.0,
             ),
             boxShadow: [
@@ -3673,7 +3712,7 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0), // Elegant tighter padding to fit the shortened box
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -3686,16 +3725,34 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            widget.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 16.0, // Slightly more compact font to prevent overflow
-                              fontWeight: FontWeight.w900,
-                              color: widget.isLight ? const Color(0xFF0F172A) : Colors.white,
-                              letterSpacing: -0.5,
-                            ),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  widget.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.w900,
+                                    color: widget.isLight ? const Color(0xFF0F172A) : Colors.white,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              ),
+                              if (!widget.isUnlocked) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                                  ),
+                                  child: const Icon(Icons.lock_rounded, size: 11, color: Color(0xFFEF4444)),
+                                ),
+                              ],
+                            ],
                           ),
                           const SizedBox(height: 1.0),
                           Expanded(
@@ -3704,7 +3761,7 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 10.0, // Tighter font size
+                                fontSize: 10.0,
                                 fontWeight: FontWeight.w600,
                                 color: widget.isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
                                 height: 1.2,
@@ -3715,9 +3772,9 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
                       ),
                     ),
                     const SizedBox(width: 4.0),
-                    // Premium illustration with custom compact size
+                    // Premium illustration
                     SizedBox(
-                      height: 34, // Slightly more compact to give the button maximum space
+                      height: 34,
                       width: 34,
                       child: FittedBox(
                         fit: BoxFit.contain,
@@ -3730,20 +3787,20 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
 
               const SizedBox(height: 6.0),
 
-              // Pill button styled EXACTLY like a beautiful modern gradient pill button, made LARGER
+              // Pill button
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10.0), // Increased button height from 9.0 to 10.0
+                padding: const EdgeInsets.symmetric(vertical: 10.0),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFF52C29F), // Vibrant mint teal
-                      widget.btnColor, // Accent theme color for each grade category
+                      widget.isUnlocked ? const Color(0xFF52C29F) : const Color(0xFFF59E0B),
+                      widget.btnColor,
                     ],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   ),
-                  borderRadius: BorderRadius.circular(24.0), // Proper pill button rounding
+                  borderRadius: BorderRadius.circular(24.0),
                   boxShadow: [
                     BoxShadow(
                       color: widget.btnColor.withValues(alpha: 0.24),
@@ -3760,14 +3817,14 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
                       widget.buttonText,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 12.0, // Increased font size from 12.0 to 13.0
+                        fontSize: 12.0,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.1,
                       ),
                     ),
                     const SizedBox(width: 4.0),
-                    const Icon(
-                      Icons.chevron_right, // Required chevron_right arrow icon
+                    Icon(
+                      widget.isUnlocked ? Icons.chevron_right : Icons.lock_open_rounded,
                       color: Colors.white,
                       size: 14.0,
                     ),

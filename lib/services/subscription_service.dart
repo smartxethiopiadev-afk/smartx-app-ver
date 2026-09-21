@@ -177,6 +177,32 @@ class SubscriptionService {
     return Set.unmodifiable(_unlockedPackages);
   }
 
+  /// Synchronous check if a grade is unlocked
+  static bool isGradeUnlockedSync(int grade, {String? subject}) {
+    if (_unlockedPackages.contains('pkg_all_grades') ||
+        _unlockedPackages.contains('all_grades') ||
+        _unlockedPackages.contains('all_inclusive') ||
+        _unlockedPackages.contains('pkg_all_inclusive') ||
+        _unlockedPackages.contains('pkg_all_inclusive_g$grade')) {
+      return true;
+    }
+
+    final String targetPkg = 'pkg_grade_$grade';
+    if (_unlockedPackages.contains(targetPkg) || _unlockedPackages.contains('grade_$grade')) {
+      return true;
+    }
+
+    if (subject != null && subject.trim().isNotEmpty) {
+      final String slug = normalizeSubjectSlug(subject);
+      final String specificSubjectPkg = 'pkg_g${grade}_$slug';
+      if (_unlockedPackages.contains(specificSubjectPkg) || _unlockedPackages.contains(slug)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   static bool isUnitAccessibleSync(int grade, int unitNumber, {String? subject}) {
     if (unitNumber <= 1) {
       return true; // Unit 1 is 100% FREE

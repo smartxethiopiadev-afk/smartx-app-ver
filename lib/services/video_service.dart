@@ -25,7 +25,7 @@ class VideoService {
     return rawSubject;
   }
 
-  /// App Overview Tutorial Video (Default fallback)
+  /// App Overview Tutorial Video (Default empty fallback if database has no entry)
   static VideoModel getAppOverviewVideo() {
     return VideoModel(
       id: 'app_overview_video',
@@ -33,14 +33,14 @@ class VideoService {
       subject: 'Tutorial',
       unitNumber: 1,
       partNumber: 1,
-      title: 'Smart Learn Ethiopian መተግበሪያ አጠቃቀም ሙሉ ገለፃ (App Overview & Tutorial)',
-      youtubeVideoId: 'uYX1-IqlFzM',
+      title: 'Smart Learn Ethiopian - የመተግበሪያ አጠቃቀም መመሪያ (Supabase)',
+      youtubeVideoId: '',
       durationText: '10 mins',
       orderIndex: 0,
     );
   }
 
-  /// Fetches the latest onboarding & tutorial video from Supabase database.
+  /// Fetches the latest onboarding & tutorial video strictly from Supabase database.
   /// Checks `app_tutorials` or `videos` table.
   static Future<VideoModel> fetchAppTutorialVideo() async {
     final bool hasConn = await OfflineManager.isNetworkAvailable();

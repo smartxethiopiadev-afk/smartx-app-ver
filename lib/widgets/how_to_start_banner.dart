@@ -118,19 +118,24 @@ class HowToStartBanner extends StatelessWidget {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(16),
                         onTap: () {
-                          if (video.hasDirectStream) {
-                            final uri = Uri.parse(video.videoUrl ?? '');
+                          final streamUrl = video.streamUrl;
+                          if (streamUrl.isNotEmpty) {
+                            final uri = Uri.parse(streamUrl);
                             canLaunchUrl(uri).then((can) {
                               if (can) {
                                 launchUrl(uri, mode: LaunchMode.externalApplication);
                               }
                             });
-                          } else if (video.youtubeVideoId.isNotEmpty) {
-                            YouTubeVideoPlayerDialog.show(
-                              context,
-                              video: video,
-                              isDarkMode: isDarkMode,
-                              languageCode: languageCode,
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  isAm
+                                      ? 'የቪዲዮ መመሪያ ከ Supabase በመጫን ላይ ነው።'
+                                      : 'Video tutorial is loading from Supabase database.',
+                                ),
+                                backgroundColor: const Color(0xFF0284C7),
+                              ),
                             );
                           }
                         },

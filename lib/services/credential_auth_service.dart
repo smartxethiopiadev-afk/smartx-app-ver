@@ -196,6 +196,7 @@ class CredentialAuthService {
 
     final currentDeviceId = await DeviceService.getDeviceId();
     final prefs = await SharedPreferences.getInstance();
+    List<String> unlockedPackages = [];
 
     try {
       final supabase = Supabase.instance.client;
@@ -204,7 +205,7 @@ class CredentialAuthService {
       try {
         final existing = await supabase
             .from('students')
-            .select('device_id')
+            .select('device_id, unlocked_packages')
             .eq('phone_number', cleanPhone)
             .maybeSingle();
 
@@ -216,13 +217,16 @@ class CredentialAuthService {
               message: 'ይህ ስልክ ቁጥር አስቀድሞ በሌላ ስልክ ላይ ተመዝግቧል።',
             );
           }
+          final List<dynamic>? rawExistingPkgs = existing['unlocked_packages'] as List<dynamic>?;
+          if (rawExistingPkgs != null) {
+            unlockedPackages = rawExistingPkgs.map((e) => e.toString()).toList();
+          }
         }
       } catch (e) {
         debugPrint('[Auth] check existing student error: $e');
       }
 
-      // Upsert into `students` table
-      final defaultPackages = ['pkg_grade_$grade', 'grade_$grade'];
+      // Upsert into `students` table strictly with genuine unlocked packages
       try {
         await supabase.from('students').upsert({
           'full_name': cleanName,
@@ -230,7 +234,7 @@ class CredentialAuthService {
           'grade': grade,
           'device_id': currentDeviceId,
           'is_active': true,
-          'unlocked_packages': defaultPackages,
+          'unlocked_packages': unlockedPackages,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         }, onConflict: 'phone_number');
       } catch (upsertErr) {
@@ -241,7 +245,7 @@ class CredentialAuthService {
           'grade': grade,
           'device_id': currentDeviceId,
           'is_active': true,
-          'unlocked_packages': defaultPackages,
+          'unlocked_packages': unlockedPackages,
         });
       }
 
@@ -252,7 +256,7 @@ class CredentialAuthService {
       await prefs.setInt('selected_grade', grade);
       await prefs.setString(_keyBoundDeviceId, currentDeviceId);
 
-      await SubscriptionService.setUnlockedPackages(defaultPackages);
+      await SubscriptionService.setUnlockedPackages(unlockedPackages);
 
       return CredentialAuthResult(
         status: CredentialAuthStatus.success,

@@ -7,19 +7,22 @@ import '../services/subscription_service.dart';
 class AccountUpgradeDialog extends StatefulWidget {
   final bool isDarkMode;
   final String languageCode;
+  final int? initialGrade;
   final VoidCallback? onSuccess;
 
   const AccountUpgradeDialog({
     super.key,
     required this.isDarkMode,
     required this.languageCode,
+    this.initialGrade,
     this.onSuccess,
   });
 
   static Future<bool?> show(
     BuildContext context, {
-    required bool isDarkMode,
-    required String languageCode,
+    bool isDarkMode = false,
+    String languageCode = 'am',
+    int? initialGrade,
     VoidCallback? onSuccess,
   }) async {
     return await showDialog<bool>(
@@ -28,6 +31,7 @@ class AccountUpgradeDialog extends StatefulWidget {
       builder: (ctx) => AccountUpgradeDialog(
         isDarkMode: isDarkMode,
         languageCode: languageCode,
+        initialGrade: initialGrade,
         onSuccess: onSuccess,
       ),
     );
