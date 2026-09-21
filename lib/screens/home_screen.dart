@@ -27,6 +27,7 @@ import '../widgets/academic_progress_charts.dart';
 import '../main.dart';
 import '../services/analytics_service.dart';
 import '../widgets/account_upgrade_dialog.dart';
+import '../widgets/startup_tutorial_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -197,6 +198,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
     // Replicating tutorial video with standard Youtube embedded controller
     _fadeController.forward();
+
+    // Check & show startup onboarding video popup
+    _checkStartupTutorialPopup();
+  }
+
+  Future<void> _checkStartupTutorialPopup() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool neverShow = prefs.getBool('never_show_startup_tutorial') ?? false;
+    if (!neverShow && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          StartupTutorialDialog.show(
+            context,
+            isDarkMode: widget.isDarkMode,
+            languageCode: widget.languageCode,
+          );
+        }
+      });
+    }
   }
 
   Future<void> _loadProfileData() async {
@@ -208,6 +228,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final savedName = prefs.getString('user_fullName') ?? prefs.getString('user_name') ?? '';
     final savedPhone = prefs.getString('user_phoneNumber') ?? prefs.getString('phone_number') ?? '';
     final bool authState = prefs.getBool('is_authenticated') ?? false;
+
+    // Silent background device validation and subscription sync
+    unawaited(SubscriptionService.validateAndSyncWithDatabase());
 
     setState(() {
       _deviceId = devId;
@@ -221,8 +244,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         _userPhoneNumber = savedPhone.isNotEmpty ? savedPhone : '';
       } else {
         _isLoggedIn = false;
-        _userName = widget.languageCode == 'am' ? 'ተማሪ (የሙከራ ተጠቃሚ)' : 'Student (Free Trial)';
-        _userPhoneNumber = widget.languageCode == 'am' ? 'ስልክ አልተያያዘም' : 'No Phone Linked';
+        _userName = widget.languageCode == 'am' ? 'ተማሪ' : 'Student';
+        _userPhoneNumber = widget.languageCode == 'am' ? 'ያልተመዘገበ' : 'Guest';
       }
       String? savedUid = prefs.getString('user_id');
       if (savedUid == null && _isLoggedIn) {
@@ -1070,34 +1093,69 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // Freemium Tip Banner
+                    // Telegram Admin Support Banner
                     Container(
                       margin: const EdgeInsets.only(bottom: 14),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: isLight ? 0.08 : 0.16),
+                        color: const Color(0xFF0088CC).withValues(alpha: isLight ? 0.08 : 0.16),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: const Color(0xFF10B981).withValues(alpha: isLight ? 0.25 : 0.4),
+                          color: const Color(0xFF0088CC).withValues(alpha: isLight ? 0.3 : 0.5),
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.lock_open_rounded, color: Color(0xFF10B981), size: 18),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              isAmharic
-                                  ? 'Unit 1 ለሁሉም ክፍሎች እና የትምህርት አይነቶች 100% ነጻ ነው!'
-                                  : 'Unit 1 is 100% Free for all subjects and grades!',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: textColor,
-                              ),
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(14),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () async {
+                            final Uri uri = Uri.parse('https://t.me/smart_x_help');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(7),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF0088CC),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.send_rounded, color: Colors.white, size: 16),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        isAmharic ? 'የቪዲዮ ጥያቄ ወይም እገዛ (Telegram Support)' : 'Video Lessons Help & Telegram Admin',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: textColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        isAmharic ? 'አድሚኑን በቴሌግራም ያናግሩ: @smart_x_help' : 'Contact admin directly on Telegram: @smart_x_help',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF0088CC),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.chevron_right_rounded, color: Color(0xFF0088CC), size: 20),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
                     _buildGradeVideoLandingCard(gradeNum: 9, isLight: isLight, isAmharic: isAmharic),
@@ -2021,38 +2079,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 14.0),
-
-            // Free Unit 1 Notice Banner
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withValues(alpha: isLight ? 0.09 : 0.18),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.3),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      isAmharic
-                          ? 'የክፍል 1 (Unit 1) ጥያቄዎች እና ማስታወሻዎች ሙሉ በሙሉ ነጻ ናቸው!'
-                          : 'Unit 1 questions and notes are 100% Free for all subjects!',
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF10B981),
                       ),
                     ),
                   ),
@@ -3208,108 +3234,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: unlockedPkgs.isNotEmpty
-                              ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                              : const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: unlockedPkgs.isNotEmpty
-                                ? const Color(0xFF10B981).withValues(alpha: 0.4)
-                                : const Color(0xFFF59E0B).withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              unlockedPkgs.isNotEmpty ? Icons.verified_rounded : Icons.lock_clock_rounded,
-                              size: 14,
-                              color: unlockedPkgs.isNotEmpty ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              unlockedPkgs.isNotEmpty
-                                  ? (isAmharic ? 'ተሻሽሏል' : 'Upgraded')
-                                  : (isAmharic ? 'ነጻ ሙከራ' : 'Free Trial'),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: unlockedPkgs.isNotEmpty ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(height: 1),
-                  const SizedBox(height: 14),
-
-                  // Single-Device Automated Security Badge
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.shield_rounded, size: 20, color: Color(0xFF10B981)),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isAmharic ? 'የመለያ ደህንነት እና ጥበቃ' : 'Device Security Status',
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: isLight ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                isAmharic
-                                    ? 'ይህ መለያ በዚህ ስልክ ላይ በደህንነት የተጠበቀ ነው (Single-Device Protection)'
-                                    : 'Account securely bound to this device (Single-Device Protection Active)',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: subColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            isAmharic ? 'ንቁ' : 'Active',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF10B981)),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ),
@@ -3455,99 +3380,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               isDarkMode: widget.isDarkMode,
               languageCode: widget.languageCode,
               currentGrade: _selectedGradeForLibraryTab,
-            ),
-
-            const SizedBox(height: 24),
-
-            // Active Subscriptions / Database Permissions Section
-            Text(
-              isAmharic ? 'የተፈቀዱ የትምህርት ክፍሎች' : 'Active Content Access',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-                color: textColor,
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: borderColor, width: 1.2),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isAmharic ? 'ክፍል 1 (Unit 1) - ሙሉ በሙሉ ነጻ' : 'Unit 1 (All Subjects) - 100% Free',
-                              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: textColor),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              isAmharic ? 'ለሁሉም ተማሪዎች ክፍት የተደረገ' : 'Always open for trial practice',
-                              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: subColor),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (unlockedPkgs.isNotEmpty) ...[
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Divider(height: 1),
-                    ),
-                    Text(
-                      isAmharic ? 'በዚህ ስልክ የተፈቀዱ ሙሉ ክፍሎች:' : 'Unlocked on this single device:',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textColor),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: unlockedPkgs.map((pkg) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0084FF).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFF0084FF).withValues(alpha: 0.3)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.lock_open_rounded, size: 13, color: Color(0xFF0084FF)),
-                              const SizedBox(width: 5),
-                              Text(
-                                pkg.replaceAll('pkg_', '').replaceAll('_', ' ').toUpperCase(),
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF0084FF)),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ],
-              ),
             ),
 
             const SizedBox(height: 36),

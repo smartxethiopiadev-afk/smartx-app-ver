@@ -86,6 +86,41 @@ class SubscriptionService {
     _notifyListeners();
   }
 
+  /// Silently validate device binding and sync active subscriptions in background
+  static Future<void> validateAndSyncWithDatabase() async {
+    try {
+      await init();
+      final devId = await DeviceService.getDeviceId();
+      if (devId.isEmpty) return;
+
+      final prefs = await SharedPreferences.getInstance();
+      final phone = prefs.getString('user_phoneNumber') ?? prefs.getString('phone_number');
+
+      if (phone != null && phone.isNotEmpty) {
+        final client = Supabase.instance.client;
+        final resp = await client
+            .from('user_subscriptions')
+            .select('package_id, is_active')
+            .eq('phone_number', phone)
+            .eq('device_id', devId)
+            .eq('is_active', true);
+
+        if (resp.isNotEmpty) {
+          final List<String> activePkgs = (resp as List)
+              .map((e) => e['package_id']?.toString() ?? '')
+              .where((s) => s.isNotEmpty)
+              .toList();
+
+          for (final pkg in activePkgs) {
+            await unlockPackage(pkg);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[SubscriptionService] Silent background sync notice: $e');
+    }
+  }
+
   /// Check if a specific package is unlocked
   static Future<bool> isPackageUnlocked(String packageId) async {
     await init();
@@ -558,18 +593,24 @@ class SubscriptionService {
         );
       }
 
-      // First time binding or name update
+      // First time binding or update device_id
+      bool deviceBindingConfirmed = false;
       if (boundDev == null || boundDev.isEmpty) {
         try {
-          await supabase.from('students').update({
+          final updateRes = await supabase.from('students').update({
             'device_id': currentDeviceId,
             'full_name': cleanName,
             'updated_at': nowIso,
-          }).eq('phone_number', cleanPhone);
+          }).eq('phone_number', cleanPhone).select('device_id');
+          
+          if (updateRes.isNotEmpty && updateRes.first['device_id'] == currentDeviceId) {
+            deviceBindingConfirmed = true;
+          }
         } catch (bindErr) {
           debugPrint('[SubscriptionService] Auto-bind error: $bindErr');
         }
       } else {
+        deviceBindingConfirmed = (boundDev == currentDeviceId);
         try {
           await supabase.from('students').update({
             'full_name': cleanName,
@@ -614,13 +655,112 @@ class SubscriptionService {
         phoneNumber: cleanPhone,
         grade: studentGrade,
         unlockedPackages: pkgs,
+        deviceBindingConfirmed: deviceBindingConfirmed,
+        boundDeviceId: currentDeviceId,
       );
     } catch (e) {
       debugPrint('[SubscriptionService] verifyAndUpgradeStudent error: $e');
       return StudentUpgradeResult(
         isSuccess: false,
-        message: 'የኔትወርክ ችግር አጋጥሟል። እባክዎ የበይነመረብ ግንኙነትዎን ያረጋግጡ: $e',
+        message: 'የማረጋገጫ ስህተት አጋጥሟል: $e',
+        rawError: e.toString(),
       );
+    }
+  }
+
+  /// Checks whether the current device's hardware ID is officially stored in the Supabase `students` table.
+  /// Returns a map with { 'isBound': bool, 'currentDeviceId': String, 'registeredDeviceId': String?, 'isLinked': bool, 'studentName': String?, 'phone': String?, 'error': String? }
+  static Future<Map<String, dynamic>> checkDatabaseDeviceBindingStatus() async {
+    try {
+      final currentDeviceId = await DeviceService.getDeviceId();
+      final prefs = await SharedPreferences.getInstance();
+      final phone = prefs.getString('user_phoneNumber') ?? prefs.getString('phone_number') ?? '';
+      final name = prefs.getString('user_fullName') ?? prefs.getString('user_name') ?? '';
+
+      if (phone.isEmpty) {
+        return {
+          'isBound': false,
+          'currentDeviceId': currentDeviceId,
+          'registeredDeviceId': null,
+          'isLinked': false,
+          'studentName': name,
+          'phone': '',
+          'error': 'ስልክ ቁጥር አልተገኘም (No linked phone)',
+        };
+      }
+
+      final cleanPhone = sanitizeEthiopianPhone(phone);
+      final supabase = Supabase.instance.client;
+
+      final res = await supabase
+          .from('students')
+          .select('device_id, full_name, phone_number')
+          .eq('phone_number', cleanPhone)
+          .maybeSingle();
+
+      if (res == null) {
+        return {
+          'isBound': false,
+          'currentDeviceId': currentDeviceId,
+          'registeredDeviceId': null,
+          'isLinked': false,
+          'studentName': name,
+          'phone': cleanPhone,
+          'error': 'በዚህ ስልክ የተመዘገበ ተማሪ በዳታቤዝ ውስጥ አልተገኘም',
+        };
+      }
+
+      final String? boundDev = (res['device_id'] as String?)?.trim();
+      final bool matches = boundDev != null && boundDev.isNotEmpty && boundDev == currentDeviceId;
+
+      // If registered device is missing in DB, update it automatically if authenticated
+      if (boundDev == null || boundDev.isEmpty) {
+        try {
+          await supabase.from('students').update({
+            'device_id': currentDeviceId,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          }).eq('phone_number', cleanPhone);
+          return {
+            'isBound': true,
+            'currentDeviceId': currentDeviceId,
+            'registeredDeviceId': currentDeviceId,
+            'isLinked': true,
+            'studentName': res['full_name'] ?? name,
+            'phone': cleanPhone,
+            'autoBound': true,
+            'error': null,
+          };
+        } catch (e) {
+          return {
+            'isBound': false,
+            'currentDeviceId': currentDeviceId,
+            'registeredDeviceId': boundDev,
+            'isLinked': true,
+            'studentName': res['full_name'] ?? name,
+            'phone': cleanPhone,
+            'error': 'Update failed: $e',
+          };
+        }
+      }
+
+      return {
+        'isBound': matches,
+        'currentDeviceId': currentDeviceId,
+        'registeredDeviceId': boundDev,
+        'isLinked': true,
+        'studentName': res['full_name'] ?? name,
+        'phone': cleanPhone,
+        'error': matches ? null : 'የስልክ መለያ አይመሳከርም (Device Mismatch)',
+      };
+    } catch (e) {
+      debugPrint('[SubscriptionService] checkDatabaseDeviceBindingStatus error: $e');
+      return {
+        'isBound': false,
+        'currentDeviceId': await DeviceService.getDeviceId(),
+        'registeredDeviceId': null,
+        'isLinked': false,
+        'error': e.toString(),
+      };
     }
   }
 }
@@ -633,6 +773,9 @@ class StudentUpgradeResult {
   final int? grade;
   final List<String> unlockedPackages;
   final bool isDeviceMismatch;
+  final bool deviceBindingConfirmed;
+  final String? boundDeviceId;
+  final String? rawError;
 
   const StudentUpgradeResult({
     required this.isSuccess,
@@ -642,5 +785,8 @@ class StudentUpgradeResult {
     this.grade,
     this.unlockedPackages = const [],
     this.isDeviceMismatch = false,
+    this.deviceBindingConfirmed = false,
+    this.boundDeviceId,
+    this.rawError,
   });
 }

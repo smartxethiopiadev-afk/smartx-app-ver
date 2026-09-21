@@ -25,7 +25,7 @@ class VideoService {
     return rawSubject;
   }
 
-  /// App Overview Tutorial Video
+  /// App Overview Tutorial Video (Default fallback)
   static VideoModel getAppOverviewVideo() {
     return VideoModel(
       id: 'app_overview_video',
@@ -33,11 +33,51 @@ class VideoService {
       subject: 'Tutorial',
       unitNumber: 1,
       partNumber: 1,
-      title: 'Ethio Concept Center መተግበሪያ አጠቃቀም ሙሉ ገለፃ (App Overview & Master Tutorial)',
+      title: 'Smart Learn Ethiopian መተግበሪያ አጠቃቀም ሙሉ ገለፃ (App Overview & Tutorial)',
       youtubeVideoId: 'uYX1-IqlFzM',
-      durationText: 'Full Tutorial',
+      durationText: '10 mins',
       orderIndex: 0,
     );
+  }
+
+  /// Fetches the latest onboarding & tutorial video from Supabase database.
+  /// Checks `app_tutorials` or `videos` table.
+  static Future<VideoModel> fetchAppTutorialVideo() async {
+    final bool hasConn = await OfflineManager.isNetworkAvailable();
+    if (hasConn) {
+      try {
+        final resp = await _supabase
+            .from('app_tutorials')
+            .select('*')
+            .order('id', ascending: false)
+            .limit(1)
+            .maybeSingle();
+
+        if (resp != null) {
+          return VideoModel.fromJson(resp);
+        }
+      } catch (e) {
+        debugPrint('[VideoService] app_tutorials table fetch note: $e');
+      }
+
+      try {
+        final vResp = await _supabase
+            .from('videos')
+            .select('*')
+            .ilike('subject', '%tutorial%')
+            .order('order_index', ascending: true)
+            .limit(1)
+            .maybeSingle();
+
+        if (vResp != null) {
+          return VideoModel.fromJson(vResp);
+        }
+      } catch (e) {
+        debugPrint('[VideoService] videos table tutorial query note: $e');
+      }
+    }
+
+    return getAppOverviewVideo();
   }
 
   /// Helper to get subjects available for a grade

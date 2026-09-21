@@ -44,6 +44,7 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
 
   bool _isLoading = false;
   String? _errorMessage;
+  String? _rawErrorDetails;
   bool _isDeviceMismatch = false;
 
   @override
@@ -59,6 +60,7 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _rawErrorDetails = null;
       _isDeviceMismatch = false;
     });
 
@@ -76,7 +78,11 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
       if (result.isSuccess) {
         setState(() => _isLoading = false);
 
-        // Show Success Feedback
+        // Show Success Feedback with device binding status
+        final String successText = result.deviceBindingConfirmed
+            ? '${result.message} (Device ID ወደ ዳታቤዝ ተመዝግቧል)'
+            : result.message;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -85,7 +91,7 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    result.message,
+                    successText,
                     style: GoogleFonts.notoSansEthiopic(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
@@ -107,6 +113,7 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
         setState(() {
           _isLoading = false;
           _errorMessage = result.message;
+          _rawErrorDetails = result.rawError;
           _isDeviceMismatch = result.isDeviceMismatch;
         });
       }
@@ -115,6 +122,7 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
         setState(() {
           _isLoading = false;
           _errorMessage = 'የማረጋገጫ ስህተት አጋጥሟል: $e';
+          _rawErrorDetails = e.toString();
         });
       }
     }
@@ -382,24 +390,84 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
                             : const Color(0xFFF59E0B).withValues(alpha: 0.4),
                       ),
                     ),
-                    child: Row(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          _isDeviceMismatch ? Icons.gpp_bad_rounded : Icons.info_outline_rounded,
-                          color: _isDeviceMismatch ? const Color(0xFFEF4444) : const Color(0xFFF59E0B),
-                          size: 20,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              _isDeviceMismatch ? Icons.gpp_bad_rounded : Icons.info_outline_rounded,
+                              color: _isDeviceMismatch ? const Color(0xFFEF4444) : const Color(0xFFF59E0B),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: GoogleFonts.notoSansEthiopic(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: _isDeviceMismatch
+                                      ? const Color(0xFFEF4444)
+                                      : (isLight ? const Color(0xFFB45309) : const Color(0xFFFBBF24)),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            _errorMessage!,
-                            style: GoogleFonts.notoSansEthiopic(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: _isDeviceMismatch
-                                  ? const Color(0xFFEF4444)
-                                  : (isLight ? const Color(0xFFB45309) : const Color(0xFFFBBF24)),
+                        const SizedBox(height: 8),
+                        // Copy Error Button for Debugging & Support
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: InkWell(
+                            onTap: () {
+                              final textToCopy = _rawErrorDetails != null && _rawErrorDetails!.isNotEmpty
+                                  ? 'Error: $_errorMessage\nDetails: $_rawErrorDetails'
+                                  : 'Error: $_errorMessage';
+                              Clipboard.setData(ClipboardData(text: textToCopy));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(isAm ? 'የስህተት መልእክቱ ተቀድቷል (Copied)' : 'Error copied to clipboard'),
+                                  duration: const Duration(seconds: 2),
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: const Color(0xFF1E293B),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: (isLight ? Colors.white : Colors.black26),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: (_isDeviceMismatch ? const Color(0xFFEF4444) : const Color(0xFFF59E0B)).withValues(alpha: 0.4),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.copy_rounded,
+                                    size: 13,
+                                    color: _isDeviceMismatch
+                                        ? const Color(0xFFEF4444)
+                                        : (isLight ? const Color(0xFFB45309) : const Color(0xFFFBBF24)),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    isAm ? 'ስህተቱን ቅዳ (Copy Error)' : 'Copy Error',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: _isDeviceMismatch
+                                          ? const Color(0xFFEF4444)
+                                          : (isLight ? const Color(0xFFB45309) : const Color(0xFFFBBF24)),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),

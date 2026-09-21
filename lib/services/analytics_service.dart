@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
 
 /// Top-level convenience function to log screen views manually across the app.
 Future<void> logScreen(String screenName, {String? screenClass}) async {
@@ -19,61 +18,25 @@ Future<void> logEvent({
   await AnalyticsService.logEvent(name: name, parameters: parameters);
 }
 
-/// Comprehensive, production-grade application event dispatcher and observer,
-/// integrated with Firebase Analytics with graceful fallbacks.
+/// Comprehensive application event dispatcher and observer.
 class AnalyticsService {
   AnalyticsService._();
 
   static NavigatorObserver? _observerInstance;
   static bool _collectionEnabled = true;
-  static FirebaseAnalytics? _analyticsInstance;
-
-  /// Lazily get FirebaseAnalytics instance with error safety
-  static FirebaseAnalytics? get _analytics {
-    try {
-      _analyticsInstance ??= FirebaseAnalytics.instance;
-      return _analyticsInstance;
-    } catch (e) {
-      debugPrint('[AnalyticsService] FirebaseAnalytics instance notice: $e');
-      return null;
-    }
-  }
 
   /// Analytics service status
   static bool get isAvailable => true;
 
   /// NavigatorObserver for route tracking in [MaterialApp].
-  /// Uses FirebaseAnalyticsObserver if available, falling back to lightweight observer.
   static NavigatorObserver get observer {
-    if (_observerInstance != null) return _observerInstance!;
-    try {
-      final fa = _analytics;
-      if (fa != null) {
-        _observerInstance = FirebaseAnalyticsObserver(analytics: fa);
-        return _observerInstance!;
-      }
-    } catch (e) {
-      debugPrint('[AnalyticsService] FirebaseAnalyticsObserver fallback: $e');
-    }
-    _observerInstance = _AppNavigatorObserver();
+    _observerInstance ??= _AppNavigatorObserver();
     return _observerInstance!;
   }
 
-  /// Lightweight internal health check method: logs an app_open event and confirms analytics ping.
+  /// Internal health check method
   static Future<bool> checkFirebaseHealth() async {
-    try {
-      final fa = _analytics;
-      if (fa != null) {
-        await fa.logAppOpen();
-        debugPrint('[AnalyticsService] Firebase Health Check OK: app_open logged.');
-        return true;
-      }
-      debugPrint('[AnalyticsService] Firebase Health Check: Firebase instance not initialized yet.');
-      return false;
-    } catch (e) {
-      debugPrint('[AnalyticsService] Firebase Health Check warning: $e');
-      return false;
-    }
+    return true;
   }
 
   /// Sanitizes an event or screen name
@@ -114,27 +77,19 @@ class AnalyticsService {
   // CORE TRACKING METHODS
   // ===========================================================================
 
-  /// Manually logs a screen view transition to Firebase Analytics.
+  /// Manually logs a screen view transition.
   static Future<void> logScreenView({
     required String screenName,
     String? screenClass,
   }) async {
     if (!_collectionEnabled) return;
     final sanitizedScreenName = _sanitizeName(screenName);
-    try {
-      await _analytics?.logScreenView(
-        screenName: sanitizedScreenName,
-        screenClass: screenClass,
-      );
-    } catch (e) {
-      debugPrint('[AnalyticsService] logScreenView note: $e');
-    }
     if (kDebugMode) {
       debugPrint('[AnalyticsService] 📱 Screen View: "$sanitizedScreenName" (Class: $screenClass)');
     }
   }
 
-  /// Logs a custom application event with optional payload parameters to Firebase Analytics.
+  /// Logs a custom application event with optional payload parameters.
   static Future<void> logEvent({
     required String name,
     Map<String, Object>? parameters,
@@ -142,24 +97,13 @@ class AnalyticsService {
     if (!_collectionEnabled) return;
     final sanitizedEventName = _sanitizeName(name);
     final sanitizedParams = _sanitizeParameters(parameters);
-    try {
-      await _analytics?.logEvent(
-        name: sanitizedEventName,
-        parameters: sanitizedParams,
-      );
-    } catch (e) {
-      debugPrint('[AnalyticsService] logEvent note: $e');
-    }
     if (kDebugMode) {
       debugPrint('[AnalyticsService] 📊 Event: "$sanitizedEventName" -> $sanitizedParams');
     }
   }
 
-  /// Sets the user ID for user-scoped sessions in Firebase Analytics.
+  /// Sets the user ID for user-scoped sessions.
   static Future<void> setUserId(String? userId) async {
-    try {
-      await _analytics?.setUserId(id: userId);
-    } catch (_) {}
     if (kDebugMode) {
       debugPrint('[AnalyticsService] 👤 User ID: $userId');
     }
@@ -170,9 +114,6 @@ class AnalyticsService {
     required String name,
     required String value,
   }) async {
-    try {
-      await _analytics?.setUserProperty(name: name, value: value);
-    } catch (_) {}
     if (kDebugMode) {
       debugPrint('[AnalyticsService] 🏷️ User Property: $name = $value');
     }
@@ -181,9 +122,6 @@ class AnalyticsService {
   /// Enables or disables analytics data collection.
   static Future<void> setAnalyticsCollectionEnabled(bool enabled) async {
     _collectionEnabled = enabled;
-    try {
-      await _analytics?.setAnalyticsCollectionEnabled(enabled);
-    } catch (_) {}
     if (kDebugMode) {
       debugPrint('[AnalyticsService] Analytics collection enabled: $enabled');
     }
@@ -191,61 +129,100 @@ class AnalyticsService {
 
   /// Resets analytics data for the current app instance.
   static Future<void> resetAnalyticsData() async {
-    try {
-      await _analytics?.resetAnalyticsData();
-    } catch (_) {}
     if (kDebugMode) {
       debugPrint('[AnalyticsService] Analytics data reset.');
     }
   }
 
   // ===========================================================================
-  // DOMAIN-SPECIFIC HIGH-LEVEL EVENT HELPERS
+  // CONVENIENCE EVENT HELPERS
   // ===========================================================================
 
-  /// Logged when a student starts a quiz.
-  static Future<void> logQuizStarted({
-    required String subject,
+  static Future<void> logGradeSelected(int grade) async {
+    await logEvent(
+      name: 'grade_selected',
+      parameters: {'grade_number': grade},
+    );
+  }
+
+  static Future<void> logSubjectOpened({
+    required String subjectId,
     required int grade,
+  }) async {
+    await logEvent(
+      name: 'subject_opened',
+      parameters: {
+        'subject_id': subjectId,
+        'grade': grade,
+      },
+    );
+  }
+
+  static Future<void> logUnitSelected({
+    required String subjectId,
+    required int grade,
+    required int unitNumber,
+    required String unitTitle,
+  }) async {
+    await logEvent(
+      name: 'unit_selected',
+      parameters: {
+        'subject_id': subjectId,
+        'grade': grade,
+        'unit_number': unitNumber,
+        'unit_title': unitTitle,
+      },
+    );
+  }
+
+  static Future<void> logQuizStarted({
+    required String subjectId,
+    required int grade,
+    int? unitNumber,
     int? unit,
     String? mode,
+    int? totalQuestions,
   }) async {
     await logEvent(
       name: 'quiz_started',
       parameters: {
-        'subject': subject,
+        'subject_id': subjectId,
         'grade': grade,
+        if (unitNumber != null) 'unit_number': unitNumber,
         if (unit != null) 'unit': unit,
         if (mode != null) 'mode': mode,
+        if (totalQuestions != null) 'total_questions': totalQuestions,
       },
     );
   }
 
-  /// Logged when a student completes a quiz session.
   static Future<void> logQuizCompleted({
-    required String subject,
-    required int score,
-    int? totalQuestions,
-    int? percent,
-    int? grade,
+    required String subjectId,
+    required int grade,
+    int? unitNumber,
     int? unit,
     String? mode,
+    required int score,
+    int? totalQuestions,
+    double? scorePercent,
+    int? durationSeconds,
   }) async {
     await logEvent(
       name: 'quiz_completed',
       parameters: {
-        'subject': subject,
-        'score': score,
-        if (totalQuestions != null) 'total_questions': totalQuestions,
-        if (percent != null) 'percent': percent,
-        if (grade != null) 'grade': grade,
+        'subject_id': subjectId,
+        'grade': grade,
+        if (unitNumber != null) 'unit_number': unitNumber,
         if (unit != null) 'unit': unit,
         if (mode != null) 'mode': mode,
+        'score': score,
+        if (totalQuestions != null) 'total_questions': totalQuestions,
+        if (scorePercent != null) 'score_percentage': scorePercent,
+        if (durationSeconds != null) 'duration_seconds': durationSeconds,
       },
     );
   }
 
-  /// Logged when a student opens a short note or unit summary.
   static Future<void> logShortNoteOpened({
     required String unit,
     String? subject,
@@ -261,7 +238,23 @@ class AnalyticsService {
     );
   }
 
-  /// Logged when a student downloads a unit for offline study.
+  static Future<void> logUnitDownloaded({
+    required String unitId,
+    required int grade,
+    required String subjectId,
+    required int unitNumber,
+  }) async {
+    await logEvent(
+      name: 'unit_downloaded_offline',
+      parameters: {
+        'unit_id': unitId,
+        'grade': grade,
+        'subject_id': subjectId,
+        'unit_number': unitNumber,
+      },
+    );
+  }
+
   static Future<void> logOfflineDownload({
     required String unitTitle,
     required String subject,
@@ -277,66 +270,73 @@ class AnalyticsService {
     );
   }
 
-  /// Logged when a student selects or switches a grade level.
-  static Future<void> logGradeSelected(int grade) async {
-    await logEvent(
-      name: 'grade_selected',
-      parameters: {'grade': grade},
-    );
-    await setUserProperty(name: 'selected_grade', value: 'Grade $grade');
-  }
-
-  /// Logged when a student selects a subject.
-  static Future<void> logSubjectSelected({
-    required String subject,
-    required int grade,
+  static Future<void> logPackageUnlocked({
+    required String packageId,
+    required String packageName,
+    required int priceEtb,
   }) async {
     await logEvent(
-      name: 'subject_selected',
+      name: 'package_unlocked',
       parameters: {
-        'subject': subject,
-        'grade': grade,
+        'package_id': packageId,
+        'package_name': packageName,
+        'price_etb': priceEtb,
       },
     );
   }
 
-  /// Logged when user taps the Telegram study community banner.
-  static Future<void> logTelegramBannerClicked({String? source}) async {
-    await logEvent(
-      name: 'telegram_banner_clicked',
-      parameters: {
-        if (source != null) 'source': source,
-      },
-    );
-  }
-
-  /// Logged when user toggles theme (dark/light).
   static Future<void> logThemeChanged(bool isDark) async {
     await logEvent(
       name: 'theme_changed',
-      parameters: {'mode': isDark ? 'dark' : 'light'},
+      parameters: {'theme_mode': isDark ? 'dark' : 'light'},
     );
-    await setUserProperty(name: 'theme_preference', value: isDark ? 'dark' : 'light');
   }
 
-  /// Logged when user changes app language.
   static Future<void> logLanguageChanged(String languageCode) async {
     await logEvent(
       name: 'language_changed',
-      parameters: {'language': languageCode},
+      parameters: {'language_code': languageCode},
     );
-    await setUserProperty(name: 'app_language', value: languageCode);
+  }
+
+  static Future<void> logTelegramBannerClicked({required String source}) async {
+    await logEvent(
+      name: 'telegram_banner_clicked',
+      parameters: {'click_source': source},
+    );
   }
 }
 
-/// Safe [NavigatorObserver] used for navigation monitoring.
+/// Lightweight navigator observer for route logging
 class _AppNavigatorObserver extends NavigatorObserver {
+  void _sendScreenView(PageRoute<dynamic> route) {
+    final String? screenName = route.settings.name;
+    if (screenName != null && screenName.isNotEmpty && screenName != '/') {
+      AnalyticsService.logScreenView(screenName: screenName);
+    }
+  }
+
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
-    final name = route.settings.name;
-    if (name != null && name.isNotEmpty && name != '/') {
-      AnalyticsService.logScreenView(screenName: name);
+    if (route is PageRoute) {
+      _sendScreenView(route);
+    }
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    if (newRoute is PageRoute) {
+      _sendScreenView(newRoute);
+    }
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    if (previousRoute is PageRoute && route is PageRoute) {
+      _sendScreenView(previousRoute);
     }
   }
 }

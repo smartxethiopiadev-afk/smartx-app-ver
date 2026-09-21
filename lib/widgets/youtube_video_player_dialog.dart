@@ -1,6 +1,5 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/video_model.dart';
 import '../services/analytics_service.dart';
@@ -102,6 +101,27 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
     }
   }
 
+  Future<void> _launchVideoDirect() async {
+    final String urlStr = widget.video.hasDirectStream 
+        ? (widget.video.videoUrl ?? '')
+        : 'https://www.youtube.com/watch?v=${widget.video.youtubeVideoId}';
+    if (urlStr.isEmpty) return;
+    final Uri uri = Uri.parse(urlStr);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.languageCode == 'am' 
+                ? 'ቪዲዮውን መክፈት አልተቻለም' 
+                : 'Could not open video link'),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isLight = !widget.isDarkMode;
@@ -111,33 +131,6 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
         isLight ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final Color subColor =
         isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
-
-    // Video player markup: supports direct CDN/Storage video URL (HTML5 player, zero tracking, compliant with privacy) or YouTube fallback
-    final String playerEmbedHtml = widget.video.hasDirectStream
-        ? '''
-          <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 16px; background-color: #000000; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
-            <video 
-              controls 
-              playsinline 
-              preload="metadata"
-              poster="${widget.video.thumbnailUrl}"
-              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; border-radius: 16px; background-color: #000000;">
-              <source src="${widget.video.videoUrl}" type="video/mp4">
-              Your browser does not support HTML5 video streaming.
-            </video>
-          </div>
-        '''
-        : '''
-          <div style="position: relative; padding-bottom: 49.5%; height: 0; overflow: hidden; border-radius: 16px; background-color: #000000; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
-            <iframe 
-              src="https://www.youtube.com/embed/${widget.video.youtubeVideoId}?autoplay=1&playsinline=1&enablejsapi=1&rel=0&modestbranding=1" 
-              frameborder="0" 
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-              allowfullscreen
-              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; border-radius: 16px;">
-            </iframe>
-          </div>
-        ''';
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.88,
@@ -227,12 +220,64 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // In-App Privacy-Friendly Video Player (Direct CDN / HTML5 or Embedded)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: HtmlWidget(
-                      playerEmbedHtml,
-                      renderMode: RenderMode.column,
+                  // Video Thumbnail Card & Play Trigger
+                  GestureDetector(
+                    onTap: _launchVideoDirect,
+                    child: Container(
+                      width: double.infinity,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                        image: widget.video.thumbnailUrl.isNotEmpty
+                            ? DecorationImage(
+                                image: NetworkImage(widget.video.thumbnailUrl),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                      ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withValues(alpha: 0.3),
+                              Colors.black.withValues(alpha: 0.7),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEF4444),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFEF4444).withValues(alpha: 0.4),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 38,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
 
@@ -324,6 +369,33 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
                   ),
 
                   const SizedBox(height: 16),
+
+                  // Watch Video CTA Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _launchVideoDirect,
+                      icon: const Icon(Icons.play_circle_filled_rounded, size: 20, color: Colors.white),
+                      label: Text(
+                        isAmharic ? 'ቪዲዮውን አጫውት (Watch Video)' : 'Play Video Lesson',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEF4444),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
 
                   // Download for Offline Button
                   SizedBox(

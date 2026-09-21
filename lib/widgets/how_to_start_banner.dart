@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../models/video_model.dart';
+import '../services/video_service.dart';
+import '../screens/login_activation_screen.dart';
+import 'youtube_video_player_dialog.dart';
 
+/// Interactive "How to Start" widget that displays a video-first guide
+/// fetched directly from the Supabase database.
 class HowToStartBanner extends StatelessWidget {
   final bool isDarkMode;
   final String languageCode;
@@ -14,7 +20,12 @@ class HowToStartBanner extends StatelessWidget {
     this.onGradeSelected,
   });
 
-  void _showHowToStartPopUp(BuildContext context) {
+  static void showUsageGuide(
+    BuildContext context, {
+    required bool isDarkMode,
+    required String languageCode,
+    int? grade,
+  }) {
     final bool isLight = !isDarkMode;
     final bool isAm = languageCode == 'am';
 
@@ -22,58 +33,19 @@ class HowToStartBanner extends StatelessWidget {
     final Color textPrimary = isLight ? const Color(0xFF0F172A) : Colors.white;
     final Color textSecondary = isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
 
-    final steps = [
-      {
-        'num': '1',
-        'title': isAm ? '1. ክፍልዎንና የትምህርት አይነትዎን ይምረጡ' : '1. Select Your Grade & Subject',
-        'icon': Icons.school_rounded,
-        'color': const Color(0xFF0284C7),
-        'text': isAm
-            ? 'በመተግበሪያው የመነሻ ገጽ ላይ ከ 9ኛ እስከ 12ኛ ክፍል የሚፈልጉትን ክፍል ይምረጡ። ከዚያም ሂሳብ፣ ፊዚክስ፣ ኬሚስትሪ፣ ባዮሎጂ ወይም ሌሎች የትምህርት አይነቶችን ይክፈቱ።'
-            : 'Choose your enrolled grade level (Grade 9 to 12) from the home page. Browse Mathematics, Physics, Chemistry, Biology, English and other subjects.',
-      },
-      {
-        'num': '2',
-        'title': isAm ? '2. ክፍል 1ን በነፃ አጠናቀው እራስዎን ይፈትሹ' : '2. Study Unit 1 100% Free',
-        'icon': Icons.check_circle_outline_rounded,
-        'color': const Color(0xFF10B981),
-        'text': isAm
-            ? 'የሁሉም የትምህርት አይነቶች ክፍል 1 (Unit 1) ማስታወሻዎች፣ የቪዲዮ ማብራሪያዎች እና የፈተና ጥያቄዎች በነፃ ክፍት የተደረጉ ናቸው። የትምህርቱን ጥራት በነፃ ሞክረው ያረጋግጡ።'
-            : 'Unit 1 for all subjects is completely free for all registered students. Access detailed textbook notes, video tutorials, and interactive quizzes without payment.',
-      },
-      {
-        'num': '3',
-        'title': isAm ? '3. ቀጣይ ክፍሎችን በ50 ብር ብቻ ይክፈቱ' : '3. Unlock Chapters for Only 50 ETB',
-        'icon': Icons.admin_panel_settings_rounded,
-        'color': const Color(0xFF0088CC),
-        'text': isAm
-            ? 'ክፍል 2 እና ቀጣዮቹን (Unit 2+) ሙሉ በሙሉ ለመክፈት በ 50 ብር ክፍያ ብቻ አድሚኑን በቴሌግራም ቀጥታ ያነጋግሩ (@smart_x_help)። ክፍያውን እንዳጠናቀቁ ፓኬጁ በስልክዎ ላይ በቋሚነት ይከፈትልዎታል።'
-            : 'To unlock Unit 2 and all remaining chapters for only 50 ETB, contact our official Telegram Admin (@smart_x_help). Your package will be unlocked for your device lifetime.',
-      },
-      {
-        'num': '4',
-        'title': isAm ? '4. ያለ ኢንተርኔት (100% Offline) ያጥኑ' : '4. Download & Study 100% Offline',
-        'icon': Icons.wifi_off_rounded,
-        'color': const Color(0xFF8B5CF6),
-        'text': isAm
-            ? 'አንዴ የወረዱ ማስታወሻዎች እና ጥያቄዎች ያለ ምንም ኢንተርኔት በማንኛውም ቦታ እና ጊዜ ይሰራሉ። የፈተና ውጤትዎን በስልክዎ መዝግበው ይከታተሉ።'
-            : 'Once unlocked and downloaded, study all short notes and practice quizzes completely offline without requiring any internet connection.',
-      },
-    ];
-
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: dialogBg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header Tag & Title
+              // Header
               Row(
                 children: [
                   Container(
@@ -83,7 +55,7 @@ class HowToStartBanner extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.help_outline_rounded,
+                      Icons.smart_display_rounded,
                       color: Color(0xFF0284C7),
                       size: 24,
                     ),
@@ -94,16 +66,16 @@ class HowToStartBanner extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isAm ? 'እንዴት ልጀምር? (ግልፅ መመሪያ)' : 'How to Start? (Clear Guide)',
-                          style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 15.5,
+                          isAm ? 'እንዴት ልጀምር? (የቪዲዮ መመሪያ)' : 'How to Start? (Video Tutorial)',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 15,
                             fontWeight: FontWeight.w900,
                             color: textPrimary,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          isAm ? 'የስማርት ለርን ኢትዮጵያ አጠቃቀም መመሪያ' : 'Smart Learn Ethiopia Usage Workflow',
+                          isAm ? 'የመተግበሪያውን አጠቃቀም በቪዲዮ ይመልከቱ' : 'Step-by-step video guide from Supabase',
                           style: GoogleFonts.notoSansEthiopic(
                             fontSize: 11.5,
                             color: textSecondary,
@@ -120,113 +92,178 @@ class HowToStartBanner extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
               const Divider(height: 1),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
 
-              // Steps List
-              ...steps.map((step) {
-                final Color itemColor = step['color'] as Color;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 18),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: itemColor.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            step['num'] as String,
-                            style: TextStyle(
-                              color: itemColor,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
+              // Dynamic Tutorial Video Card from Supabase Database
+              FutureBuilder<VideoModel>(
+                future: VideoService.fetchAppTutorialVideo(),
+                builder: (context, snapshot) {
+                  final video = snapshot.data ?? VideoService.getAppOverviewVideo();
+                  final String thumbUrl = video.thumbnailUrl;
+
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: !isLight ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFF0284C7).withValues(alpha: 0.35),
+                        width: 1.2,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          if (video.hasDirectStream) {
+                            final uri = Uri.parse(video.videoUrl ?? '');
+                            canLaunchUrl(uri).then((can) {
+                              if (can) {
+                                launchUrl(uri, mode: LaunchMode.externalApplication);
+                              }
+                            });
+                          } else if (video.youtubeVideoId.isNotEmpty) {
+                            YouTubeVideoPlayerDialog.show(
+                              context,
+                              video: video,
+                              isDarkMode: isDarkMode,
+                              languageCode: languageCode,
+                            );
+                          }
+                        },
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              step['title'] as String,
-                              style: GoogleFonts.notoSansEthiopic(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w800,
-                                color: textPrimary,
-                              ),
+                            Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                                  child: AspectRatio(
+                                    aspectRatio: 16 / 9,
+                                    child: thumbUrl.isNotEmpty
+                                        ? Image.network(
+                                            thumbUrl,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Container(
+                                              color: const Color(0xFF0F172A),
+                                              child: const Center(
+                                                child: Icon(Icons.video_library_rounded, color: Colors.white54, size: 40),
+                                              ),
+                                            ),
+                                          )
+                                        : Container(
+                                            color: const Color(0xFF0F172A),
+                                            child: const Center(
+                                              child: Icon(Icons.play_arrow_rounded, color: Colors.white54, size: 48),
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                                Container(
+                                  height: 140,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.35),
+                                  ),
+                                ),
+                                Container(
+                                  width: 52,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0284C7),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF0284C7).withValues(alpha: 0.5),
+                                        blurRadius: 14,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.play_arrow_rounded,
+                                    color: Colors.white,
+                                    size: 30,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              step['text'] as String,
-                              style: GoogleFonts.notoSansEthiopic(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: textSecondary,
-                                height: 1.45,
+                            Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      video.title.isNotEmpty
+                                          ? video.title
+                                          : (isAm
+                                              ? 'የመተግበሪያው አጠቃቀም ሙሉ ገለፃ ቪዲዮ'
+                                              : 'Smart Learn Master Tutorial Video'),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: textPrimary,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0284C7),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.play_circle_fill_rounded, size: 14, color: Colors.white),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          isAm ? 'እይ' : 'Watch',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                );
-              }),
-
-              const SizedBox(height: 8),
-
-              // Pricing highlight box (50 ETB / 50 ብር)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.monetization_on_rounded, color: Color(0xFF10B981), size: 24),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        isAm
-                            ? 'የክፍያ ዋጋ፡ ለእያንዳንዱ ትምህርት / ዩኒት 50 ብር ብቻ! ለመክፈል አድሚኑን @smart_x_help ያነጋግሩ።'
-                            : 'Price: Only 50 ETB per subject / unit! Contact admin @smart_x_help to unlock.',
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF10B981),
-                        ),
-                      ),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 18),
 
-              // Contact Admin Button (@smart_x_help)
+              // Action Buttons
               SizedBox(
-                height: 48,
+                height: 46,
                 child: ElevatedButton.icon(
-                  onPressed: () async {
+                  onPressed: () {
                     Navigator.of(ctx).pop();
-                    final Uri adminUri = Uri.parse('https://t.me/smart_x_help');
-                    if (await canLaunchUrl(adminUri)) {
-                      await launchUrl(adminUri, mode: LaunchMode.externalApplication);
-                    }
+                    LoginActivationScreen.push(
+                      context,
+                      isDarkMode: isDarkMode,
+                      languageCode: languageCode,
+                      preferredGrade: grade ?? 12,
+                    );
                   },
-                  icon: const Icon(Icons.person_outline_rounded, size: 20, color: Colors.white),
+                  icon: const Icon(Icons.login_rounded, size: 18, color: Colors.white),
                   label: Text(
-                    isAm ? 'አድሚኑን በቴሌግራም ያነጋግሩ (@smart_x_help)' : 'Contact Admin on Telegram (@smart_x_help)',
+                    isAm ? 'በአካውንት ይግቡ (Student Login)' : 'Student Login',
                     style: GoogleFonts.notoSansEthiopic(
                       fontWeight: FontWeight.w900,
                       fontSize: 13,
@@ -234,7 +271,7 @@ class HowToStartBanner extends StatelessWidget {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0088CC),
+                    backgroundColor: const Color(0xFF0284C7),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
@@ -244,23 +281,23 @@ class HowToStartBanner extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              // Join Community Channel Button (https://t.me/SmartX_Discussion)
+              // Telegram Admin Contact
               SizedBox(
                 height: 44,
                 child: OutlinedButton.icon(
                   onPressed: () async {
                     Navigator.of(ctx).pop();
-                    final Uri channelUri = Uri.parse('https://t.me/SmartX_Discussion');
-                    if (await canLaunchUrl(channelUri)) {
-                      await launchUrl(channelUri, mode: LaunchMode.externalApplication);
+                    final Uri adminUri = Uri.parse('https://t.me/smart_x_help');
+                    if (await canLaunchUrl(adminUri)) {
+                      await launchUrl(adminUri, mode: LaunchMode.externalApplication);
                     }
                   },
-                  icon: const Icon(Icons.groups_rounded, size: 18, color: Color(0xFF0088CC)),
+                  icon: const Icon(Icons.support_agent_rounded, size: 18, color: Color(0xFF0088CC)),
                   label: Text(
-                    isAm ? 'የቴሌግራም ቻናላችንን ይቀላቀሉ' : 'Join Telegram Discussion Channel',
+                    isAm ? 'አድሚኑን በቴሌግራም ያግኙ (@smart_x_help)' : 'Contact Admin on Telegram',
                     style: GoogleFonts.notoSansEthiopic(
                       fontWeight: FontWeight.w800,
-                      fontSize: 12.5,
+                      fontSize: 12,
                       color: const Color(0xFF0088CC),
                     ),
                   ),
@@ -274,6 +311,14 @@ class HowToStartBanner extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showHowToStartPopUp(BuildContext context) {
+    showUsageGuide(
+      context,
+      isDarkMode: isDarkMode,
+      languageCode: languageCode,
     );
   }
 
@@ -318,7 +363,7 @@ class HowToStartBanner extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
-                    Icons.help_outline_rounded,
+                    Icons.smart_display_rounded,
                     color: Color(0xFF0284C7),
                     size: 22,
                   ),
@@ -326,8 +371,8 @@ class HowToStartBanner extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    isAm ? 'እንዴት ልጀምር? (ሙሉ ግልፅ መመሪያ)' : 'How to Start? (Clear Usage Guide)',
-                    style: GoogleFonts.notoSansEthiopic(
+                    isAm ? 'እንዴት ልጀምር? (የቪዲዮ አጠቃቀም መመሪያ)' : 'How to Start? (Video Tutorial)',
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: textPrimary,
@@ -341,8 +386,8 @@ class HowToStartBanner extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    isAm ? 'እይ (View)' : 'View',
-                    style: GoogleFonts.notoSansEthiopic(
+                    isAm ? 'እይ (Watch)' : 'Watch',
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                       color: const Color(0xFF0284C7),

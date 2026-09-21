@@ -20,6 +20,8 @@ class PackageModel {
   final String contactInstruction;
   final String contactInstructionAm;
 
+  String get priceDisplay => qualitativeTierAm;
+
   const PackageModel({
     required this.id,
     required this.title,

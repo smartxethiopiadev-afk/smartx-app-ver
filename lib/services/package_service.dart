@@ -7,6 +7,10 @@ class PackageService {
     return PackageModel.getPackagesForGrade(grade, subject: subject);
   }
 
+  static Future<List<PackageModel>> getAvailablePackages({int grade = 12, String? subject}) async {
+    return fetchPackagesForGrade(grade, subject: subject);
+  }
+
   static Future<List<PackageModel>> fetchPackagesForGrade(int grade, {String? subject}) async {
     try {
       final supabase = Supabase.instance.client;

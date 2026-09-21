@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'account_upgrade_dialog.dart';
+import '../screens/login_activation_screen.dart';
+import 'how_to_start_banner.dart';
 
 class LockedUnitDialog extends StatelessWidget {
   final int grade;
@@ -49,55 +48,28 @@ class LockedUnitDialog extends StatelessWidget {
     );
   }
 
-  Future<void> _contactTelegramAdmin(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    final userName = prefs.getString('user_fullName') ?? prefs.getString('user_name') ?? 'ተማሪ';
-    final userPhone = prefs.getString('user_phoneNumber') ?? prefs.getString('phone_number') ?? '';
-
-    final String message =
-        'ሰላም አድሚን (@smart_x_help)፣ የክፍል $grade $subject ክፍል $unitNumber በ 50 ብር ክፍያ ለማስከፈት ፈልጌ ነበር። የተማሪ ስም: $userName፣ ስልክ ቁጥር: $userPhone';
-
-    final Uri telegramUri =
-        Uri.parse('https://t.me/smart_x_help?text=${Uri.encodeComponent(message)}');
-
-    try {
-      if (await canLaunchUrl(telegramUri)) {
-        await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
-      } else {
-        await launchUrl(telegramUri, mode: LaunchMode.platformDefault);
-      }
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ቴሌግራም ላይ @smart_x_help ያነጋግሩ'),
-            backgroundColor: Color(0xFF0088CC),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final bool isLight = !isDarkMode;
+    final bool isAm = languageCode == 'am';
+
+    final Color dialogBg = isLight ? Colors.white : const Color(0xFF1E293B);
+    final Color borderColor = isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155);
+    final Color textPrimary = isLight ? const Color(0xFF0F172A) : Colors.white;
+    final Color textSecondary = isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
 
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 400),
+        constraints: const BoxConstraints(maxWidth: 420),
         decoration: BoxDecoration(
-          color: isLight ? Colors.white : const Color(0xFF1E293B),
+          color: dialogBg,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-            width: 1.5,
-          ),
+          border: Border.all(color: borderColor, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
+              color: Colors.black.withValues(alpha: isLight ? 0.08 : 0.35),
               blurRadius: 28,
               offset: const Offset(0, 10),
             ),
@@ -108,55 +80,59 @@ class LockedUnitDialog extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Lock Icon Header
+              // Lock Icon Header with glowing accent ring
               Container(
-                width: 64,
-                height: 64,
+                width: 68,
+                height: 68,
                 decoration: BoxDecoration(
                   color: const Color(0xFFEF4444).withValues(alpha: 0.12),
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.25),
+                    width: 2,
+                  ),
                 ),
                 child: const Icon(
-                  Icons.lock_rounded,
+                  Icons.lock_outline_rounded,
                   color: Color(0xFFEF4444),
                   size: 34,
                 ),
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
 
               // Title
               Text(
-                'ይህ ክፍል ተቆልፏል 🔒',
+                isAm ? 'ይህ ክፍል ተቆልፏል 🔒' : 'Chapter Locked 🔒',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 18,
+                  fontSize: 18.5,
                   fontWeight: FontWeight.w900,
-                  color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                  color: textPrimary,
                 ),
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
 
-              // Price Badge: 50 ETB (50 ብር)
+              // Badge: Unit 1 Free Information
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF10B981), width: 1.2),
+                  color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.stars_rounded, color: Color(0xFF10B981), size: 18),
+                    const Icon(Icons.check_circle_rounded, color: Color(0xFF0284C7), size: 15),
                     const SizedBox(width: 6),
                     Text(
-                      'የመክፈቻ ዋጋ፡ 50 ብር ብቻ (50 ETB)',
+                      isAm ? 'ክፍል 1 ለሁሉም 100% ነፃ ነው' : 'Unit 1 is 100% Free',
                       style: GoogleFonts.notoSansEthiopic(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF10B981),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0284C7),
                       ),
                     ),
                   ],
@@ -165,37 +141,51 @@ class LockedUnitDialog extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              // Short Copy
+              // Informative description
               Text(
-                'ክፍል 1 ለሁሉም ተማሪዎች 100% ነፃ ነው! ክፍል $unitNumber እና ቀጣዮቹን ክፍሎች በ 50 ብር ብቻ ለማስከፈት አድሚኑን በቴሌግራም (@smart_x_help) ያነጋግሩ።',
+                isAm
+                    ? 'ክፍል $unitNumber እና ቀጣዮቹን ክፍሎች ለመክፈት አካውንትዎን ያስገቡ (Login ያድርጉ) ወይም የመተግበሪያውን አጠቃቀም መመሪያ (How to Start) ይመልከቱ።'
+                    : 'To access Unit $unitNumber and subsequent units, please log in with your registered student account or check our usage guide.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.notoSansEthiopic(
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isLight ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
-                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                  color: textSecondary,
+                  height: 1.5,
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
 
-              // Primary Action Button: "አድሚኑን በቴሌግራም ያነጋግሩ (@smart_x_help)"
+              // 1. Primary Action: Login (ግባ / Login)
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton.icon(
-                  onPressed: () => _contactTelegramAdmin(context),
-                  icon: const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    final loggedIn = await LoginActivationScreen.push(
+                      context,
+                      isDarkMode: isDarkMode,
+                      languageCode: languageCode,
+                      preferredGrade: grade,
+                      preferredSubject: subject,
+                    );
+                    if (loggedIn == true) {
+                      onUnlocked?.call();
+                    }
+                  },
+                  icon: const Icon(Icons.login_rounded, size: 18, color: Colors.white),
                   label: Text(
-                    'አድሚኑን በቴሌግራም ያነጋግሩ (@smart_x_help)',
+                    isAm ? 'በአካውንት ይግቡ (Login)' : 'Student Login',
                     style: GoogleFonts.notoSansEthiopic(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14,
                       color: Colors.white,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0088CC),
+                    backgroundColor: const Color(0xFF0284C7),
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -207,34 +197,30 @@ class LockedUnitDialog extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              // Verify Telegram Purchase / Upgrade button
+              // 2. Secondary Action: How to Start (እንዴት ልጀምር? / How to Start)
               SizedBox(
                 width: double.infinity,
-                height: 44,
+                height: 46,
                 child: OutlinedButton.icon(
-                  onPressed: () async {
+                  onPressed: () {
                     Navigator.of(context).pop();
-                    final res = await AccountUpgradeDialog.show(
+                    HowToStartBanner.showUsageGuide(
                       context,
                       isDarkMode: isDarkMode,
                       languageCode: languageCode,
-                      onSuccess: onUnlocked,
                     );
-                    if (res == true) {
-                      onUnlocked?.call();
-                    }
                   },
-                  icon: const Icon(Icons.verified_user_rounded, size: 18, color: Color(0xFF0284C7)),
+                  icon: const Icon(Icons.help_outline_rounded, size: 18, color: Color(0xFF10B981)),
                   label: Text(
-                    'በቴሌግራም ከፍለዋል? አካውንትዎን ያረጋግጡ',
+                    isAm ? 'እንዴት ልጀምር? (How to Start)' : 'How to Start Guide',
                     style: GoogleFonts.notoSansEthiopic(
                       fontWeight: FontWeight.w800,
-                      fontSize: 12.5,
-                      color: const Color(0xFF0284C7),
+                      fontSize: 13,
+                      color: const Color(0xFF10B981),
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF0284C7), width: 1.5),
+                    side: const BorderSide(color: Color(0xFF10B981), width: 1.5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -242,19 +228,19 @@ class LockedUnitDialog extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
 
-              // Secondary Action Button: "ዝጋ (Close)"
+              // 3. Dismiss Action: Close
               SizedBox(
                 width: double.infinity,
-                height: 40,
+                height: 38,
                 child: TextButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: TextButton.styleFrom(
-                    foregroundColor: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                    foregroundColor: textSecondary,
                   ),
                   child: Text(
-                    'ዝጋ (Close)',
+                    isAm ? 'ዝጋ (Close)' : 'Close',
                     style: GoogleFonts.notoSansEthiopic(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,

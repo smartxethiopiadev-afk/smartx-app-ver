@@ -134,7 +134,7 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
     final String selectedPkgTitle = _selectedPackage.title;
 
     final String message =
-        "ሰላም ስማርት ለርን አድሚን (@smart_x_help)፣ $selectedPkgTitle በ 50 ብር ክፍያ ማስከፈት እፈልጋለሁ። የተማሪ ስም: $cleanName፣ ስልክ ቁጥር: $cleanPhone።";
+        "ሰላም ስማርት ለርን አድሚን (@smart_x_help)፣ $selectedPkgTitle ክፍያ ፈጽሜ ማስከፈት እፈልጋለሁ። የተማሪ ስም: $cleanName፣ ስልክ ቁጥር: $cleanPhone።";
 
     final encodedMsg = Uri.encodeComponent(message);
     final Uri directTelegramUri = Uri.parse("https://t.me/smart_x_help?text=$encodedMsg");
