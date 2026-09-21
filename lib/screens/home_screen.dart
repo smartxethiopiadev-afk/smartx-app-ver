@@ -27,7 +27,6 @@ import '../widgets/academic_progress_charts.dart';
 import '../main.dart';
 import '../services/analytics_service.dart';
 import '../widgets/account_upgrade_dialog.dart';
-import '../widgets/startup_tutorial_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool isDarkMode;

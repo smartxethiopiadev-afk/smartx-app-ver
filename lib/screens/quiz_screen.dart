@@ -36,7 +36,6 @@ class QuizScreen extends StatefulWidget {
 
 class _QuizScreenState extends State<QuizScreen> {
   bool _isLoading = true;
-  bool _isSubmittingScore = false;
   String? _errorMessage;
   List<QuestionModel> _questions = [];
   
@@ -165,11 +164,11 @@ class _QuizScreenState extends State<QuizScreen> {
 
       final List<QuestionModel> sequentialQuestions = List<QuestionModel>.from(selectedQuestions);
       sequentialQuestions.sort((a, b) {
-        if (a.orderIndex != null && b.orderIndex != null) {
-          return a.orderIndex!.compareTo(b.orderIndex!);
+        if (a.orderIndex != b.orderIndex) {
+          return a.orderIndex.compareTo(b.orderIndex);
         }
-        if (a.questionNumber != null && b.questionNumber != null) {
-          return a.questionNumber!.compareTo(b.questionNumber!);
+        if (a.questionNumber != b.questionNumber) {
+          return a.questionNumber.compareTo(b.questionNumber);
         }
         return a.id.compareTo(b.id);
       });
@@ -755,21 +754,6 @@ class _QuizScreenState extends State<QuizScreen> {
       }
     } catch (_) {}
 
-    void restartQuiz() {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => QuizScreen(
-            grade: widget.grade,
-            subject: widget.subject,
-            unit: widget.unit,
-            mode: widget.mode,
-            isOffline: widget.isOffline,
-            offlineUnitId: widget.offlineUnitId,
-          ),
-        ),
-      );
-    }
-
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final String langCode = AppStateProvider.of(context).languageCode;
 
@@ -1346,6 +1330,8 @@ class _QuizScreenState extends State<QuizScreen> {
         return const Color(0xFF10B981); // Emerald
       case QuestionType.blankSpace:
         return const Color(0xFF8B5CF6); // Purple
+      case QuestionType.matching:
+        return const Color(0xFFF59E0B); // Amber
     }
   }
 
@@ -1357,6 +1343,8 @@ class _QuizScreenState extends State<QuizScreen> {
         return isAm ? "እውነት / ሐሰት" : "True / False";
       case QuestionType.blankSpace:
         return isAm ? "ባዶ ቦታ ሙላ" : "Fill in the Blank";
+      case QuestionType.matching:
+        return isAm ? "ማዛመድ" : "Matching";
     }
   }
 
@@ -1806,7 +1794,6 @@ class _QuizScreenState extends State<QuizScreen> {
 
   Widget _buildFinishedSection() {
     if (_questions.isEmpty) return const SizedBox.shrink();
-    final bool isLight = Theme.of(context).brightness == Brightness.light;
     final bool isAm = AppStateProvider.of(context).languageCode == 'am';
 
     return Padding(

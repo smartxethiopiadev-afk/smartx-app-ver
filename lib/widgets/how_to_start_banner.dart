@@ -4,7 +4,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/video_model.dart';
 import '../services/video_service.dart';
 import '../screens/login_activation_screen.dart';
-import 'youtube_video_player_dialog.dart';
 
 /// Interactive "How to Start" widget that displays a video-first guide
 /// fetched directly from the Supabase database.
