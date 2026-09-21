@@ -770,6 +770,9 @@ class _QuizScreenState extends State<QuizScreen> {
       );
     }
 
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final String langCode = AppStateProvider.of(context).languageCode;
+
     QuizResultDialog.show(
       context,
       score: score,
@@ -778,9 +781,8 @@ class _QuizScreenState extends State<QuizScreen> {
       grade: widget.grade,
       unit: widget.unit,
       subject: widget.subject,
-      languageCode: widget.languageCode,
-      themeColor: widget.themeColor,
-      isDark: !isLight,
+      languageCode: langCode,
+      isDark: isDark,
       onReview: () {
         Navigator.of(context).pop();
         setState(() {
