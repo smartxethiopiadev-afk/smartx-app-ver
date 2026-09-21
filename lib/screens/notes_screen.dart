@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../services/offline_manager.dart';
 import '../services/analytics_service.dart';
 import '../widgets/math_text.dart';
+import '../widgets/in_app_pdf_viewer_dialog.dart';
 import '../main.dart';
 
 enum NotesErrorType {
@@ -405,26 +406,15 @@ class _NotesScreenState extends State<NotesScreen> {
       return;
     }
 
-    try {
-      final Uri uri = Uri.parse(pdfUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        _showFloatingSnackbar(
-          widget.languageCode == 'am'
-              ? 'ፒዲኤፉን መክፈት አልተቻለም'
-              : 'Could not open PDF file',
-          isError: true,
-        );
-      }
-    } catch (e) {
-      _showFloatingSnackbar(
-        widget.languageCode == 'am'
-            ? 'የማስፈንጠሪያ ስህተት አጋጥሟል'
-            : 'Error launching PDF URL',
-        isError: true,
-      );
-    }
+    final currentNote = _notesList.isNotEmpty ? _notesList[_currentPageIndex] : {};
+    final title = currentNote['title']?.toString() ?? widget.unitTitle;
+
+    InAppPdfViewerDialog.show(
+      context,
+      pdfUrl: pdfUrl,
+      title: title,
+      isDark: _isDarkMode,
+    );
   }
 
   void _shareNote() {
@@ -1160,6 +1150,53 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 
   Widget _buildErrorView(Color textColor, Color subColor, bool isAmharic) {
+    if (_errorType == NotesErrorType.emptyData) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: widget.themeColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.hourglass_top_rounded,
+                  size: 52,
+                  color: widget.themeColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                isAmharic ? 'በቅርብ ቀን (Coming Soon)' : 'Coming Soon',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isAmharic
+                    ? 'ለዚህ ዩኒት ማስታወሻና ፒዲኤፍ በቅርብ ቀን ይለቀቃል።'
+                    : 'Notes and PDF for this unit are coming soon.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: subColor,
+                  height: 1.45,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     String title = isAmharic ? 'ማስታወሻ አልተገኘም' : 'No Short Notes Found';
     String desc = isAmharic
         ? 'ለዚህ ዩኒት ማስታወሻ በሱፓቤዝ ዳታቤዝ ውስጥ ገና አልተካተተም። እባክዎ በSQL table ላይ የፒዲኤፍ ሊንክ ያስገቡ።'
