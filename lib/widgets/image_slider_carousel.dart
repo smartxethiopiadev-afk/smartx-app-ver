@@ -22,7 +22,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
 
   final List<Map<String, dynamic>> _slidesData = [
     {
-      'assetPath': 'assets/images/home_banner1.png',
+      'assetPath': 'assets/images/hero_banner_edu.jpg',
       'titleEn': 'Smart Learn Ethiopian Hub',
       'titleAm': 'ስማርት ለርን ኢትዮጵያን የመማሪያ ማዕከል',
       'descEn': 'Master Grade 9-12 curriculum with concise unit notes, formulas & quizzes.',
@@ -34,7 +34,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
       'icon': Icons.auto_stories_rounded,
     },
     {
-      'assetPath': 'assets/images/home_banner3.png',
+      'assetPath': 'assets/images/hero_banner_edu.jpg',
       'titleEn': 'National Exam Question Bank',
       'titleAm': 'የብሔራዊ ፈተና ጥያቄዎችና ሞዴሎች',
       'descEn': 'Timed matric practice tests with detailed step-by-step explanations.',
@@ -46,7 +46,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
       'icon': Icons.quiz_rounded,
     },
     {
-      'assetPath': 'assets/images/home_banner5.png',
+      'assetPath': 'assets/images/hero_banner_edu.jpg',
       'titleEn': '100% Offline Study Mode',
       'titleAm': 'ያለ ኢንተርኔት 100% ከመስመር ውጭ',
       'descEn': 'Download your chapters once and study anywhere without internet connection.',
@@ -58,7 +58,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
       'icon': Icons.offline_bolt_rounded,
     },
     {
-      'assetPath': 'assets/images/home_banner1.png',
+      'assetPath': 'assets/images/hero_banner_edu.jpg',
       'titleEn': 'Performance & Quiz Analytics',
       'titleAm': 'የትምህርት እድገት እና የውጤት ትንታኔ',
       'descEn': 'Track study speed, test ratings, and chapter mastery progression in real time.',

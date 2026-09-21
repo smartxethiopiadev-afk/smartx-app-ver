@@ -1082,71 +1082,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // Telegram Admin Support Banner
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0088CC).withValues(alpha: isLight ? 0.08 : 0.16),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: const Color(0xFF0088CC).withValues(alpha: isLight ? 0.3 : 0.5),
-                        ),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(14),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(14),
-                          onTap: () async {
-                            final Uri uri = Uri.parse('https://t.me/smart_x_help');
-                            if (await canLaunchUrl(uri)) {
-                              await launchUrl(uri, mode: LaunchMode.externalApplication);
-                            }
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(7),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF0088CC),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.send_rounded, color: Colors.white, size: 16),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        isAmharic ? 'የቪዲዮ ጥያቄ ወይም እገዛ (Telegram Support)' : 'Video Lessons Help & Telegram Admin',
-                                        style: TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w800,
-                                          color: textColor,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        isAmharic ? 'አድሚኑን በቴሌግራም ያናግሩ: @smart_x_help' : 'Contact admin directly on Telegram: @smart_x_help',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF0088CC),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Icon(Icons.chevron_right_rounded, color: Color(0xFF0088CC), size: 20),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
                     _buildGradeVideoLandingCard(gradeNum: 9, isLight: isLight, isAmharic: isAmharic),
                     _buildGradeVideoLandingCard(gradeNum: 10, isLight: isLight, isAmharic: isAmharic),
                     _buildGradeVideoLandingCard(gradeNum: 11, isLight: isLight, isAmharic: isAmharic),
@@ -3957,56 +3892,6 @@ class HelpSupportScreen extends StatelessWidget {
                   const SizedBox(height: 16.0),
                   Divider(color: borderColor, height: 1.0),
                   const SizedBox(height: 14.0),
-                  
-                  // Telegram Direct Developer Button (@HabIT_Dev)
-                  InkWell(
-                    onTap: () async {
-                      final uri = Uri.parse('https://t.me/HabIT_Dev');
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(12.0),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0088CC).withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12.0),
-                        border: Border.all(
-                          color: const Color(0xFF0088CC).withValues(alpha: 0.25),
-                          width: 1.0,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.telegram_rounded,
-                            color: Color(0xFF0088CC),
-                            size: 22,
-                          ),
-                          const SizedBox(width: 10.0),
-                          Text(
-                            languageCode == 'en' ? 'Telegram Developer' : 'አልሚውን በቴሌግራም',
-                            style: const TextStyle(
-                              color: Color(0xFF0088CC),
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13.5,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '@HabIT_Dev',
-                            style: TextStyle(
-                              color: textColor,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13.0,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10.0),
                   
                   // Phone Call / SMS (+251900297614)
                   InkWell(

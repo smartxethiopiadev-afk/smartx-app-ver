@@ -25,6 +25,7 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
 
   final List<Map<String, dynamic>> _videoBanners = [
     {
+      'assetPath': 'assets/images/video_hero_banner.jpg',
       'titleEn': 'Smart Learn Ethiopian Video Hub',
       'titleAm': 'ስማርት ለርን የቪዲዮ ትምህርቶች (Grade 9-12)',
       'descEn': 'High-definition chapter walkthroughs tailored for Ethiopian national curricula.',
@@ -36,6 +37,7 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
       'icon': Icons.ondemand_video_rounded,
     },
     {
+      'assetPath': 'assets/images/video_hero_banner.jpg',
       'titleEn': 'Step-by-Step Problem Solving',
       'titleAm': 'የፈተና ጥያቄዎች ደረጃ በደረጃ አሰራር',
       'descEn': 'Master tricky physics derivations, math proofs, and chemistry reactions.',
@@ -47,6 +49,7 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
       'icon': Icons.psychology_rounded,
     },
     {
+      'assetPath': 'assets/images/video_hero_banner.jpg',
       'titleEn': 'Concept Walkthroughs & Formulas',
       'titleAm': 'የቁልፍ ፎርሙላዎች እና ፅንሰ ሀሳቦች ዳሰሳ',
       'descEn': 'Grasp foundational science rules and derivations in fast 15-30 min sessions.',
@@ -58,6 +61,7 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
       'icon': Icons.auto_stories_rounded,
     },
     {
+      'assetPath': 'assets/images/video_hero_banner.jpg',
       'titleEn': 'National Matric Model Video Analysis',
       'titleAm': 'የማትሪክ ፈተና ሞዴል ጥያቄዎች ትንታኔ',
       'descEn': 'In-depth analysis of past national exams with expert tips for maximum score.',
@@ -117,19 +121,23 @@ class _VideoSliderCarouselState extends State<VideoSliderCarousel> {
                 borderRadius: BorderRadius.circular(18.0),
                 child: Stack(
                   children: [
-                    // Deep Rich Gradient Base
+                    // Base background image
                     Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              accentColor,
-                              secondaryColor,
-                              const Color(0xFF070C18),
-                            ],
-                            stops: const [0.0, 0.45, 1.0],
+                      child: Image.asset(
+                        slide['assetPath']!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                accentColor,
+                                secondaryColor,
+                                const Color(0xFF070C18),
+                              ],
+                              stops: const [0.0, 0.45, 1.0],
+                            ),
                           ),
                         ),
                       ),
