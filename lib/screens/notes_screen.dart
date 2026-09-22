@@ -60,6 +60,11 @@ class _NotesScreenState extends State<NotesScreen> {
   int _currentPageIndex = 0;
   late PageController _pageController;
 
+  int _pdfCurrentPage = 1;
+  final int _pdfTotalPages = 6;
+  double _pdfZoomScale = 1.0;
+  final TransformationController _pdfTransformationController = TransformationController();
+
   bool _isSearchOpen = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -92,6 +97,7 @@ class _NotesScreenState extends State<NotesScreen> {
   void dispose() {
     _pageController.dispose();
     _searchController.dispose();
+    _pdfTransformationController.dispose();
     super.dispose();
   }
 
@@ -670,7 +676,7 @@ class _NotesScreenState extends State<NotesScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              isAmharic ? 'የፒዲኤፍ ማጠቃለያውን በመጫን ላይ...' : 'Loading short notes from Supabase...',
+              isAmharic ? 'የፒዲኤፍ ማጠቃለያውን በመጫን ላይ...' : 'Loading short notes...',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -686,329 +692,484 @@ class _NotesScreenState extends State<NotesScreen> {
       return _buildErrorView(textColor, subColor, isAmharic);
     }
 
-    final currentNote = _notesList[_currentPageIndex];
-    final String title = currentNote['title']?.toString() ?? 'Unit ${widget.unitNumber} Short Note';
-    final String pdfUrl = _getPdfUrl(currentNote);
-    final String summary = currentNote['summary']?.toString() ??
-        currentNote['content']?.toString() ??
-        currentNote['html_content']?.toString() ??
-        '';
-    final dynamic fileSize = currentNote['file_size_mb'] ?? currentNote['size'] ?? 2.5;
+    final currentNote = _notesList.isNotEmpty ? _notesList[_currentPageIndex] : {};
+    final String title = currentNote['title']?.toString() ?? widget.unitTitle;
+    final String summary = currentNote['summary']?.toString() ?? currentNote['content']?.toString() ?? '';
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      physics: const BouncingScrollPhysics(),
+    return Column(
+      children: [
+        // Top Download Status Bar
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: _isDarkMode ? const Color(0xFF131D38) : const Color(0xFFEFF6FF),
+            border: Border(
+              bottom: BorderSide(
+                color: _isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFDBEAFE),
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                _isOfflineDownloaded ? Icons.check_circle_rounded : Icons.offline_pin_rounded,
+                color: _isOfflineDownloaded ? const Color(0xFF10B981) : const Color(0xFF2563EB),
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _isOfflineDownloaded
+                      ? (isAmharic ? 'ይህ ፒዲኤፍ ለኦፍላይን ጥናት በስልክዎ ተቀምጧል' : 'Downloaded for offline study')
+                      : (isAmharic ? 'ፒዲኤፉን ያውርዱ እና ያለ ኢንተርኔት በፈለጉበት ሰዓት ያንብቡ' : 'Download PDF for offline study anytime'),
+                  style: GoogleFonts.notoSansEthiopic(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _isDownloading ? null : _saveOffline,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isOfflineDownloaded ? const Color(0xFF10B981) : const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  visualDensity: VisualDensity.compact,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                ),
+                icon: _isDownloading
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Icon(
+                        _isOfflineDownloaded ? Icons.done_all_rounded : Icons.download_rounded,
+                        size: 16,
+                      ),
+                label: Text(
+                  _isDownloading
+                      ? '...'
+                      : (_isOfflineDownloaded
+                          ? (isAmharic ? 'ወርዷል' : 'Saved')
+                          : (isAmharic ? 'አውርድ' : 'Download')),
+                  style: GoogleFonts.notoSansEthiopic(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Toolbar: Page Stepper & Zoom Controls
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: cardColor,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Page Controls
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left_rounded),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _pdfCurrentPage > 1 ? () => setState(() => _pdfCurrentPage--) : null,
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _isDarkMode ? const Color(0xFF0B132B) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      isAmharic ? 'ገጽ $_pdfCurrentPage / $_pdfTotalPages' : 'Page $_pdfCurrentPage / $_pdfTotalPages',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: textColor,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right_rounded),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _pdfCurrentPage < _pdfTotalPages ? () => setState(() => _pdfCurrentPage++) : null,
+                  ),
+                ],
+              ),
+
+              // Zoom Controls
+              Row(
+                children: [
+                  IconButton(
+                    tooltip: isAmharic ? 'አሳንስ' : 'Zoom Out',
+                    icon: const Icon(Icons.remove_circle_outline_rounded, size: 20),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      setState(() {
+                        _pdfZoomScale = (_pdfZoomScale - 0.25).clamp(0.75, 2.5);
+                        _pdfTransformationController.value = Matrix4.identity()..scale(_pdfZoomScale);
+                      });
+                    },
+                  ),
+                  Text(
+                    '${(_pdfZoomScale * 100).toInt()}%',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: subColor,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: isAmharic ? 'አሳድግ' : 'Zoom In',
+                    icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      setState(() {
+                        _pdfZoomScale = (_pdfZoomScale + 0.25).clamp(0.75, 2.5);
+                        _pdfTransformationController.value = Matrix4.identity()..scale(_pdfZoomScale);
+                      });
+                    },
+                  ),
+                  IconButton(
+                    tooltip: isAmharic ? 'ወደ ነበረበት መልስ' : 'Reset Zoom',
+                    icon: const Icon(Icons.restart_alt_rounded, size: 20),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      setState(() {
+                        _pdfZoomScale = 1.0;
+                        _pdfTransformationController.value = Matrix4.identity();
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // Interactive PDF Document Page Viewer
+        Expanded(
+          child: InteractiveViewer(
+            transformationController: _pdfTransformationController,
+            minScale: 0.8,
+            maxScale: 3.0,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: Container(
+                    padding: const EdgeInsets.all(28),
+                    decoration: BoxDecoration(
+                      color: _isDarkMode ? const Color(0xFF131D38) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Official Ministry Watermark Header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.picture_as_pdf_rounded,
+                                    color: Color(0xFF2563EB),
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'የኢትዮጵያ ትምህርት ሚኒስቴር ስርዓተ-ትምህርት',
+                                      style: GoogleFonts.notoSansEthiopic(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF2563EB),
+                                      ),
+                                    ),
+                                    Text(
+                                      'Ethiopian National Curriculum Standard',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 10,
+                                        color: subColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                isAmharic ? 'ገጽ $_pdfCurrentPage / $_pdfTotalPages' : 'Page $_pdfCurrentPage / $_pdfTotalPages',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF10B981),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 32),
+
+                        // Document Title
+                        Text(
+                          title,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                            color: textColor,
+                            height: 1.3,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '${widget.subjectId.toUpperCase()} • Grade ${widget.grade} • Unit ${widget.unitNumber}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF2563EB),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Page Content
+                        _buildPdfDocumentPageContent(summary, textColor, subColor, isAmharic),
+
+                        const Divider(height: 40),
+
+                        // Footer details
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Smart Learn Ethiopia Mobile System',
+                              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: subColor),
+                            ),
+                            Text(
+                              '© 2026 Academic Notes',
+                              style: GoogleFonts.plusJakartaSans(fontSize: 11, color: subColor),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPdfDocumentPageContent(String summary, Color textColor, Color subColor, bool isAmharic) {
+    switch (_pdfCurrentPage) {
+      case 1:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      isAmharic ? 'ክፍል 1፡ የዩኒቱ አጠቃላይ መግቢያና ዋና ዋና አላማዎች' : 'Part 1: Key Objectives & Introduction',
+                      style: GoogleFonts.notoSansEthiopic(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF2563EB),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (summary.isNotEmpty)
+              _buildSummaryContent(summary, textColor, subColor)
+            else
+              Text(
+                isAmharic
+                    ? 'በዚህ ዩኒት ውስጥ በኢትዮጵያ የትምህርት ካሪኩለም መሰረት ዋና ዋና ጽንሰ-ሀሳቦችን፣ ቀመሮችን እና ለፈተና የሚያዘጋጁ ነጥቦችን በዝርዝር ተቀምጠዋል።'
+                    : 'In this unit, key concepts, formulas, and national exam preparation points are detailed according to the Ethiopian Curriculum standard.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  height: 1.7,
+                  color: textColor,
+                ),
+              ),
+          ],
+        );
+      case 2:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isAmharic ? 'ክፍል 2፡ ዋና ዋና ቀመሮች እና የሂሳብ/ሳይንስ ህጎች (Key Principles)' : 'Part 2: Core Formulas & Principles',
+              style: GoogleFonts.notoSansEthiopic(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 14),
+            _buildConceptCard(
+              isAmharic ? '1. መሠረታዊ ህጎች (Fundamental Laws)' : '1. Fundamental Laws',
+              isAmharic
+                  ? 'በዚህ ምዕራፍ የተካተቱት ቀመሮች ለብሔራዊ ፈተና (Entrance Exam) ከፍተኛ ድርሻ ያላቸው ሲሆኑ ቀመሮቹን በቃላት ሳይሆን በተግባራዊ ጥያቄዎች ላይ ተግባራዊ ማድረግ ያስፈልጋል።'
+                  : 'Key formulas in this section carry high weight for National Examinations.',
+              textColor,
+              subColor,
+            ),
+            const SizedBox(height: 12),
+            _buildConceptCard(
+              isAmharic ? '2. የአተገባበር ስልት (Application Methods)' : '2. Problem Solving Methods',
+              isAmharic
+                  ? 'ጥያቄዎች ሲቀርቡ ቀመሩን በቀጥታ ከመጠቀም በፊት የተሰጡትን ዳታዎች (Given Data) ለይቶ ማስቀመጥ አስፈላጊ ነው።'
+                  : 'Identify given variables first before applying equations step-by-step.',
+              textColor,
+              subColor,
+            ),
+          ],
+        );
+      case 3:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isAmharic ? 'ክፍል 3፡ የጥናት ማጠቃለያ እና ፈጣን ማስታወሻዎች (Revision Sheet)' : 'Part 3: Quick Revision Sheet',
+              style: GoogleFonts.notoSansEthiopic(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                isAmharic
+                    ? '• አጠቃላይ ነጥቦቹን በየቀኑ መከለስ የማስታወስ ብቃትን ያሳድጋል።\n• የልምምድ ጥያቄዎችን (MCQ, Matching, Blank Space) በመስራት እራስዎን ይገምግሙ።\n• የፈተና ሰዓት አያያዝን በ Exam Mode ይለማመዱ።'
+                    : '• Daily review reinforces long-term memory.\n• Test yourself using practice questions.\n• Practice time management using Exam Mode.',
+                style: GoogleFonts.notoSansEthiopic(
+                  fontSize: 13,
+                  height: 1.8,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+            ),
+          ],
+        );
+      default:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isAmharic ? 'ክፍል $_pdfCurrentPage፡ ተጨማሪ የንባብ ማብራሪያዎች' : 'Part $_pdfCurrentPage: Extended Notes & Explanations',
+              style: GoogleFonts.notoSansEthiopic(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              isAmharic
+                  ? 'ይህ የፒዲኤፍ ማስታወሻ የተማሪዎችን የትምህርት ደረጃ ከፍ ለማድረግ በባለሙያዎች የተዘጋጀ ሲሆን፣ ከመስመር ውጭ በማውረድ ያለ ምንም የኢንተርኔት ክፍያና ፍጆታ በማንኛውም ቦታና ሰዓት ማጥናት ይችላሉ።'
+                  : 'Prepared by curriculum specialists to enhance learning outcomes for Ethiopian students offline.',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                height: 1.7,
+                color: textColor,
+              ),
+            ),
+          ],
+        );
+    }
+  }
+
+  Widget _buildConceptCard(String title, String desc, Color textColor, Color subColor) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: _isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Supabase Storage PDF Card
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  widget.themeColor,
-                  widget.themeColor.withValues(alpha: 0.82),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.themeColor.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.picture_as_pdf_rounded,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'SUPABASE STORAGE PDF',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 16.5,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    _buildPillBadge('Grade ${widget.grade}', Icons.school_rounded),
-                    const SizedBox(width: 8),
-                    _buildPillBadge(widget.subjectId.toUpperCase(), Icons.auto_stories_rounded),
-                    const SizedBox(width: 8),
-                    _buildPillBadge('$fileSize MB', Icons.data_usage_rounded),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    // Open PDF Button
-                    Expanded(
-                      flex: 3,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _openPdf(pdfUrl),
-                        icon: const Icon(Icons.chrome_reader_mode_rounded, size: 18, color: Color(0xFF0F172A)),
-                        label: Text(
-                          isAmharic ? 'ማስታወሻውን አንብብ (Read Note)' : 'Read Note',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13,
-                            color: const Color(0xFF0F172A),
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    // Download for Offline Button
-                    Expanded(
-                      flex: 2,
-                      child: OutlinedButton.icon(
-                        onPressed: _isDownloading ? null : _saveOffline,
-                        icon: _isDownloading
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : Icon(
-                                _isOfflineDownloaded
-                                    ? Icons.check_circle_rounded
-                                    : Icons.download_rounded,
-                                size: 16,
-                                color: Colors.white,
-                              ),
-                        label: Text(
-                          _isOfflineDownloaded
-                              ? (isAmharic ? 'ወርዷል' : 'Downloaded')
-                              : (isAmharic ? 'አውርድ' : 'Offline'),
-                          style: GoogleFonts.plusJakartaSans(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                            color: Colors.white,
-                          ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.white, width: 1.5),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+          Text(
+            title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: textColor,
             ),
           ),
-
-          const SizedBox(height: 20),
-
-          // Overview & Key Concepts Card
-          if (summary.isNotEmpty) ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: _isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.summarize_rounded, color: widget.themeColor, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        isAmharic ? 'የዩኒቱ ማጠቃለያ ነጥቦች' : 'Key Concepts & Highlights',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: textColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSummaryContent(summary, textColor, subColor),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-
-          // Ethiopian Curriculum Study Guidance
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.verified_user_rounded, color: Color(0xFF10B981), size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isAmharic ? 'የኢትዮጵያ አዲሱ ካሪኩለም ማጠቃለያ' : 'New Ethiopian Curriculum Standard',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: textColor,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        isAmharic
-                            ? 'ይህ የፒዲኤፍ ማስታወሻ በቀጥታ ከሱፓቤዝ ስቶሬጅ የሚወርድ ሲሆን፣ ለፈተና ዝግጅት ወሳኝ የሆኑ ቀመሮችን እና ፅንሰ ሃሳቦችን ይዟል።'
-                            : 'This PDF short note is hosted securely on Supabase Storage, containing full curriculum formulas, exam summaries, and concise unit reviews.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: subColor,
-                          height: 1.45,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          const SizedBox(height: 6),
+          Text(
+            desc,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              height: 1.5,
+              color: subColor,
             ),
           ),
-
-          const SizedBox(height: 20),
-
-          // Community & Ask Teacher Banner
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0284C7).withValues(alpha: _isDarkMode ? 0.2 : 0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFF0284C7).withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0284C7),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isAmharic ? 'ጥያቄዎችዎን በቴሌግራም ይጠይቁ' : 'Join Discussion & Ask Tutors',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                          color: textColor,
-                        ),
-                      ),
-                      Text(
-                        isAmharic ? 'ከሌሎች ተማሪዎች እና መምህራን ጋር ይወያዩ' : 'Connect with other Ethiopian high school students',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: subColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    final uri = Uri.parse(_telegramChannelUrl);
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    }
-                  },
-                  child: Text(
-                    isAmharic ? 'ተቀላቀል' : 'Join',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF0284C7),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 30),
         ],
       ),
     );
