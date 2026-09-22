@@ -125,10 +125,10 @@ class LockedUnitDialog extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.check_circle_rounded, color: Color(0xFF0284C7), size: 15),
+                    const Icon(Icons.lock_rounded, color: Color(0xFF0284C7), size: 15),
                     const SizedBox(width: 6),
                     Text(
-                      isAm ? 'ምዕራፍ 1 ለሁሉም 100% ነፃ ነው' : 'Unit 1 is 100% Free Trial',
+                      isAm ? 'የተቆለፈ የትምህርት ምዕራፍ' : 'Premium Curriculum Unit',
                       style: GoogleFonts.notoSansEthiopic(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
@@ -174,9 +174,9 @@ class LockedUnitDialog extends StatelessWidget {
                       onUnlocked?.call();
                     }
                   },
-                  icon: const Icon(Icons.workspace_premium_rounded, size: 20, color: Colors.white),
+                  icon: const Icon(Icons.vpn_key_rounded, size: 20, color: Colors.white),
                   label: Text(
-                    isAm ? 'አካውንት ያሻሽሉ (Account Upgrade)' : 'Upgrade Account & Unlock',
+                    isAm ? 'ማግበሪያ ኮድ አስገባ / አሻሽል' : 'Enter Activation Code / Upgrade',
                     style: GoogleFonts.notoSansEthiopic(
                       fontWeight: FontWeight.w900,
                       fontSize: 13.5,
@@ -196,55 +196,26 @@ class LockedUnitDialog extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              // 2. Secondary Action: Telegram Payment / Upgrade
+              // 2. Dismiss Action: Close
               SizedBox(
                 width: double.infinity,
-                height: 46,
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    Navigator.of(context).pop();
-                    await UpgradeTelegramModal.show(
-                      context,
-                      grade: grade,
-                      isDarkMode: isDarkMode,
-                      languageCode: languageCode,
-                    );
-                    onUnlocked?.call();
-                  },
-                  icon: const Icon(Icons.send_rounded, size: 18, color: Color(0xFF0088CC)),
-                  label: Text(
-                    isAm ? 'በቴሌግራም ይክፈሉ / ያነጋግሩ (@smart_x_help)' : 'Purchase on Telegram (@smart_x_help)',
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                      color: const Color(0xFF0088CC),
-                    ),
-                  ),
+                height: 44,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF0088CC), width: 1.5),
+                    side: BorderSide(
+                      color: borderColor,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // 3. Dismiss Action: Close
-              SizedBox(
-                width: double.infinity,
-                height: 38,
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: TextButton.styleFrom(
-                    foregroundColor: textSecondary,
-                  ),
                   child: Text(
-                    isAm ? 'ዝጋ (Close)' : 'Close',
+                    isAm ? 'ዝጋ / ተመለስ' : 'Dismiss',
                     style: GoogleFonts.notoSansEthiopic(
-                      fontWeight: FontWeight.w700,
                       fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: textSecondary,
                     ),
                   ),
                 ),

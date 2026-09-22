@@ -11,6 +11,7 @@ import 'video_subject_selection_screen.dart';
 import '../services/offline_manager.dart';
 import 'quiz_screen.dart';
 import 'notes_screen.dart';
+import 'developer_profile_screen.dart';
 import '../models/video_model.dart';
 import '../services/video_service.dart';
 import '../widgets/youtube_video_player_dialog.dart';
@@ -235,8 +236,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       // Populate text controllers
       _fullNameController.text = _isLoggedIn ? _userName : '';
       _phoneController.text = _isLoggedIn ? _userPhoneNumber.replaceAll(RegExp(r'^\+251\s*'), '') : '';
+
+      // Auto-default library grade to student's unlocked grade or previously selected grade
+      final savedGrade = prefs.getInt('selected_grade_preference') ?? prefs.getInt('last_lesson_grade');
+      if (savedGrade != null && [9, 10, 11, 12].contains(savedGrade)) {
+        _selectedGradeForLibraryTab = savedGrade;
+      } else {
+        // If student unlocked a grade (e.g., Grade 10, 11, 12), prioritize it automatically
+        for (final g in [10, 11, 12, 9]) {
+          if (SubscriptionService.isGradeUnlockedSync(g)) {
+            _selectedGradeForLibraryTab = g;
+            break;
+          }
+        }
+      }
       
-      debugPrint('Current user: $savedUid, deviceId: $_deviceId, loggedIn: $_isLoggedIn');
+      debugPrint('Current user: $savedUid, deviceId: $_deviceId, loggedIn: $_isLoggedIn, defaultGrade: $_selectedGradeForLibraryTab');
     });
   }
 
@@ -435,12 +450,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                   _buildDrawerTile(
                     icon: Icons.code_rounded,
-                    title: widget.languageCode == 'en' ? 'Developer (Habtamu Yifiru)' : 'አልሚው (Habtamu Yifiru)',
+                    title: widget.languageCode == 'en' ? 'Developer & HAB IT Solutions' : 'አልሚው (HAB IT Solutions)',
                     isSelected: false,
                     isLight: isLight,
                     onTap: () {
                       Navigator.pop(context);
-                      _showAboutAppModal(isLight);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DeveloperProfileScreen(
+                            isDarkMode: widget.isDarkMode,
+                            languageCode: widget.languageCode,
+                          ),
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerTile(
@@ -474,19 +497,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     onTap: () async {
                       Navigator.pop(context);
                       final Uri uri = Uri.parse('https://admi8829.github.io/privacy-policy.html/');
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
-                      }
-                    },
-                  ),
-                  _buildDrawerTile(
-                    icon: Icons.send_rounded,
-                    title: widget.languageCode == 'en' ? 'Contact Admin (@smart_x_help)' : 'አድሚኑን ያነጋግሩ (@smart_x_help)',
-                    isSelected: false,
-                    isLight: isLight,
-                    onTap: () async {
-                      Navigator.pop(context);
-                      final Uri uri = Uri.parse('https://t.me/smart_x_help');
                       if (await canLaunchUrl(uri)) {
                         await launchUrl(uri, mode: LaunchMode.externalApplication);
                       }
@@ -676,7 +686,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 onTap: () {
                   setState(() {
                     _selectedGradeForVideosTab = gradeNum;
+                    _selectedGradeForLibraryTab = gradeNum;
                     _selectedUnitForVideosTab = 0; // reset to all units
+                  });
+                  SharedPreferences.getInstance().then((prefs) {
+                    prefs.setInt('selected_grade_preference', gradeNum);
                   });
                 },
                 child: AnimatedContainer(
@@ -1039,49 +1053,49 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- TOP VIDEO BANNER CAROUSEL (3-5 Rotating Slides) ---
-                  VideoSliderCarousel(
-                    isDarkMode: !isLight,
-                    languageCode: widget.languageCode,
-                  ),
-
-                  const SizedBox(height: 14),
-
                   // CONDITIONAL CONTENT:
-                  // IF NO GRADE SELECTED -> Show 4 Stacked Full-Width Grade Cards
+                  // IF NO GRADE SELECTED -> Prominent Grade Exploration lifted to top
                   if (_selectedGradeForVideosTab == null) ...[
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: Color(0x1FEF4444),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.video_library_rounded, size: 16, color: Color(0xFFEF4444)),
+                          child: const Icon(Icons.video_library_rounded, size: 20, color: Color(0xFFEF4444)),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          isAmharic ? 'ክፍልዎን ይምረጡ (የቪዲዮ ትምህርቶች)' : 'Select Your Grade (Video Lessons)',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: textColor,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isAmharic ? 'ክፍልዎን ይምረጡ (የቪዲዮ ትምህርቶች)' : 'Explore Grades • Video Lessons',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                  color: textColor,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isAmharic
+                                    ? 'የትምህርት ዓይነት እና የዩኒት ማብራሪያዎችን ለመመልከት ክፍልዎን ይምረጡ'
+                                    : 'Choose your grade to explore subjects, units, and video walkthroughs.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: subColor,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      isAmharic
-                          ? 'የትምህርት ዓይነት እና የዩኒት ማብራሪያዎችን ለመመልከት ክፍልዎን ይምረጡ'
-                          : 'Choose your grade to explore subjects, units, and video walkthroughs.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: subColor,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     _buildGradeVideoLandingCard(gradeNum: 9, isLight: isLight, isAmharic: isAmharic),
                     _buildGradeVideoLandingCard(gradeNum: 10, isLight: isLight, isAmharic: isAmharic),
                     _buildGradeVideoLandingCard(gradeNum: 11, isLight: isLight, isAmharic: isAmharic),
@@ -1742,6 +1756,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   setState(() {
                     _selectedGradeForLibraryTab = gradeNum;
                   });
+                  SharedPreferences.getInstance().then((prefs) {
+                    prefs.setInt('selected_grade_preference', gradeNum);
+                  });
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
@@ -2200,9 +2217,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             crossAxisCount: 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 16.0,
-            mainAxisSpacing: 16.0,
-            childAspectRatio: 1.1, // Adjusted childAspectRatio for a perfect fit without progress bars
+            crossAxisSpacing: 14.0,
+            mainAxisSpacing: 14.0,
+            childAspectRatio: 1.02,
             children: [
               // Grade 9
               _animateItem(
@@ -2210,8 +2227,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: _InteractiveGradeCard(
                   title: _local('g9_title'),
                   subtitle: _local('g9_sub'),
-                  illustration: _buildScrollIllustration(),
-                  btnColor: const Color(0xFF0084FF),
+                  icon: Icons.school_rounded,
+                  primaryColor: const Color(0xFF2563EB),
+                  secondaryColor: const Color(0xFF1D4ED8),
                   isLight: isLight,
                   statusText: widget.languageCode == 'en' ? "GRADE 9" : "ክፍል 9",
                   buttonText: _local('start_course_btn'),
@@ -2226,8 +2244,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: _InteractiveGradeCard(
                   title: _local('g10_title'),
                   subtitle: _local('g10_sub'),
-                  illustration: _buildShieldIllustration(),
-                  btnColor: const Color(0xFF10B981),
+                  icon: Icons.auto_stories_rounded,
+                  primaryColor: const Color(0xFF059669),
+                  secondaryColor: const Color(0xFF047857),
                   isLight: isLight,
                   statusText: widget.languageCode == 'en' ? "GRADE 10" : "ክፍል 10",
                   buttonText: _local('start_course_btn'),
@@ -2242,8 +2261,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: _InteractiveGradeCard(
                   title: _local('g11_title'),
                   subtitle: _local('g11_sub'),
-                  illustration: _buildOrbitIllustration(),
-                  btnColor: const Color(0xFFF59E0B),
+                  icon: Icons.science_rounded,
+                  primaryColor: const Color(0xFFD97706),
+                  secondaryColor: const Color(0xFFB45309),
                   isLight: isLight,
                   statusText: widget.languageCode == 'en' ? "GRADE 11" : "ክፍል 11",
                   buttonText: _local('start_course_btn'),
@@ -2258,8 +2278,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: _InteractiveGradeCard(
                   title: _local('g12_title'),
                   subtitle: _local('g12_sub'),
-                  illustration: _buildGraduateIllustration(),
-                  btnColor: const Color(0xFF8B5CF6),
+                  icon: Icons.military_tech_rounded,
+                  primaryColor: const Color(0xFF7C3AED),
+                  secondaryColor: const Color(0xFF6D28D9),
                   isLight: isLight,
                   statusText: widget.languageCode == 'en' ? "GRADE 12" : "ክፍል 12",
                   buttonText: _local('start_course_btn'),
@@ -2419,6 +2440,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   void _openSubjectsForGrade(int grade, {required bool isShortNotes}) async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('selected_grade_preference', grade);
+    setState(() {
+      _selectedGradeForLibraryTab = grade;
+    });
     String sub = "Mathematics";
     String title = "Unit 1: Functions and Calculus Intro";
     int colorInt = 0xFF0084FF;
@@ -2627,7 +2652,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     InkWell(
                       onTap: () async {
                         Navigator.of(ctx).pop();
-                        await AccountUpgradeDialog.show(context, initialGrade: grade);
+                        final res = await AccountUpgradeDialog.show(context, initialGrade: grade);
+                        if (res == true || SubscriptionService.isGradeUnlockedSync(grade)) {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setInt('selected_grade_preference', grade);
+                          setState(() {
+                            _selectedGradeForLibraryTab = grade;
+                          });
+                          await _loadProfileData();
+                        }
                         if (mounted) setState(() {});
                       },
                       borderRadius: BorderRadius.circular(16),
@@ -3592,8 +3625,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 class _InteractiveGradeCard extends StatefulWidget {
   final String title;
   final String subtitle;
-  final Widget illustration;
-  final Color btnColor;
+  final IconData icon;
+  final Color primaryColor;
+  final Color secondaryColor;
   final bool isLight;
   final VoidCallback onTap;
   final String statusText;
@@ -3604,8 +3638,9 @@ class _InteractiveGradeCard extends StatefulWidget {
   const _InteractiveGradeCard({
     required this.title,
     required this.subtitle,
-    required this.illustration,
-    required this.btnColor,
+    required this.icon,
+    required this.primaryColor,
+    required this.secondaryColor,
     required this.isLight,
     required this.onTap,
     required this.statusText,
@@ -3645,96 +3680,113 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
             color: widget.isLight ? Colors.white : const Color(0xFF1E293B),
             borderRadius: BorderRadius.circular(18.0),
             border: Border.all(
-              color: widget.btnColor.withValues(alpha: widget.isLight ? 0.25 : 0.4),
+              color: widget.primaryColor.withValues(alpha: widget.isLight ? 0.28 : 0.45),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: widget.btnColor.withValues(alpha: widget.isLight ? 0.08 : 0.18),
+                color: widget.primaryColor.withValues(alpha: widget.isLight ? 0.08 : 0.20),
                 blurRadius: 14.0,
                 offset: const Offset(0, 5),
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+          padding: const EdgeInsets.symmetric(horizontal: 13.0, vertical: 12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Upper row containing title/subtitle on left and custom graphics/illustration on right
+              // Upper row containing icon badge and grade status tag
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(9.0),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [widget.primaryColor, widget.secondaryColor],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12.0),
+                      boxShadow: [
+                        BoxShadow(
+                          color: widget.primaryColor.withValues(alpha: 0.35),
+                          blurRadius: 8.0,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      widget.icon,
+                      color: Colors.white,
+                      size: 22.0,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      color: widget.primaryColor.withValues(alpha: widget.isLight ? 0.12 : 0.25),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: Text(
+                      widget.statusText,
+                      style: TextStyle(
+                        fontSize: 10.0,
+                        fontWeight: FontWeight.w900,
+                        color: widget.primaryColor,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10.0),
+
+              // Title and Subtitle
+              Text(
+                widget.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16.0,
+                  fontWeight: FontWeight.w900,
+                  color: widget.isLight ? const Color(0xFF0F172A) : Colors.white,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 2.0),
               Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  widget.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.w900,
-                                    color: widget.isLight ? const Color(0xFF0F172A) : Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 1.0),
-                          Expanded(
-                            child: Text(
-                              widget.subtitle,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 10.0,
-                                fontWeight: FontWeight.w600,
-                                color: widget.isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                                height: 1.2,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 4.0),
-                    // Premium illustration
-                    SizedBox(
-                      height: 34,
-                      width: 34,
-                      child: FittedBox(
-                        fit: BoxFit.contain,
-                        child: widget.illustration,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  widget.subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.0,
+                    fontWeight: FontWeight.w600,
+                    color: widget.isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                    height: 1.25,
+                  ),
                 ),
               ),
 
-              const SizedBox(height: 6.0),
+              const SizedBox(height: 8.0),
 
-              // Pill button - Clean White Style
+              // Action button - with matching primary brand color
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 9.0),
+                padding: const EdgeInsets.symmetric(vertical: 8.5),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24.0),
+                  color: widget.isLight ? Colors.white : const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(20.0),
                   border: Border.all(
-                    color: widget.btnColor,
-                    width: 1.8,
+                    color: widget.primaryColor,
+                    width: 1.6,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: widget.btnColor.withValues(alpha: 0.15),
-                      blurRadius: 8.0,
-                      offset: const Offset(0, 3),
+                      color: widget.primaryColor.withValues(alpha: 0.14),
+                      blurRadius: 6.0,
+                      offset: const Offset(0, 2),
                     )
                   ],
                 ),
@@ -3745,17 +3797,17 @@ class _InteractiveGradeCardState extends State<_InteractiveGradeCard> {
                     Text(
                       widget.buttonText,
                       style: TextStyle(
-                        color: widget.btnColor,
-                        fontSize: 12.0,
+                        color: widget.primaryColor,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: 0.1,
+                        letterSpacing: 0.2,
                       ),
                     ),
                     const SizedBox(width: 4.0),
                     Icon(
                       Icons.arrow_forward_rounded,
-                      color: widget.btnColor,
-                      size: 14.0,
+                      color: widget.primaryColor,
+                      size: 13.0,
                     ),
                   ],
                 ),
@@ -3987,6 +4039,59 @@ class HelpSupportScreen extends StatelessWidget {
                               fontSize: 13.0,
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14.0),
+
+                  // View HAB IT Solutions Dedicated Page Button
+                  InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DeveloperProfileScreen(
+                            isDarkMode: !isLight,
+                            languageCode: languageCode,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(12.0),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12.0),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0284C7), Color(0xFF2563EB)],
+                        ),
+                        borderRadius: BorderRadius.circular(12.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0284C7).withValues(alpha: 0.25),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.business_center_rounded, color: Colors.white, size: 18),
+                          const SizedBox(width: 8.0),
+                          Text(
+                            languageCode == 'en'
+                                ? 'View HAB IT Solutions Profile'
+                                : 'ስለ HAB IT Solutions ሙሉ መረጃ',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13.0,
+                            ),
+                          ),
+                          const SizedBox(width: 6.0),
+                          const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
                         ],
                       ),
                     ),

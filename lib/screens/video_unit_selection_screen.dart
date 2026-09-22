@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../data/curriculum_units.dart';
 import '../services/subscription_service.dart';
 import '../widgets/locked_unit_dialog.dart';
-import 'video_coming_soon_screen.dart';
+import 'video_lesson_screen.dart';
 
 class VideoUnitSelectionScreen extends StatefulWidget {
   final int grade;
@@ -109,7 +109,7 @@ class _VideoUnitSelectionScreenState extends State<VideoUnitSelectionScreen> {
     } else {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => VideoComingSoonScreen(
+          builder: (_) => VideoLessonScreen(
             grade: widget.grade,
             subject: widget.subject,
             unitNumber: unitNumber,
@@ -176,7 +176,7 @@ class _VideoUnitSelectionScreenState extends State<VideoUnitSelectionScreen> {
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           children: [
-            // Freemium Info Banner
+            // Educational Overview Header
             Container(
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -195,7 +195,7 @@ class _VideoUnitSelectionScreenState extends State<VideoUnitSelectionScreen> {
                       color: widget.subjectColor.withValues(alpha: 0.18),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.info_outline_rounded, color: widget.subjectColor, size: 20),
+                    child: Icon(Icons.play_lesson_rounded, color: widget.subjectColor, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -203,9 +203,9 @@ class _VideoUnitSelectionScreenState extends State<VideoUnitSelectionScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isEn ? 'Unit 1 is 100% Free!' : 'ዩኒት 1 ለሁሉም ተማሪዎች ሙሉ በሙሉ ነጻ ነው!',
+                          isEn ? 'Curriculum Video Lessons' : 'የስርዓተ-ትምህርት ቪዲዮ ትምህርቶች',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12.5,
+                            fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: textColor,
                           ),
@@ -213,10 +213,10 @@ class _VideoUnitSelectionScreenState extends State<VideoUnitSelectionScreen> {
                         const SizedBox(height: 2),
                         Text(
                           isEn
-                              ? 'Explore Unit 1 with full access. Unlock Unit 2+ anytime via our Telegram Admin.'
-                              : 'ዩኒት 1ን በነጻ ይማሩ። ቀሪ ክፍሎችን ለማስከፈት በማንኛውም ጊዜ የቴሌግራም አድሚናችንን ያነጋግሩ።',
+                              ? 'Stream video explanations and solved examples directly from database.'
+                              : 'ከዳታቤዝ በቀጥታ የሚተላለፉ የመማሪያ ቪዲዮዎችን እና የተሰሩ ምሳሌዎችን ይመልከቱ።',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 11.5,
                             color: subColor,
                             height: 1.35,
                           ),

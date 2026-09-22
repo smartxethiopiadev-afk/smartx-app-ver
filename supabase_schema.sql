@@ -206,8 +206,8 @@ CREATE TABLE IF NOT EXISTS public.practice_questions (
     subject TEXT NOT NULL,
     unit_number INTEGER NOT NULL,
     topic TEXT,
-    -- Question Type: 'multiple_choice', 'true_false', or 'blank_space'
-    question_type TEXT NOT NULL CHECK (question_type IN ('multiple_choice', 'true_false', 'blank_space')),
+    -- Question Type: 'multiple_choice', 'true_false', 'blank_space', or 'matching'
+    question_type TEXT NOT NULL CHECK (question_type IN ('multiple_choice', 'true_false', 'blank_space', 'matching')),
     question_number INTEGER NOT NULL,
     question_text TEXT NOT NULL,
     question_image_url TEXT,
@@ -226,6 +226,10 @@ CREATE TABLE IF NOT EXISTS public.practice_questions (
     -- Accepted variants/synonyms JSONB array (e.g. ["acceleration", "a", "rate of velocity change"])
     accepted_answers JSONB DEFAULT '[]'::jsonb,
     case_sensitive BOOLEAN DEFAULT false,
+
+    -- For 'matching' (Matching / አዛምድ):
+    -- Format: [{"left": "Term A", "right": "Definition A"}, {"left": "Term B", "right": "Definition B"}]
+    matching_pairs JSONB DEFAULT '[]'::jsonb,
 
     -- General Correct Answer & Guidance
     correct_answer TEXT NOT NULL,
@@ -704,12 +708,12 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =====================================================================
--- 16. SEED DATA - PRACTICE_QUESTIONS (PRACTICE MODE - 3 QUESTION FORMATS)
--- Types: 'multiple_choice', 'true_false', 'blank_space' (Fill in the blank)
+-- 16. SEED DATA - PRACTICE_QUESTIONS (PRACTICE MODE - 4 QUESTION FORMATS)
+-- Types: 'multiple_choice', 'true_false', 'blank_space' (Fill in the blank), 'matching' (አዛምድ)
 -- =====================================================================
 INSERT INTO public.practice_questions (
     grade, subject, unit_number, topic, question_type, question_number,
-    question_text, options, correct_boolean, blank_answer, accepted_answers,
+    question_text, options, correct_boolean, blank_answer, accepted_answers, matching_pairs,
     correct_answer, hint, explanation, difficulty, order_index
 )
 VALUES
@@ -717,7 +721,7 @@ VALUES
     (12, 'Mathematics', 1, 'Arithmetic Sequences', 'multiple_choice', 1,
     'What is the 10th term of the arithmetic progression with first term $a_1 = 4$ and common difference $d = 5$?',
     '[{"key": "A", "text": "45", "is_correct": false}, {"key": "B", "text": "49", "is_correct": true, "explanation": "a_10 = 4 + 9(5) = 49"}, {"key": "C", "text": "54", "is_correct": false}, {"key": "D", "text": "50", "is_correct": false}]'::jsonb,
-    NULL, NULL, '[]'::jsonb,
+    NULL, NULL, '[]'::jsonb, '[]'::jsonb,
     '49',
     'Use the general AP term formula: $a_n = a_1 + (n - 1)d$.',
     'Using $a_n = a_1 + (n-1)d$: $a_{10} = 4 + (10 - 1)(5) = 4 + 45 = 49$.',
@@ -727,7 +731,7 @@ VALUES
     (12, 'Mathematics', 1, 'Infinite Geometric Series', 'true_false', 2,
     'True or False: An infinite geometric series converges if and only if the absolute value of the common ratio is strictly less than 1 ($|r| < 1$).',
     '[]'::jsonb,
-    true, NULL, '[]'::jsonb,
+    true, NULL, '[]'::jsonb, '[]'::jsonb,
     'True',
     'Recall the condition for the limit of $r^n$ as $n \to \infty$.',
     'True. When $|r| < 1$, the terms approach zero and the infinite sum converges to $S_\infty = \frac{a_1}{1 - r}$. If $|r| \ge 1$, the series diverges.',
@@ -737,17 +741,28 @@ VALUES
     (12, 'Mathematics', 1, 'Harmonic Progression', 'blank_space', 3,
     'A sequence is called a Harmonic Progression (HP) if the reciprocals of its terms form an _______ progression.',
     '[]'::jsonb,
-    NULL, 'Arithmetic', '["arithmetic", "arithmetic progression", "AP", "ap"]'::jsonb,
+    NULL, 'Arithmetic', '["arithmetic", "arithmetic progression", "AP", "ap"]'::jsonb, '[]'::jsonb,
     'Arithmetic',
     'Think of the fundamental sequence type whose reciprocal generates harmonic numbers.',
     'By definition, a sequence $h_1, h_2, h_3, ...$ is a Harmonic Progression if $\frac{1}{h_1}, \frac{1}{h_2}, \frac{1}{h_3}, ...$ forms an Arithmetic Progression (AP).',
     'medium', 3),
 
+    -- Type 4: Matching / አዛምድ (Math G12 Unit 1)
+    (12, 'Mathematics', 1, 'Sequences Classifications', 'matching', 4,
+    'Match each sequence type in Column A with its defining property in Column B (በአምድ "ሀ" ስር ያሉትን ከአምድ "ለ" ጋር አዛምዱ):',
+    '[]'::jsonb,
+    NULL, NULL, '[]'::jsonb,
+    '[{"left": "Arithmetic Progression (AP)", "right": "Constant difference between consecutive terms (d)"}, {"left": "Geometric Progression (GP)", "right": "Constant ratio between consecutive terms (r)"}, {"left": "Harmonic Progression (HP)", "right": "Reciprocals form an arithmetic sequence"}, {"left": "Fibonacci Sequence", "right": "Each term is the sum of the two preceding ones"}]'::jsonb,
+    'Matching completed',
+    'Consider how consecutive terms are generated in each standard mathematical sequence.',
+    'AP adds a constant difference d; GP multiplies by a constant ratio r; HP consists of reciprocals of an AP; Fibonacci adds the prior two terms.',
+    'medium', 4),
+
     -- Type 1: Multiple Choice (Physics G12 Unit 1)
     (12, 'Physics', 1, 'First Law of Thermodynamics', 'multiple_choice', 1,
     'According to the First Law of Thermodynamics, if 500 J of heat is added to a system and the system performs 200 J of work on its surroundings, what is the change in internal energy ($\Delta U$)?',
     '[{"key": "A", "text": "700 J", "is_correct": false}, {"key": "B", "text": "300 J", "is_correct": true, "explanation": "ΔU = Q - W = 500 - 200 = 300 J"}, {"key": "C", "text": "-300 J", "is_correct": false}, {"key": "D", "text": "2.5 J", "is_correct": false}]'::jsonb,
-    NULL, NULL, '[]'::jsonb,
+    NULL, NULL, '[]'::jsonb, '[]'::jsonb,
     '300 J',
     'Apply $\Delta U = Q - W$, noting that work done by the system is positive.',
     'First Law: $\Delta U = Q - W = 500\text{ J} - 200\text{ J} = 300\text{ J}$.',
@@ -757,7 +772,7 @@ VALUES
     (12, 'Physics', 1, 'Second Law of Thermodynamics', 'true_false', 2,
     'True or False: According to the Second Law of Thermodynamics, heat can spontaneously flow from a colder body to a hotter body without external work.',
     '[]'::jsonb,
-    false, NULL, '[]'::jsonb,
+    false, NULL, '[]'::jsonb, '[]'::jsonb,
     'False',
     'Consider Clausius statement of the Second Law of Thermodynamics.',
     'False. Clausius Statement: It is impossible to construct a device that operates in a cycle and produces no effect other than the transfer of heat from a cooler body to a hotter body.',
@@ -767,17 +782,39 @@ VALUES
     (12, 'Physics', 1, 'Carnot Heat Engines', 'blank_space', 3,
     'The maximum theoretical efficiency of any heat engine operating between two thermal reservoirs is called the _______ efficiency.',
     '[]'::jsonb,
-    NULL, 'Carnot', '["carnot", "Carnot efficiency", "carnot efficiency", "Carnot cycle"]'::jsonb,
+    NULL, 'Carnot', '["carnot", "Carnot efficiency", "carnot efficiency", "Carnot cycle"]'::jsonb, '[]'::jsonb,
     'Carnot',
     'Named after the French physicist Nicolas Léonard Sadi _______',
     'The Carnot efficiency $\eta_{Carnot} = 1 - \frac{T_C}{T_H}$ establishes the upper thermodynamic limit on efficiency for any heat engine operating between temperatures $T_H$ and $T_C$.',
     'medium', 3),
 
+    -- Type 4: Matching / አዛምድ (Physics G12 Unit 1)
+    (12, 'Physics', 1, 'Thermodynamic Processes', 'matching', 4,
+    'Match each thermodynamic process with its key characteristic (የሙቀት ሂደቶችን ከባህሪያቸው ጋር አዛምዱ):',
+    '[]'::jsonb,
+    NULL, NULL, '[]'::jsonb,
+    '[{"left": "Isobaric Process", "right": "Constant Pressure (ΔP = 0)"}, {"left": "Isochoric (Isovolumetric)", "right": "Constant Volume (W = 0, ΔV = 0)"}, {"left": "Isothermal Process", "right": "Constant Temperature (ΔU = 0 for ideal gas)"}, {"left": "Adiabatic Process", "right": "No heat exchange with surroundings (Q = 0)"}]'::jsonb,
+    'Matching completed',
+    'Look at the Greek roots: baros (pressure), chora (space/volume), therme (heat/temperature), adiabatos (impassable/no heat).',
+    'Isobaric: constant pressure; Isochoric: constant volume; Isothermal: constant temperature; Adiabatic: zero heat transfer.',
+    'medium', 4),
+
+    -- Type 4: Matching / አዛምድ (Biology G9 Unit 1)
+    (9, 'Biology', 1, 'Cell Organelles and Functions', 'matching', 1,
+    'Match each cell organelle with its primary biological function (የሴል ክፍሎችን ከስራቸው ጋር አዛምዱ):',
+    '[]'::jsonb,
+    NULL, NULL, '[]'::jsonb,
+    '[{"left": "Mitochondria", "right": "Powerhouse of cell; generates ATP via cellular respiration"}, {"left": "Ribosome", "right": "Site of protein synthesis"}, {"left": "Chloroplast", "right": "Site of photosynthesis in plant cells"}, {"left": "Nucleus", "right": "Stores genetic material (DNA) and directs cell activities"}]'::jsonb,
+    'Matching completed',
+    'Recall which organelle is responsible for cellular energy versus protein manufacturing.',
+    'Mitochondria produces ATP; ribosomes assemble polypeptides; chloroplasts conduct photosynthesis; nucleus contains chromosomes.',
+    'easy', 1),
+
     -- Type 3: Blank Space (Chemistry G11 Unit 1)
     (11, 'Chemistry', 1, 'Atomic Orbitals', 'blank_space', 1,
     'The quantum number that determines the spatial orientation of an atomic orbital is the _______ quantum number.',
     '[]'::jsonb,
-    NULL, 'Magnetic', '["magnetic", "magnetic quantum number", "m_l", "ml"]'::jsonb,
+    NULL, 'Magnetic', '["magnetic", "magnetic quantum number", "m_l", "ml"]'::jsonb, '[]'::jsonb,
     'Magnetic',
     'Denoted as $m_l$ or $m$.',
     'The magnetic quantum number ($m_l$) specifies the orientation in space of an orbital of a given energy ($n$) and shape ($l$).',
