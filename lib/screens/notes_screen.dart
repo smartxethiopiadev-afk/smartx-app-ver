@@ -209,6 +209,7 @@ class _NotesScreenState extends State<NotesScreen> {
     // 1. Check local offline cache first
     try {
       final offlineNotes = await OfflineManager.getOfflineNotes(unitId);
+      final hasOfflinePdf = await OfflineManager.hasOfflinePdf(unitId);
       if (offlineNotes.isNotEmpty) {
         if (mounted) {
           setState(() {
@@ -218,6 +219,25 @@ class _NotesScreenState extends State<NotesScreen> {
           });
         }
         return;
+      } else if (hasOfflinePdf) {
+        final pdfData = await OfflineManager.getOfflinePdf(unitId);
+        if (pdfData != null && mounted) {
+          setState(() {
+            _notesList = [
+              {
+                'id': pdfData['unitId'],
+                'title': pdfData['title'] ?? widget.unitTitle,
+                'summary': pdfData['summary'] ?? '',
+                'pdf_url': pdfData['pdfUrl'] ?? '',
+                'grade': widget.grade,
+                'unit_number': widget.unitNumber,
+              }
+            ];
+            _isLoading = false;
+            _isOfflineDownloaded = true;
+          });
+          return;
+        }
       }
     } catch (e) {
       debugPrint('[NotesScreen] Offline check notice: $e');
@@ -409,6 +429,7 @@ class _NotesScreenState extends State<NotesScreen> {
       grade: widget.grade,
       subject: widget.subjectId,
       unit: widget.unitNumber,
+      unitId: _getUnitId(),
     );
   }
 
@@ -422,9 +443,8 @@ class _NotesScreenState extends State<NotesScreen> {
     final shareContent = '📚 ${widget.subjectId.toUpperCase()} Grade ${widget.grade} — Unit ${widget.unitNumber}\n'
         '$title\n'
         '${summary.isNotEmpty ? '\n$summary\n' : ''}'
-        '${pdfUrl.isNotEmpty ? '\n📥 Supabase PDF Link: $pdfUrl\n' : ''}\n'
-        'Study with Smart Learn Ethiopia App!\n'
-        'Telegram: $_telegramChannelUrl';
+        '${pdfUrl.isNotEmpty ? '\n📥 PDF Link: $pdfUrl\n' : ''}\n'
+        'Smart Learn Ethiopia Mobile App';
 
     Share.share(shareContent, subject: title);
   }

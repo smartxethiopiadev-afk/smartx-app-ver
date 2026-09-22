@@ -147,6 +147,194 @@ class OfflineManager {
     } catch (_) {}
   }
 
+  /// Generate an isolated storage key for mode and question type
+  static String buildQuestionKey({
+    required String unitId,
+    required String mode,
+    String? questionType,
+  }) {
+    final clean = _cleanKey(unitId);
+    if (mode == 'exam') {
+      return '${clean}_exam';
+    }
+    if (questionType != null && questionType.isNotEmpty && questionType != 'all') {
+      return '${clean}_practice_$questionType';
+    }
+    return '${clean}_practice_all';
+  }
+
+  /// Save questions separated by mode (practice vs exam) and question type
+  static Future<void> saveOfflineQuestionsByMode({
+    required String unitId,
+    required String mode,
+    String? questionType,
+    required List<QuestionModel> questions,
+    int? grade,
+    int? unit,
+  }) async {
+    try {
+      final key = buildQuestionKey(unitId: unitId, mode: mode, questionType: questionType);
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> jsonList = questions.map((q) => jsonEncode(q.toJson())).toList();
+      await prefs.setStringList('offline_q_$key', jsonList);
+
+      await addDownload(key);
+
+      final clean = _cleanKey(unitId);
+      final hasGeneric = prefs.getStringList('offline_questions_$clean') != null;
+      if (!hasGeneric || (mode == 'practice' && (questionType == null || questionType == 'all'))) {
+        await saveOfflineQuestions(clean, questions, grade: grade, unit: unit);
+      }
+    } catch (e) {
+      debugPrint('[OfflineManager] Error saving questions by mode: $e');
+    }
+  }
+
+  /// Retrieve questions separated by mode and question type
+  static Future<List<QuestionModel>> getOfflineQuestionsByMode({
+    required String unitId,
+    required String mode,
+    String? questionType,
+  }) async {
+    await init();
+    final key = buildQuestionKey(unitId: unitId, mode: mode, questionType: questionType);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // 1. Check exact key
+      List<String>? jsonList = prefs.getStringList('offline_q_$key');
+
+      // 2. If looking for specific practice type, check if practice_all has it
+      if ((jsonList == null || jsonList.isEmpty) && mode == 'practice' && questionType != null && questionType != 'all') {
+        final allPracticeKey = buildQuestionKey(unitId: unitId, mode: 'practice', questionType: 'all');
+        final allList = prefs.getStringList('offline_q_$allPracticeKey');
+        if (allList != null && allList.isNotEmpty) {
+          final allQuestions = allList
+              .map((str) => QuestionModel.fromJson(jsonDecode(str) as Map<String, dynamic>))
+              .toList();
+          final filtered = allQuestions.where((q) {
+            if (questionType == 'multiple_choice') return q.isMultipleChoice;
+            if (questionType == 'true_false') return q.isTrueFalse;
+            if (questionType == 'blank_space') return q.isBlankSpace;
+            if (questionType == 'matching') return q.questionType == QuestionType.matching;
+            return true;
+          }).toList();
+          if (filtered.isNotEmpty) return filtered;
+        }
+      }
+
+      // 3. Fallback to generic questions for this unit
+      if (jsonList == null || jsonList.isEmpty) {
+        final clean = _cleanKey(unitId);
+        final generic = await getOfflineQuestions(clean);
+        if (generic.isNotEmpty) {
+          if (questionType != null && questionType.isNotEmpty && questionType != 'all') {
+            final filtered = generic.where((q) {
+              if (questionType == 'multiple_choice') return q.isMultipleChoice;
+              if (questionType == 'true_false') return q.isTrueFalse;
+              if (questionType == 'blank_space') return q.isBlankSpace;
+              if (questionType == 'matching') return q.questionType == QuestionType.matching;
+              return true;
+            }).toList();
+            if (filtered.isNotEmpty) return filtered;
+          }
+          return generic;
+        }
+      }
+
+      if (jsonList != null && jsonList.isNotEmpty) {
+        return jsonList
+            .map((str) => QuestionModel.fromJson(jsonDecode(str) as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[OfflineManager] Error getting questions by mode: $e');
+      return [];
+    }
+  }
+
+  /// Check if questions for specific mode and type are downloaded
+  static Future<bool> hasOfflineQuestionsByMode({
+    required String unitId,
+    required String mode,
+    String? questionType,
+  }) async {
+    await init();
+    final key = buildQuestionKey(unitId: unitId, mode: mode, questionType: questionType);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList('offline_q_$key');
+      if (list != null && list.isNotEmpty) return true;
+
+      if (mode == 'practice' && questionType != null && questionType != 'all') {
+        final allPracticeKey = buildQuestionKey(unitId: unitId, mode: 'practice', questionType: 'all');
+        final allList = prefs.getStringList('offline_q_$allPracticeKey');
+        if (allList != null && allList.isNotEmpty) {
+          return allList.any((str) => str.contains('"type":"$questionType"'));
+        }
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Dedicated PDF Offline Storage and Management
+  static Future<void> saveOfflinePdf({
+    required String unitId,
+    required String pdfUrl,
+    String? title,
+    String? summary,
+    int? grade,
+    int? unit,
+  }) async {
+    try {
+      final clean = _cleanKey(unitId);
+      final prefs = await SharedPreferences.getInstance();
+      final pdfData = {
+        'unitId': clean,
+        'pdfUrl': pdfUrl,
+        'title': title ?? 'Curriculum Short Note PDF',
+        'summary': summary ?? '',
+        'grade': grade ?? 9,
+        'unit': unit ?? 1,
+        'downloadedAt': DateTime.now().millisecondsSinceEpoch,
+        'isOfflineAvailable': true,
+      };
+      await prefs.setString('offline_pdf_$clean', jsonEncode(pdfData));
+      await addDownload('${clean}_pdf');
+      await addDownload(clean);
+    } catch (e) {
+      debugPrint('[OfflineManager] Error saving offline PDF: $e');
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getOfflinePdf(String unitId) async {
+    await init();
+    final clean = _cleanKey(unitId);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final str = prefs.getString('offline_pdf_$clean');
+      if (str != null && str.isNotEmpty) {
+        return Map<String, dynamic>.from(jsonDecode(str) as Map);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<bool> hasOfflinePdf(String unitId) async {
+    await init();
+    final clean = _cleanKey(unitId);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.containsKey('offline_pdf_$clean');
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<List<QuestionModel>> getOfflineQuestions(String unitId) async {
     await init();
     final bool tamperOk = await DeviceService.verifyOfflineTamperIntegrity();
@@ -380,8 +568,20 @@ class OfflineManager {
   static Future<void> _deleteOfflineDataForUnit(SharedPreferences prefs, String unitId) async {
     await prefs.remove('offline_questions_$unitId');
     await prefs.remove('offline_notes_$unitId');
+    await prefs.remove('offline_pdf_$unitId');
     await prefs.remove('offline_worksheets_$unitId');
     await prefs.remove('offline_metadata_$unitId');
+    // Also remove mode-specific keys
+    for (final key in [
+      'offline_q_${unitId}_exam',
+      'offline_q_${unitId}_practice_all',
+      'offline_q_${unitId}_practice_multiple_choice',
+      'offline_q_${unitId}_practice_true_false',
+      'offline_q_${unitId}_practice_blank_space',
+      'offline_q_${unitId}_practice_matching',
+    ]) {
+      await prefs.remove(key);
+    }
     // Also remove legacy keys if present
     await prefs.remove('offline_questions_${unitId}_notes');
     await prefs.remove('offline_notes_${unitId}_notes');

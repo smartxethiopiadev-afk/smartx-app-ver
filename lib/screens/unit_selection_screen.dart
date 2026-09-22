@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/offline_manager.dart';
 import '../services/quiz_service.dart';
@@ -581,7 +582,499 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
 
   int _selectedUnitIndex = 0;
 
+  Future<void> _showDownloadOptionsModal({
+    required String unitId,
+    required int activeUnitNum,
+    required String unitTitle,
+  }) async {
+    final isDark = AppStateProvider.of(context).isDarkMode;
+    final cleanUnitId = 'g${widget.grade}_$unitId';
 
+    // State trackers for this unit
+    bool hasPdf = await OfflineManager.hasOfflinePdf(cleanUnitId);
+    bool hasExam = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'exam');
+    bool hasPracticeMcq = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'multiple_choice');
+    bool hasPracticeTf = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'true_false');
+    bool hasPracticeBlank = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'blank_space');
+    bool hasPracticeMatching = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'matching');
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalContext, setModalState) {
+            final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+            final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+            final subColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.82,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white24 : Colors.black12,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.download_rounded, color: Color(0xFF2563EB), size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'የማውረጃ ማዕከል (Download Hub)',
+                                style: GoogleFonts.notoSansEthiopic(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: textColor,
+                                ),
+                              ),
+                              Text(
+                                'Unit $activeUnitNum: $unitTitle',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: subColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+
+                  // Options List
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      children: [
+                        // 1. Short Note PDF
+                        _buildDownloadOptionTile(
+                          title: 'አጭር ማስታወሻ ፒዲኤፍ (Short Note PDF)',
+                          subtitle: 'ኦፊሴላዊ የኢትዮጵያ ስርዓተ-ትምህርት ፒዲኤፍ',
+                          icon: Icons.picture_as_pdf_rounded,
+                          iconColor: const Color(0xFFEF4444),
+                          isDownloaded: hasPdf,
+                          onDownload: () async {
+                            await _downloadUnitPdf(cleanUnitId: cleanUnitId, activeUnitNum: activeUnitNum, unitTitle: unitTitle);
+                            final updated = await OfflineManager.hasOfflinePdf(cleanUnitId);
+                            setModalState(() => hasPdf = updated);
+                            _loadOfflineDownloads();
+                          },
+                          cardBg: cardBg,
+                          textColor: textColor,
+                          subColor: subColor,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // 2. Exam Mode Questions
+                        _buildDownloadOptionTile(
+                          title: 'የፈተና ጥያቄዎች (Exam Mode Questions)',
+                          subtitle: 'የተቆጠረ የብሔራዊ ፈተና ጥያቄዎች (Timed Exam)',
+                          icon: Icons.timer_outlined,
+                          iconColor: const Color(0xFFF59E0B),
+                          isDownloaded: hasExam,
+                          onDownload: () async {
+                            await _downloadUnitQuestionsSeparately(
+                              cleanUnitId: cleanUnitId,
+                              activeUnitNum: activeUnitNum,
+                              mode: 'exam',
+                              type: null,
+                            );
+                            final updated = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'exam');
+                            setModalState(() => hasExam = updated);
+                            _loadOfflineDownloads();
+                          },
+                          cardBg: cardBg,
+                          textColor: textColor,
+                          subColor: subColor,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Section Header: Practice Mode by Type
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8, bottom: 8),
+                          child: Text(
+                            'የልምምድ ጥያቄዎች በየዓይነቱ (Practice Questions by Type)',
+                            style: GoogleFonts.notoSansEthiopic(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF2563EB),
+                            ),
+                          ),
+                        ),
+
+                        // 3a. Multiple Choice
+                        _buildDownloadOptionTile(
+                          title: 'ምርጫ ጥያቄዎች (Multiple Choice - MCQ)',
+                          subtitle: 'የተሟሉ 4 አማራጭ ያላቸው ጥያቄዎች',
+                          icon: Icons.checklist_rounded,
+                          iconColor: const Color(0xFF3B82F6),
+                          isDownloaded: hasPracticeMcq,
+                          onDownload: () async {
+                            await _downloadUnitQuestionsSeparately(
+                              cleanUnitId: cleanUnitId,
+                              activeUnitNum: activeUnitNum,
+                              mode: 'practice',
+                              type: 'multiple_choice',
+                            );
+                            final updated = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'multiple_choice');
+                            setModalState(() => hasPracticeMcq = updated);
+                            _loadOfflineDownloads();
+                          },
+                          cardBg: cardBg,
+                          textColor: textColor,
+                          subColor: subColor,
+                        ),
+                        const SizedBox(height: 10),
+
+                        // 3b. True / False
+                        _buildDownloadOptionTile(
+                          title: 'እውነት / ሐሰት (True or False)',
+                          subtitle: 'ጽንሰ-ሀሳብን የሚፈትሹ ጥያቄዎች',
+                          icon: Icons.rule_rounded,
+                          iconColor: const Color(0xFF10B981),
+                          isDownloaded: hasPracticeTf,
+                          onDownload: () async {
+                            await _downloadUnitQuestionsSeparately(
+                              cleanUnitId: cleanUnitId,
+                              activeUnitNum: activeUnitNum,
+                              mode: 'practice',
+                              type: 'true_false',
+                            );
+                            final updated = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'true_false');
+                            setModalState(() => hasPracticeTf = updated);
+                            _loadOfflineDownloads();
+                          },
+                          cardBg: cardBg,
+                          textColor: textColor,
+                          subColor: subColor,
+                        ),
+                        const SizedBox(height: 10),
+
+                        // 3c. Fill in the blank (Blank Space)
+                        _buildDownloadOptionTile(
+                          title: 'ክፍት ቦታ ሙላ (Blank Space)',
+                          subtitle: 'ቀመሮችንና ቁልፍ ቃላትን የሚጠይቁ',
+                          icon: Icons.edit_note_rounded,
+                          iconColor: const Color(0xFF8B5CF6),
+                          isDownloaded: hasPracticeBlank,
+                          onDownload: () async {
+                            await _downloadUnitQuestionsSeparately(
+                              cleanUnitId: cleanUnitId,
+                              activeUnitNum: activeUnitNum,
+                              mode: 'practice',
+                              type: 'blank_space',
+                            );
+                            final updated = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'blank_space');
+                            setModalState(() => hasPracticeBlank = updated);
+                            _loadOfflineDownloads();
+                          },
+                          cardBg: cardBg,
+                          textColor: textColor,
+                          subColor: subColor,
+                        ),
+                        const SizedBox(height: 10),
+
+                        // 3d. Matching
+                        _buildDownloadOptionTile(
+                          title: 'አዛምድ (Matching Questions)',
+                          subtitle: 'ጽንሰ-ሀሳብን ከትርጉም ማዛመድ',
+                          icon: Icons.sync_alt_rounded,
+                          iconColor: const Color(0xFFF59E0B),
+                          isDownloaded: hasPracticeMatching,
+                          onDownload: () async {
+                            await _downloadUnitQuestionsSeparately(
+                              cleanUnitId: cleanUnitId,
+                              activeUnitNum: activeUnitNum,
+                              mode: 'practice',
+                              type: 'matching',
+                            );
+                            final updated = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'matching');
+                            setModalState(() => hasPracticeMatching = updated);
+                            _loadOfflineDownloads();
+                          },
+                          cardBg: cardBg,
+                          textColor: textColor,
+                          subColor: subColor,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 4. Download All Bundle Button
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            Navigator.of(ctx).pop();
+                            _downloadUnit(unitId);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          icon: const Icon(Icons.cloud_download_rounded),
+                          label: Text(
+                            'ሁሉንም በአንድ ላይ አውርድ (Download Full Package)',
+                            style: GoogleFonts.notoSansEthiopic(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _downloadUnitPdf({
+    required String cleanUnitId,
+    required int activeUnitNum,
+    required String unitTitle,
+  }) async {
+    try {
+      final normalizedSubject = widget.subjectId.toLowerCase();
+      String pdfUrl = '';
+      String summary = '';
+
+      try {
+        final res = await Supabase.instance.client
+            .from('short_notes')
+            .select()
+            .eq('grade', widget.grade)
+            .eq('unit_number', activeUnitNum)
+            .ilike('subject', '%$normalizedSubject%')
+            .maybeSingle();
+
+        if (res != null) {
+          pdfUrl = res['pdf_url']?.toString() ?? '';
+          summary = res['summary']?.toString() ?? res['content']?.toString() ?? '';
+        }
+      } catch (e) {
+        debugPrint('[Download PDF] query note: $e');
+      }
+
+      if (pdfUrl.isEmpty) {
+        pdfUrl = 'https://smartlearn.et/curriculum/grade_${widget.grade}/${normalizedSubject}_u$activeUnitNum.pdf';
+      }
+
+      await OfflineManager.saveOfflinePdf(
+        unitId: cleanUnitId,
+        pdfUrl: pdfUrl,
+        title: 'Unit $activeUnitNum: $unitTitle',
+        summary: summary,
+        grade: widget.grade,
+        unit: activeUnitNum,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'የ Unit $activeUnitNum ፒዲኤፍ ማስታወሻ ወርዷል!',
+              style: GoogleFonts.notoSansEthiopic(),
+            ),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ማውረድ አልተሳካም፡ $e', style: GoogleFonts.notoSansEthiopic()),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _downloadUnitQuestionsSeparately({
+    required String cleanUnitId,
+    required int activeUnitNum,
+    required String mode,
+    String? type,
+  }) async {
+    try {
+      final quizMode = mode == 'exam' ? QuizMode.exam : QuizMode.practice;
+      final questions = await QuizService.fetchQuestions(
+        grade: widget.grade,
+        subject: widget.subjectId,
+        unit: activeUnitNum,
+        mode: quizMode,
+        questionType: type ?? 'all',
+      );
+
+      if (questions.isEmpty) {
+        throw Exception("ጥያቄዎች አልተገኙም");
+      }
+
+      await OfflineManager.saveOfflineQuestionsByMode(
+        unitId: cleanUnitId,
+        mode: mode,
+        questionType: type,
+        questions: questions,
+        grade: widget.grade,
+        unit: activeUnitNum,
+      );
+
+      if (mounted) {
+        final label = mode == 'exam'
+            ? 'የፈተና ጥያቄዎች (Exam Mode)'
+            : 'የልምምድ ጥያቄዎች (${(type ?? "all").toUpperCase()})';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '$label ለ Unit $activeUnitNum ወርዷል!',
+              style: GoogleFonts.notoSansEthiopic(),
+            ),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ማውረድ አልተሳካም፡ $e', style: GoogleFonts.notoSansEthiopic()),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildDownloadOptionTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required bool isDownloaded,
+    required VoidCallback onDownload,
+    required Color cardBg,
+    required Color textColor,
+    required Color subColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDownloaded
+              ? const Color(0xFF10B981).withValues(alpha: 0.4)
+              : (cardBg == Colors.white ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.notoSansEthiopic(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    color: subColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton.icon(
+            onPressed: onDownload,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDownloaded
+                  ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                  : const Color(0xFF2563EB),
+              foregroundColor: isDownloaded ? const Color(0xFF10B981) : Colors.white,
+              elevation: 0,
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            icon: Icon(
+              isDownloaded ? Icons.check_circle_rounded : Icons.download_rounded,
+              size: 15,
+            ),
+            label: Text(
+              isDownloaded ? 'ወርዷል' : 'አውርድ',
+              style: GoogleFonts.notoSansEthiopic(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _downloadUnit(String unitId) async {
     final String typeSuffix = widget.isShortNotesMode ? '_notes' : '_quiz';
@@ -1558,27 +2051,12 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                             );
                                             return;
                                           }
-                                          if (isDownloaded && !isExpired) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  languageCode == 'en'
-                                                      ? (widget.isShortNotesMode
-                                                          ? 'Unit notes are fully up-to-date and available offline.'
-                                                          : 'Unit questions are fully up-to-date and available offline.')
-                                                      : (widget.isShortNotesMode
-                                                          ? 'የክፍሉ ማስታወሻዎች ወቅታዊ ናቸው እና ከመስመር ውጭ ማግኘት ይችላሉ።'
-                                                          : 'የክፍሉ ጥያቄዎች ወቅታዊ ናቸው እና ከመስመር ውጭ ማግኘት ይችላሉ።'),
-                                                ),
-                                                backgroundColor: const Color(0xFF10B981),
-                                                behavior: SnackBarBehavior.floating,
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                              ),
-                                            );
-                                            return;
-                                          }
                                           _checkRegistrationAndProceed(index, activeUnitNum, onSuccess: () {
-                                            _downloadUnit(unitId);
+                                            _showDownloadOptionsModal(
+                                              unitId: unitId,
+                                              activeUnitNum: activeUnitNum,
+                                              unitTitle: title,
+                                            );
                                           });
                                         },
                                       ),

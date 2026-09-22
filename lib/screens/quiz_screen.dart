@@ -137,10 +137,22 @@ class _QuizScreenState extends State<QuizScreen> {
 
     try {
       final List<QuestionModel> fetched;
-      final String downloadKey = '${_getUnitId()}_quiz';
+      final String unitId = _getUnitId();
+      final String modeStr = widget.mode == QuizMode.exam ? 'exam' : 'practice';
+
+      // 1. Check if questions for this specific mode and type are downloaded offline
+      final offlineModeQuestions = await OfflineManager.getOfflineQuestionsByMode(
+        unitId: unitId,
+        mode: modeStr,
+        questionType: widget.mode == QuizMode.practice ? _selectedTypeFilter : null,
+      );
+
+      final String downloadKey = '${unitId}_quiz';
       final bool isQuizDownloaded = await OfflineManager.isDownloaded(downloadKey);
 
-      if (isQuizDownloaded) {
+      if (offlineModeQuestions.isNotEmpty) {
+        fetched = offlineModeQuestions;
+      } else if (isQuizDownloaded) {
         fetched = await OfflineManager.getOfflineQuestions(downloadKey);
       } else if (widget.isOffline && widget.offlineUnitId != null) {
         fetched = await OfflineManager.getOfflineQuestions(widget.offlineUnitId!);
@@ -238,6 +250,51 @@ class _QuizScreenState extends State<QuizScreen> {
         _onTimeExpired();
       }
     });
+  }
+
+  Future<void> _downloadCurrentModeQuestions() async {
+    if (_questions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'ጥያቄዎች ገና አልተጫኑም (Questions still loading)',
+            style: GoogleFonts.notoSansEthiopic(),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    final unitId = _getUnitId();
+    final modeStr = widget.mode == QuizMode.exam ? 'exam' : 'practice';
+    final type = widget.mode == QuizMode.practice ? _selectedTypeFilter : null;
+
+    await OfflineManager.saveOfflineQuestionsByMode(
+      unitId: unitId,
+      mode: modeStr,
+      questionType: type,
+      questions: _questions,
+      grade: widget.grade,
+      unit: widget.unit,
+    );
+
+    if (mounted) {
+      final isAm = AppStateProvider.of(context).languageCode == 'am';
+      final typeLabel = widget.mode == QuizMode.exam
+          ? (isAm ? "የፈተና ጥያቄዎች (Exam Mode)" : "Exam Questions")
+          : (isAm ? "የልምምድ ጥያቄዎች (${_selectedTypeFilter.toUpperCase()})" : "Practice Questions (${_selectedTypeFilter.toUpperCase()})");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$typeLabel ከመስመር ውጭ ተቀምጠዋል! (Downloaded for Offline)',
+            style: GoogleFonts.notoSansEthiopic(),
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   void _onTimeExpired() {
@@ -891,6 +948,15 @@ class _QuizScreenState extends State<QuizScreen> {
           foregroundColor: titleTextColor,
           centerTitle: true,
           actions: [
+            IconButton(
+              icon: const Icon(
+                Icons.download_for_offline_rounded,
+                color: Color(0xFF2563EB),
+                size: 22,
+              ),
+              tooltip: "Download Current Mode Questions Offline",
+              onPressed: _downloadCurrentModeQuestions,
+            ),
             IconButton(
               icon: Icon(
                 isLight ? Icons.dark_mode_outlined : Icons.light_mode_outlined,

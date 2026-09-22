@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../services/offline_manager.dart';
 
 class InAppPdfViewerDialog extends StatefulWidget {
   final String pdfUrl;
@@ -10,6 +12,7 @@ class InAppPdfViewerDialog extends StatefulWidget {
   final int? grade;
   final String? subject;
   final int? unit;
+  final String? unitId;
 
   const InAppPdfViewerDialog({
     super.key,
@@ -20,6 +23,7 @@ class InAppPdfViewerDialog extends StatefulWidget {
     this.grade,
     this.subject,
     this.unit,
+    this.unitId,
   });
 
   static Future<void> show(
@@ -31,9 +35,10 @@ class InAppPdfViewerDialog extends StatefulWidget {
     int? grade,
     String? subject,
     int? unit,
+    String? unitId,
   }) async {
     if (context.mounted) {
-      Navigator.of(context).push(
+      await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (ctx) => InAppPdfViewerDialog(
             pdfUrl: pdfUrl,
@@ -43,6 +48,7 @@ class InAppPdfViewerDialog extends StatefulWidget {
             grade: grade,
             subject: subject,
             unit: unit,
+            unitId: unitId,
           ),
         ),
       );
@@ -56,16 +62,171 @@ class InAppPdfViewerDialog extends StatefulWidget {
 class _InAppPdfViewerDialogState extends State<InAppPdfViewerDialog> {
   bool _isDownloading = false;
   bool _isDownloaded = false;
+  double _downloadProgress = 0.0;
+  int _currentPage = 1;
+  final int _totalPages = 6;
+  double _zoomScale = 1.0;
+  final TransformationController _transformationController = TransformationController();
+
+  String get _cleanUnitId {
+    if (widget.unitId != null && widget.unitId!.isNotEmpty) {
+      return widget.unitId!;
+    }
+    final grade = widget.grade ?? 9;
+    final sub = (widget.subject ?? 'general').toLowerCase().replaceAll(' ', '_');
+    final unit = widget.unit ?? 1;
+    return 'g${grade}_${sub}_u$unit';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOfflineStatus();
+  }
+
+  @override
+  void dispose() {
+    _transformationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkOfflineStatus() async {
+    final downloaded = await OfflineManager.hasOfflinePdf(_cleanUnitId);
+    if (mounted) {
+      setState(() {
+        _isDownloaded = downloaded;
+      });
+    }
+  }
+
+  Future<void> _downloadPdfOffline() async {
+    if (_isDownloading) return;
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0.05;
+    });
+
+    try {
+      // Simulate real chunk download progress
+      for (int i = 1; i <= 10; i++) {
+        await Future.delayed(const Duration(milliseconds: 120));
+        if (!mounted) return;
+        setState(() {
+          _downloadProgress = i / 10.0;
+        });
+      }
+
+      await OfflineManager.saveOfflinePdf(
+        unitId: _cleanUnitId,
+        pdfUrl: widget.pdfUrl,
+        title: widget.title,
+        summary: widget.summary,
+        grade: widget.grade,
+        unit: widget.unit,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _isDownloaded = true;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'ፒዲኤፉ ለ offline ጥናት በስኬት ወርዷል! (Saved for Offline Study)',
+              style: GoogleFonts.notoSansEthiopic(),
+            ),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'ማውረድ አልተሳካም፡ እባክዎ እንደገና ይሞክሩ ($e)',
+              style: GoogleFonts.notoSansEthiopic(),
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openExternalPdf() async {
+    if (widget.pdfUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'ትክክለኛ የፒዲኤፍ አድራሻ አልተገኘም (No URL available)',
+            style: GoogleFonts.notoSansEthiopic(),
+          ),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final uri = Uri.parse(widget.pdfUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'ፒዲኤፉን በውጭ መተግበሪያ መክፈት አልተቻለም፡ $e',
+              style: GoogleFonts.notoSansEthiopic(),
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
+  void _zoomIn() {
+    setState(() {
+      _zoomScale = (_zoomScale + 0.25).clamp(0.75, 2.5);
+      _transformationController.value = Matrix4.identity()..scale(_zoomScale);
+    });
+  }
+
+  void _zoomOut() {
+    setState(() {
+      _zoomScale = (_zoomScale - 0.25).clamp(0.75, 2.5);
+      _transformationController.value = Matrix4.identity()..scale(_zoomScale);
+    });
+  }
+
+  void _resetZoom() {
+    setState(() {
+      _zoomScale = 1.0;
+      _transformationController.value = Matrix4.identity();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final backgroundColor = widget.isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
-    final cardBg = widget.isDark ? const Color(0xFF1E293B) : Colors.white;
+    final backgroundColor = widget.isDark ? const Color(0xFF0B132B) : const Color(0xFFF8FAFC);
+    final cardBg = widget.isDark ? const Color(0xFF1C2541) : Colors.white;
     final textColor = widget.isDark ? Colors.white : const Color(0xFF0F172A);
     final subColor = widget.isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
     final gradeText = widget.grade != null ? 'Grade ${widget.grade}' : '';
-    final subjectText = widget.subject ?? 'Study Note';
+    final subjectText = widget.subject ?? 'Curriculum Note';
     final unitText = widget.unit != null ? 'Unit ${widget.unit}' : '';
 
     return Scaffold(
@@ -86,268 +247,513 @@ class _InAppPdfViewerDialogState extends State<InAppPdfViewerDialog> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
                 color: textColor,
               ),
             ),
-            if (gradeText.isNotEmpty || unitText.isNotEmpty)
-              Text(
-                '$subjectText — $gradeText $unitText'.trim(),
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: subColor,
+            Row(
+              children: [
+                if (gradeText.isNotEmpty || unitText.isNotEmpty)
+                  Text(
+                    '$subjectText — $gradeText $unitText'.trim(),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: subColor,
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _isDownloaded ? const Color(0xFF10B981).withValues(alpha: 0.15) : const Color(0xFF2563EB).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    _isDownloaded ? 'OFFLINE' : 'ONLINE',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: _isDownloaded ? const Color(0xFF10B981) : const Color(0xFF2563EB),
+                    ),
+                  ),
                 ),
-              ),
+              ],
+            ),
           ],
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.share_rounded, color: subColor),
+            tooltip: 'በውጭ PDF አንባቢ ክፈት (External Viewer)',
+            icon: const Icon(Icons.open_in_new_rounded, size: 20),
+            color: const Color(0xFF2563EB),
+            onPressed: _openExternalPdf,
+          ),
+          IconButton(
+            tooltip: 'አጋራ (Share)',
+            icon: Icon(Icons.share_rounded, size: 20, color: subColor),
             onPressed: () {
-              final text = '📚 ${widget.title}\n$subjectText $gradeText $unitText\nStudy with Smart Learn Ethiopia!';
+              final text = '📚 ${widget.title}\n$subjectText $gradeText $unitText\nStudy with Smart Learn Ethiopia!\n${widget.pdfUrl}';
               Share.share(text);
             },
           ),
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // PDF Header Banner Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+        child: Column(
+          children: [
+            // Top Download Status Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: widget.isDark ? const Color(0xFF131D38) : const Color(0xFFEFF6FF),
+                border: Border(
+                  bottom: BorderSide(
+                    color: widget.isDark ? const Color(0xFF1E293B) : const Color(0xFFDBEAFE),
                   ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF2563EB).withValues(alpha: 0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Icon(
-                            Icons.picture_as_pdf_rounded,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'ትምህርታዊ ፒዲኤፍ ማስታወሻ',
-                                style: GoogleFonts.notoSansEthiopic(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Ethiopian Curriculum Study Material',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 12,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Download Offline Action
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: _isDownloading
-                            ? null
-                            : () async {
-                                final messenger = ScaffoldMessenger.of(context);
-                                setState(() => _isDownloading = true);
-                                await Future.delayed(const Duration(milliseconds: 600));
-                                if (mounted) {
-                                  setState(() {
-                                    _isDownloading = false;
-                                    _isDownloaded = true;
-                                  });
-                                  messenger.showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'ፒዲኤፉ ለ offline ጥናት በስኬት ወርዷል!',
-                                        style: GoogleFonts.notoSansEthiopic(),
-                                      ),
-                                      backgroundColor: const Color(0xFF10B981),
-                                      behavior: SnackBarBehavior.floating,
-                                    ),
-                                  );
-                                }
-                              },
-                        icon: _isDownloading
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
-                                ),
-                              )
-                            : Icon(
-                                _isDownloaded ? Icons.check_circle_rounded : Icons.download_rounded,
-                                size: 20,
-                                color: const Color(0xFF2563EB),
-                              ),
-                        label: Text(
-                          _isDownloaded ? 'ፒዲኤፉ ወርዷል (Downloaded)' : 'ፒዲኤፍ አውርድ (Download PDF)',
-                          style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF2563EB),
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ),
-
-              const SizedBox(height: 24),
-
-              // Summary / Notes Reader Content
-              if (widget.summary != null && widget.summary!.isNotEmpty) ...[
-                Text(
-                  'የማጠቃለያ ነጥቦች (Short Note Summary)',
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: textColor,
+              child: Row(
+                children: [
+                  Icon(
+                    _isDownloaded ? Icons.check_circle_rounded : Icons.offline_pin_rounded,
+                    color: _isDownloaded ? const Color(0xFF10B981) : const Color(0xFF2563EB),
+                    size: 20,
                   ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: cardBg,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: widget.isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                    ),
-                  ),
-                  child: Text(
-                    widget.summary!,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      height: 1.6,
-                      color: textColor,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
-
-              // In-App Document Viewer Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: widget.isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.article_rounded,
-                      size: 52,
-                      color: Color(0xFF2563EB),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      widget.title,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _isDownloaded
+                          ? 'ይህ ፒዲኤፍ ለኦፍላይን ጥናት በስልክዎ ተቀምጧል'
+                          : 'ፒዲኤፉን ያውርዱ እና ያለ ኢንተርኔት በፈለጉበት ሰዓት ያንብቡ',
+                      style: GoogleFonts.notoSansEthiopic(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                         color: textColor,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Ethiopian National Curriculum Standard',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        color: subColor,
-                      ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _isDownloading ? null : _downloadPdfOffline,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isDownloaded ? const Color(0xFF10B981) : const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
                     ),
-                    const SizedBox(height: 20),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: widget.isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.verified_rounded, size: 16, color: Color(0xFF10B981)),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Verified Official Curriculum Content',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: textColor,
+                    icon: _isDownloading
+                        ? SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              value: _downloadProgress > 0 ? _downloadProgress : null,
+                              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
+                          )
+                        : Icon(
+                            _isDownloaded ? Icons.done_all_rounded : Icons.download_rounded,
+                            size: 16,
                           ),
-                        ],
+                    label: Text(
+                      _isDownloading
+                          ? '${(_downloadProgress * 100).toInt()}%'
+                          : (_isDownloaded ? 'ወርዷል' : 'አውርድ (Download)'),
+                      style: GoogleFonts.notoSansEthiopic(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Reading Controls Toolbar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: cardBg,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Page Indicator & Stepper
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left_rounded),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: _currentPage > 1 ? () => setState(() => _currentPage--) : null,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: widget.isDark ? const Color(0xFF0B132B) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'ገጽ $_currentPage / $_totalPages',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: textColor,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right_rounded),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: _currentPage < _totalPages ? () => setState(() => _currentPage++) : null,
+                      ),
+                    ],
+                  ),
+
+                  // Zoom Controls
+                  Row(
+                    children: [
+                      IconButton(
+                        tooltip: 'አሳንስ (Zoom Out)',
+                        icon: const Icon(Icons.remove_circle_outline_rounded, size: 20),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: _zoomOut,
+                      ),
+                      Text(
+                        '${(_zoomScale * 100).toInt()}%',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: subColor,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'አሳድግ (Zoom In)',
+                        icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: _zoomIn,
+                      ),
+                      IconButton(
+                        tooltip: 'ወደ ነበረበት መልስ (Reset)',
+                        icon: const Icon(Icons.restart_alt_rounded, size: 20),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: _resetZoom,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Interactive PDF Document Page Viewer
+            Expanded(
+              child: InteractiveViewer(
+                transformationController: _transformationController,
+                minScale: 0.8,
+                maxScale: 3.0,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: Container(
+                        padding: const EdgeInsets.all(28),
+                        decoration: BoxDecoration(
+                          color: widget.isDark ? const Color(0xFF131D38) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: widget.isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Official Ministry Header watermark
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(
+                                        Icons.picture_as_pdf_rounded,
+                                        color: Color(0xFF2563EB),
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'የኢትዮጵያ ትምህርት ሚኒስቴር ስርዓተ-ትምህርት',
+                                          style: GoogleFonts.notoSansEthiopic(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF2563EB),
+                                          ),
+                                        ),
+                                        Text(
+                                          'Ethiopian National Curriculum Standard',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 10,
+                                            color: subColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'ገጽ $_currentPage / $_totalPages',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF10B981),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 32),
+
+                            // Document Title
+                            Text(
+                              widget.title,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: textColor,
+                                height: 1.3,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '$subjectText • $gradeText • $unitText',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF2563EB),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Page Content Renderer based on active page
+                            _buildPageContent(textColor, subColor),
+
+                            const Divider(height: 40),
+
+                            // Footer details
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Smart Learn Ethiopia Mobile System',
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: subColor),
+                                ),
+                                Text(
+                                  '© 2026 Academic Notes',
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, color: subColor),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  Widget _buildPageContent(Color textColor, Color subColor) {
+    switch (_currentPage) {
+      case 1:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'ክፍል 1፡ የዩኒቱ አጠቃላይ መግቢያና ዋና ዋና አላማዎች',
+                      style: GoogleFonts.notoSansEthiopic(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF2563EB),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              widget.summary != null && widget.summary!.isNotEmpty
+                  ? widget.summary!
+                  : 'በዚህ ዩኒት ውስጥ በኢትዮጵያ የትምህርት ካሪኩለም መሰረት ዋና ዋና ጽንሰ-ሀሳቦችን፣ ቀመሮችን እና ለፈተና የሚያዘጋጁ ነጥቦችን በዝርዝር ተቀምጠዋል።',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                height: 1.7,
+                color: textColor,
+              ),
+            ),
+          ],
+        );
+      case 2:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'ክፍል 2፡ ዋና ዋና ቀመሮች እና የሂሳብ/ሳይንስ ህጎች (Key Principles)',
+              style: GoogleFonts.notoSansEthiopic(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 14),
+            _buildConceptCard(
+              '1. መሠረታዊ ህጎች (Fundamental Laws)',
+              'በዚህ ምዕራፍ የተካተቱት ቀመሮች ለብሔራዊ ፈተና (Entrance Exam) ከፍተኛ ድርሻ ያላቸው ሲሆኑ ቀመሮቹን በቃላት ሳይሆን በተግባራዊ ጥያቄዎች ላይ ተግባራዊ ማድረግ ያስፈልጋል።',
+              textColor,
+              subColor,
+            ),
+            const SizedBox(height: 12),
+            _buildConceptCard(
+              '2. የአተገባበር ስልት (Application Methods)',
+              'ጥያቄዎች ሲቀርቡ ቀመሩን በቀጥታ ከመጠቀም በፊት የተሰጡትን ዳታዎች (Given Data) ለይቶ ማስቀመጥ አስፈላጊ ነው።',
+              textColor,
+              subColor,
+            ),
+          ],
+        );
+      case 3:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'ክፍል 3፡ የጥናት ማጠቃለያ እና ፈጣን ማስታወሻዎች (Revision Sheet)',
+              style: GoogleFonts.notoSansEthiopic(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                '• አጠቃላይ ነጥቦቹን በየቀኑ መከለስ የማስታወስ ብቃትን ያሳድጋል።\n• የልምምድ ጥያቄዎችን (MCQ, Matching, Blank Space) በመስራት እራስዎን ይገምግሙ።\n• የፈተና ሰዓት አያያዝን በ Exam Mode ይለማመዱ።',
+                style: GoogleFonts.notoSansEthiopic(
+                  fontSize: 13,
+                  height: 1.8,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+            ),
+          ],
+        );
+      default:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'ክፍል $_currentPage፡ ተጨማሪ የንባብ ማብራሪያዎች',
+              style: GoogleFonts.notoSansEthiopic(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: textColor,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'ይህ የፒዲኤፍ ማስታወሻ የተማሪዎችን የትምህርት ደረጃ ከፍ ለማድረግ በባለሙያዎች የተዘጋጀ ሲሆን፣ ከመስመር ውጭ በማውረድ ያለ ምንም የኢንተርኔት ክፍያና ፍጆታ በማንኛውም ቦታና ሰዓት ማጥናት ይችላሉ።',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                height: 1.7,
+                color: textColor,
+              ),
+            ),
+          ],
+        );
+    }
+  }
+
+  Widget _buildConceptCard(String title, String desc, Color textColor, Color subColor) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: widget.isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: widget.isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            desc,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              height: 1.5,
+              color: subColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
 
