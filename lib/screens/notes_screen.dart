@@ -1,4 +1,4 @@
-// ignore_for_file: prefer_final_fields, prefer_interpolation_to_compose_strings, deprecated_member_use
+// ignore_for_file: prefer_final_fields, prefer_interpolation_to_compose_strings, deprecated_member_use, unused_element
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,11 +6,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../services/offline_manager.dart';
 import '../services/analytics_service.dart';
 import '../services/short_note_service.dart';
-import '../models/short_note_model.dart';
 import '../widgets/math_text.dart';
 import '../widgets/in_app_pdf_viewer_dialog.dart';
 import '../main.dart';
@@ -999,180 +997,14 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 
   Widget _buildPdfDocumentPageContent(String summary, Color textColor, Color subColor, bool isAmharic) {
-    switch (_pdfCurrentPage) {
-      case 1:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2563EB).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      isAmharic ? 'ክፍል 1፡ የዩኒቱ አጠቃላይ መግቢያና ዋና ዋና አላማዎች' : 'Part 1: Key Objectives & Introduction',
-                      style: GoogleFonts.notoSansEthiopic(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF2563EB),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (summary.isNotEmpty)
-              _buildSummaryContent(summary, textColor, subColor)
-            else
-              Text(
-                isAmharic
-                    ? 'በዚህ ዩኒት ውስጥ በኢትዮጵያ የትምህርት ካሪኩለም መሰረት ዋና ዋና ጽንሰ-ሀሳቦችን፣ ቀመሮችን እና ለፈተና የሚያዘጋጁ ነጥቦችን በዝርዝር ተቀምጠዋል።'
-                    : 'In this unit, key concepts, formulas, and national exam preparation points are detailed according to the Ethiopian Curriculum standard.',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14,
-                  height: 1.7,
-                  color: textColor,
-                ),
-              ),
-          ],
-        );
-      case 2:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              isAmharic ? 'ክፍል 2፡ ዋና ዋና ቀመሮች እና የሂሳብ/ሳይንስ ህጎች (Key Principles)' : 'Part 2: Core Formulas & Principles',
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: textColor,
-              ),
-            ),
-            const SizedBox(height: 14),
-            _buildConceptCard(
-              isAmharic ? '1. መሠረታዊ ህጎች (Fundamental Laws)' : '1. Fundamental Laws',
-              isAmharic
-                  ? 'በዚህ ምዕራፍ የተካተቱት ቀመሮች ለብሔራዊ ፈተና (Entrance Exam) ከፍተኛ ድርሻ ያላቸው ሲሆኑ ቀመሮቹን በቃላት ሳይሆን በተግባራዊ ጥያቄዎች ላይ ተግባራዊ ማድረግ ያስፈልጋል።'
-                  : 'Key formulas in this section carry high weight for National Examinations.',
-              textColor,
-              subColor,
-            ),
-            const SizedBox(height: 12),
-            _buildConceptCard(
-              isAmharic ? '2. የአተገባበር ስልት (Application Methods)' : '2. Problem Solving Methods',
-              isAmharic
-                  ? 'ጥያቄዎች ሲቀርቡ ቀመሩን በቀጥታ ከመጠቀም በፊት የተሰጡትን ዳታዎች (Given Data) ለይቶ ማስቀመጥ አስፈላጊ ነው።'
-                  : 'Identify given variables first before applying equations step-by-step.',
-              textColor,
-              subColor,
-            ),
-          ],
-        );
-      case 3:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              isAmharic ? 'ክፍል 3፡ የጥናት ማጠቃለያ እና ፈጣን ማስታወሻዎች (Revision Sheet)' : 'Part 3: Quick Revision Sheet',
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: textColor,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                isAmharic
-                    ? '• አጠቃላይ ነጥቦቹን በየቀኑ መከለስ የማስታወስ ብቃትን ያሳድጋል።\n• የልምምድ ጥያቄዎችን (MCQ, Matching, Blank Space) በመስራት እራስዎን ይገምግሙ።\n• የፈተና ሰዓት አያያዝን በ Exam Mode ይለማመዱ።'
-                    : '• Daily review reinforces long-term memory.\n• Test yourself using practice questions.\n• Practice time management using Exam Mode.',
-                style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 13,
-                  height: 1.8,
-                  fontWeight: FontWeight.w600,
-                  color: textColor,
-                ),
-              ),
-            ),
-          ],
-        );
-      default:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              isAmharic ? 'ክፍል $_pdfCurrentPage፡ ተጨማሪ የንባብ ማብራሪያዎች' : 'Part $_pdfCurrentPage: Extended Notes & Explanations',
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: textColor,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              isAmharic
-                  ? 'ይህ የፒዲኤፍ ማስታወሻ የተማሪዎችን የትምህርት ደረጃ ከፍ ለማድረግ በባለሙያዎች የተዘጋጀ ሲሆን፣ ከመስመር ውጭ በማውረድ ያለ ምንም የኢንተርኔት ክፍያና ፍጆታ በማንኛውም ቦታና ሰዓት ማጥናት ይችላሉ።'
-                  : 'Prepared by curriculum specialists to enhance learning outcomes for Ethiopian students offline.',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                height: 1.7,
-                color: textColor,
-              ),
-            ),
-          ],
-        );
+    if (summary.isNotEmpty) {
+      return _buildSummaryContent(summary, textColor, subColor);
     }
+    return Container();
   }
 
   Widget _buildConceptCard(String title, String desc, Color textColor, Color subColor) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: _isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: _isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            desc,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              height: 1.5,
-              color: subColor,
-            ),
-          ),
-        ],
-      ),
-    );
+    return Container();
   }
 
   Widget _buildSummaryContent(String text, Color textColor, Color subColor) {
@@ -1379,18 +1211,47 @@ class _NotesScreenState extends State<NotesScreen> {
               ),
             ),
             const SizedBox(height: 22),
-            ElevatedButton.icon(
-              onPressed: _fetchNotes,
-              icon: const Icon(Icons.refresh_rounded, size: 18, color: Colors.white),
-              label: Text(
-                isAmharic ? 'እንደገና ሞክር' : 'Try Again',
-                style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: widget.themeColor,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _fetchNotes,
+                  icon: const Icon(Icons.refresh_rounded, size: 18, color: Colors.white),
+                  label: Text(
+                    isAmharic ? 'እንደገና ሞክር' : 'Try Again',
+                    style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: widget.themeColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    final errLog = 'Grade: ${widget.grade}, Subject: ${widget.subjectId}, Unit: ${widget.unitNumber}, ErrorType: $_errorType';
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isAmharic ? 'የስህተት መረጃው ኮፒ ሆኗል፡ $errLog' : 'Error log copied to clipboard: $errLog',
+                          style: GoogleFonts.notoSansEthiopic(),
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  label: Text(
+                    isAmharic ? 'ስህተቱን ኮፒ አድርግ' : 'Copy Error',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

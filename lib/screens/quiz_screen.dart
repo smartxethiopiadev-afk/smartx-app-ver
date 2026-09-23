@@ -124,11 +124,17 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Future<void> _loadQuestions() async {
+    for (final controller in _blankControllers.values) {
+      controller.dispose();
+    }
+    _blankControllers.clear();
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
       _selectedAnswers.clear();
       _blankInputAnswers.clear();
+      _matchingAnswers.clear();
       _revealedHints.clear();
       _submittedQuestions.clear();
       _showAnswersAndExplanations = false;
@@ -503,6 +509,9 @@ class _QuizScreenState extends State<QuizScreen> {
         'currentIndex': _currentIndex,
         'selectedAnswers': _selectedAnswers.map((k, v) => MapEntry(k.toString(), v)),
         'blankInputAnswers': _blankInputAnswers.map((k, v) => MapEntry(k.toString(), v)),
+        'matchingAnswers': _matchingAnswers.map(
+          (k, v) => MapEntry(k.toString(), v.map((k2, v2) => MapEntry(k2.toString(), v2))),
+        ),
         'submittedQuestions': _submittedQuestions.map((e) => e.toString()).toList(),
         'revealedHints': _revealedHints.map((e) => e.toString()).toList(),
         'timeLeftSeconds': _timeLeftSeconds,
@@ -621,6 +630,22 @@ class _QuizScreenState extends State<QuizScreen> {
           restoredBlankAnswers[intIndex] = v.toString();
         }
       });
+
+      final Map<String, dynamic> matchingJson = data['matchingAnswers'] as Map<String, dynamic>? ?? {};
+      final Map<int, Map<int, String>> restoredMatching = {};
+      matchingJson.forEach((qKey, mapVal) {
+        final qIdx = int.tryParse(qKey);
+        if (qIdx != null && mapVal is Map) {
+          final Map<int, String> pairMap = {};
+          mapVal.forEach((pKey, pVal) {
+            final pIdx = int.tryParse(pKey.toString());
+            if (pIdx != null) {
+              pairMap[pIdx] = pVal.toString();
+            }
+          });
+          restoredMatching[qIdx] = pairMap;
+        }
+      });
       
       setState(() {
         _questions = restoredQuestions;
@@ -630,6 +655,8 @@ class _QuizScreenState extends State<QuizScreen> {
         _selectedAnswers.addAll(restoredAnswers);
         _blankInputAnswers.clear();
         _blankInputAnswers.addAll(restoredBlankAnswers);
+        _matchingAnswers.clear();
+        _matchingAnswers.addAll(restoredMatching);
         _questionKeys = List.generate(restoredQuestions.length, (_) => GlobalKey());
         _isLoading = false;
         
@@ -804,7 +831,9 @@ class _QuizScreenState extends State<QuizScreen> {
         final userPairs = _matchingAnswers[i] ?? {};
         int correctCount = 0;
         for (int pIdx = 0; pIdx < q.matchingPairs.length; pIdx++) {
-          if (userPairs[pIdx] == q.matchingPairs[pIdx].right) {
+          final userVal = userPairs[pIdx]?.trim().toLowerCase() ?? '';
+          final expectedVal = q.matchingPairs[pIdx].right.trim().toLowerCase();
+          if (userVal.isNotEmpty && userVal == expectedVal) {
             correctCount++;
           }
         }
@@ -2043,7 +2072,7 @@ class _QuizScreenState extends State<QuizScreen> {
           final pairIdx = entry.key;
           final pair = entry.value;
           final selectedRight = userAnswers[pairIdx];
-          final isCorrect = selectedRight == pair.right;
+          final isCorrect = selectedRight != null && selectedRight.trim().toLowerCase() == pair.right.trim().toLowerCase();
 
           return Container(
             margin: const EdgeInsets.only(bottom: 12),

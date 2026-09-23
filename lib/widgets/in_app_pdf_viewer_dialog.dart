@@ -1,3 +1,4 @@
+// ignore_for_file: unused_element, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
@@ -590,169 +591,21 @@ class _InAppPdfViewerDialogState extends State<InAppPdfViewerDialog> {
   }
 
   Widget _buildPageContent(Color textColor, Color subColor) {
-    switch (_currentPage) {
-      case 1:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2563EB).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'ክፍል 1፡ የዩኒቱ አጠቃላይ መግቢያና ዋና ዋና አላማዎች',
-                      style: GoogleFonts.notoSansEthiopic(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF2563EB),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              widget.summary != null && widget.summary!.isNotEmpty
-                  ? widget.summary!
-                  : 'በዚህ ዩኒት ውስጥ በኢትዮጵያ የትምህርት ካሪኩለም መሰረት ዋና ዋና ጽንሰ-ሀሳቦችን፣ ቀመሮችን እና ለፈተና የሚያዘጋጁ ነጥቦችን በዝርዝር ተቀምጠዋል።',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                height: 1.7,
-                color: textColor,
-              ),
-            ),
-          ],
-        );
-      case 2:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'ክፍል 2፡ ዋና ዋና ቀመሮች እና የሂሳብ/ሳይንስ ህጎች (Key Principles)',
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: textColor,
-              ),
-            ),
-            const SizedBox(height: 14),
-            _buildConceptCard(
-              '1. መሠረታዊ ህጎች (Fundamental Laws)',
-              'በዚህ ምዕራፍ የተካተቱት ቀመሮች ለብሔራዊ ፈተና (Entrance Exam) ከፍተኛ ድርሻ ያላቸው ሲሆኑ ቀመሮቹን በቃላት ሳይሆን በተግባራዊ ጥያቄዎች ላይ ተግባራዊ ማድረግ ያስፈልጋል።',
-              textColor,
-              subColor,
-            ),
-            const SizedBox(height: 12),
-            _buildConceptCard(
-              '2. የአተገባበር ስልት (Application Methods)',
-              'ጥያቄዎች ሲቀርቡ ቀመሩን በቀጥታ ከመጠቀም በፊት የተሰጡትን ዳታዎች (Given Data) ለይቶ ማስቀመጥ አስፈላጊ ነው።',
-              textColor,
-              subColor,
-            ),
-          ],
-        );
-      case 3:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'ክፍል 3፡ የጥናት ማጠቃለያ እና ፈጣን ማስታወሻዎች (Revision Sheet)',
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: textColor,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                '• አጠቃላይ ነጥቦቹን በየቀኑ መከለስ የማስታወስ ብቃትን ያሳድጋል።\n• የልምምድ ጥያቄዎችን (MCQ, Matching, Blank Space) በመስራት እራስዎን ይገምግሙ።\n• የፈተና ሰዓት አያያዝን በ Exam Mode ይለማመዱ።',
-                style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 13,
-                  height: 1.8,
-                  fontWeight: FontWeight.w600,
-                  color: textColor,
-                ),
-              ),
-            ),
-          ],
-        );
-      default:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'ክፍል $_currentPage፡ ተጨማሪ የንባብ ማብራሪያዎች',
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: textColor,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'ይህ የፒዲኤፍ ማስታወሻ የተማሪዎችን የትምህርት ደረጃ ከፍ ለማድረግ በባለሙያዎች የተዘጋጀ ሲሆን፣ ከመስመር ውጭ በማውረድ ያለ ምንም የኢንተርኔት ክፍያና ፍጆታ በማንኛውም ቦታና ሰዓት ማጥናት ይችላሉ።',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                height: 1.7,
-                color: textColor,
-              ),
-            ),
-          ],
-        );
+    if (widget.summary != null && widget.summary!.trim().isNotEmpty) {
+      return Text(
+        widget.summary!.trim(),
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 14,
+          height: 1.7,
+          color: textColor,
+        ),
+      );
     }
+    return Container();
   }
 
   Widget _buildConceptCard(String title, String desc, Color textColor, Color subColor) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: widget.isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: widget.isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            desc,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              height: 1.5,
-              color: subColor,
-            ),
-          ),
-        ],
-      ),
-    );
+    return Container();
   }
 }
 

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 enum QuestionType {
   multipleChoice,
   trueFalse,
@@ -13,8 +15,8 @@ class MatchingPair {
 
   factory MatchingPair.fromJson(Map<String, dynamic> json) {
     return MatchingPair(
-      left: json['left']?.toString() ?? json['premise']?.toString() ?? '',
-      right: json['right']?.toString() ?? json['response']?.toString() ?? '',
+      left: (json['left'] ?? json['premise'] ?? json['column_a'] ?? json['term'] ?? json['k'] ?? '').toString().trim(),
+      right: (json['right'] ?? json['response'] ?? json['column_b'] ?? json['definition'] ?? json['v'] ?? '').toString().trim(),
     );
   }
 
@@ -38,11 +40,30 @@ class QuestionOption {
   });
 
   factory QuestionOption.fromJson(Map<String, dynamic> json) {
+    bool correct = false;
+    if (json['is_correct'] != null) {
+      final raw = json['is_correct'];
+      if (raw is bool) {
+        correct = raw;
+      } else {
+        final s = raw.toString().trim().toLowerCase();
+        correct = s == 'true' || s == '1' || s == 'yes' || s == 't';
+      }
+    } else if (json['isCorrect'] != null) {
+      final raw = json['isCorrect'];
+      if (raw is bool) {
+        correct = raw;
+      } else {
+        final s = raw.toString().trim().toLowerCase();
+        correct = s == 'true' || s == '1' || s == 'yes' || s == 't';
+      }
+    }
+
     return QuestionOption(
-      text: json['text'] as String? ?? json['option_text'] as String? ?? '',
-      isCorrect: json['is_correct'] as bool? ?? json['isCorrect'] as bool? ?? false,
-      explanation: json['explanation'] as String?,
-      key: json['key'] as String?,
+      text: (json['text'] ?? json['option_text'] ?? json['label'] ?? json['value'] ?? '').toString().trim(),
+      isCorrect: correct,
+      explanation: json['explanation']?.toString().trim(),
+      key: json['key']?.toString().trim().toUpperCase(),
     );
   }
 
@@ -122,80 +143,138 @@ class QuestionModel {
   bool get isBlankSpace => questionType == QuestionType.blankSpace;
   bool get isMatching => questionType == QuestionType.matching;
 
+  static String _normalizeAnswerString(String str) {
+    return str
+        .trim()
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'[.,!?]+$'), '')
+        .trim();
+  }
+
   /// Validates a user's typed blank input against canonical `blankAnswer` and `acceptedAnswers`
   bool checkBlankAnswer(String userInput) {
-    final cleanInput = userInput.trim();
+    final cleanInput = _normalizeAnswerString(userInput);
     if (cleanInput.isEmpty) return false;
 
     if (caseSensitive) {
-      if (blankAnswer != null && cleanInput == blankAnswer!.trim()) return true;
+      if (blankAnswer != null && cleanInput == _normalizeAnswerString(blankAnswer!)) return true;
       for (final accepted in acceptedAnswers) {
-        if (cleanInput == accepted.trim()) return true;
+        if (cleanInput == _normalizeAnswerString(accepted)) return true;
       }
     } else {
       final lowerInput = cleanInput.toLowerCase();
-      if (blankAnswer != null && lowerInput == blankAnswer!.trim().toLowerCase()) return true;
+      if (blankAnswer != null && lowerInput == _normalizeAnswerString(blankAnswer!).toLowerCase()) return true;
       for (final accepted in acceptedAnswers) {
-        if (lowerInput == accepted.trim().toLowerCase()) return true;
+        if (lowerInput == _normalizeAnswerString(accepted).toLowerCase()) return true;
       }
     }
     return false;
   }
 
   factory QuestionModel.fromJson(Map<String, dynamic> json) {
+    // Helpers for safe type parsing
+    int? parseNullableInt(dynamic val) {
+      if (val == null) return null;
+      if (val is int) return val;
+      if (val is double) return val.toInt();
+      if (val is num) return val.toInt();
+      return int.tryParse(val.toString().trim());
+    }
+
+    int parseInt(dynamic val, {int defaultValue = 1}) {
+      return parseNullableInt(val) ?? defaultValue;
+    }
+
+    bool parseBool(dynamic val, {bool defaultValue = false}) {
+      if (val == null) return defaultValue;
+      if (val is bool) return val;
+      final str = val.toString().trim().toLowerCase();
+      if (str == 'true' || str == '1' || str == 'yes' || str == 't' || str == 'እውነት') return true;
+      if (str == 'false' || str == '0' || str == 'no' || str == 'f' || str == 'ሐሰት') return false;
+      return defaultValue;
+    }
+
     // 1. Resolve Question Type
-    final rawType = (json['question_type'] ?? json['type'] ?? 'multiple_choice').toString().toLowerCase();
+    final rawType = (json['question_type'] ?? json['type'] ?? json['format'] ?? 'multiple_choice')
+        .toString()
+        .toLowerCase()
+        .trim();
     QuestionType resolvedType = QuestionType.multipleChoice;
-    if (rawType.contains('true') || rawType.contains('false') || rawType == 'tf') {
+    if (rawType.contains('true') || rawType.contains('false') || rawType == 'tf' || rawType.contains('እውነት')) {
       resolvedType = QuestionType.trueFalse;
-    } else if (rawType.contains('blank') || rawType.contains('fill') || rawType == 'space') {
+    } else if (rawType.contains('blank') || rawType.contains('fill') || rawType == 'space' || rawType.contains('ባዶ')) {
       resolvedType = QuestionType.blankSpace;
     } else if (rawType.contains('match') || rawType.contains('pair') || rawType.contains('አዛምድ')) {
       resolvedType = QuestionType.matching;
     }
 
-    // 2. Parse Options
-    final rawOptions = json['options'];
+    // 2. Parse Options safely
+    dynamic rawOptions = json['options'] ?? json['question_options'] ?? json['choices'];
+    if (rawOptions is String && rawOptions.trim().startsWith('[')) {
+      try {
+        rawOptions = jsonDecode(rawOptions);
+      } catch (_) {}
+    } else if (rawOptions is String && rawOptions.trim().startsWith('{')) {
+      try {
+        rawOptions = jsonDecode(rawOptions);
+      } catch (_) {}
+    }
+
     final List<QuestionOption> parsedOptions = [];
+    final String correctAnswerStr = (json['correct_answer'] ?? json['correct_option'] ?? json['answer'] ?? '')
+        .toString()
+        .trim();
 
     if (rawOptions is List) {
       for (final item in rawOptions) {
         if (item is Map<String, dynamic>) {
           parsedOptions.add(QuestionOption.fromJson(item));
-        } else if (item is String) {
-          final correctAnswerStr = json['correct_answer']?.toString() ?? '';
+        } else if (item is Map) {
+          parsedOptions.add(QuestionOption.fromJson(Map<String, dynamic>.from(item)));
+        } else if (item != null) {
+          final itemStr = item.toString().trim();
+          final isCorr = itemStr.toLowerCase() == correctAnswerStr.toLowerCase() ||
+              (correctAnswerStr.isNotEmpty && itemStr.toUpperCase() == correctAnswerStr.toUpperCase());
           parsedOptions.add(QuestionOption(
-            text: item,
-            isCorrect: item.trim() == correctAnswerStr.trim(),
+            text: itemStr,
+            isCorrect: isCorr,
           ));
         }
       }
-    } else if (rawOptions is Map<String, dynamic>) {
+    } else if (rawOptions is Map) {
       rawOptions.forEach((key, value) {
+        final optKey = key.toString().trim().toUpperCase();
         if (value is Map<String, dynamic>) {
           parsedOptions.add(QuestionOption.fromJson(value));
-        } else if (value is String) {
-          final correctAnswerStr = json['correct_answer']?.toString() ?? json['correct_option']?.toString() ?? '';
+        } else if (value is Map) {
+          parsedOptions.add(QuestionOption.fromJson(Map<String, dynamic>.from(value)));
+        } else if (value != null) {
+          final valStr = value.toString().trim();
+          final isCorr = optKey == correctAnswerStr.toUpperCase() ||
+              valStr.toLowerCase() == correctAnswerStr.toLowerCase();
           parsedOptions.add(QuestionOption(
-            key: key,
-            text: value,
-            isCorrect: key.toUpperCase() == correctAnswerStr.toUpperCase() || value == correctAnswerStr,
+            key: optKey,
+            text: valStr,
+            isCorrect: isCorr,
           ));
         }
       });
     }
 
-    // If options are still empty but option_a, option_b etc. exist (common in exam tables)
+    // Fallback: check option_a, option_b, option_c, option_d columns
     if (parsedOptions.isEmpty && (json['option_a'] != null || json['option_b'] != null)) {
-      final correctOpt = (json['correct_option'] ?? json['correct_answer'] ?? '').toString().toUpperCase();
+      final correctOpt = correctAnswerStr.toUpperCase();
       
       void addIfPresent(String optKey, dynamic val) {
-        if (val != null && val.toString().isNotEmpty) {
-          parsedOptions.add(QuestionOption(
-            key: optKey,
-            text: val.toString(),
-            isCorrect: correctOpt == optKey || correctOpt == val.toString().toUpperCase(),
-          ));
+        if (val != null) {
+          final valStr = val.toString().trim();
+          if (valStr.isNotEmpty) {
+            parsedOptions.add(QuestionOption(
+              key: optKey,
+              text: valStr,
+              isCorrect: correctOpt == optKey || correctOpt == valStr.toUpperCase(),
+            ));
+          }
         }
       }
 
@@ -208,85 +287,96 @@ class QuestionModel {
     // 3. For True / False, populate default True/False options if none provided
     bool? boolVal;
     if (json['correct_boolean'] != null) {
-      boolVal = json['correct_boolean'] is bool
-          ? json['correct_boolean'] as bool
-          : json['correct_boolean'].toString().toLowerCase() == 'true';
+      boolVal = parseBool(json['correct_boolean']);
     } else if (resolvedType == QuestionType.trueFalse) {
-      final ansStr = (json['correct_answer'] ?? '').toString().toLowerCase();
-      boolVal = ansStr.contains('true') || ansStr.contains('እውነት');
+      final ansStr = correctAnswerStr.toLowerCase();
+      boolVal = ansStr.contains('true') || ansStr.contains('እውነት') || ansStr == 't' || ansStr == '1';
     }
 
     if (resolvedType == QuestionType.trueFalse && parsedOptions.isEmpty) {
       parsedOptions.add(QuestionOption(
         text: 'True (እውነት)',
         isCorrect: boolVal == true,
+        key: 'A',
       ));
       parsedOptions.add(QuestionOption(
         text: 'False (ሐሰት)',
         isCorrect: boolVal == false,
+        key: 'B',
       ));
     }
 
     // 4. Accepted Answers List for Blank Space
     final List<String> accepted = [];
-    final rawAccepted = json['accepted_answers'];
+    dynamic rawAccepted = json['accepted_answers'] ?? json['valid_answers'];
+    if (rawAccepted is String && rawAccepted.trim().startsWith('[')) {
+      try {
+        rawAccepted = jsonDecode(rawAccepted);
+      } catch (_) {}
+    }
     if (rawAccepted is List) {
       for (final a in rawAccepted) {
-        if (a != null && a.toString().isNotEmpty) {
-          accepted.add(a.toString());
+        if (a != null && a.toString().trim().isNotEmpty) {
+          accepted.add(a.toString().trim());
         }
       }
     }
 
     // 5. Matching Pairs List for Matching Questions (አዛምድ)
     final List<MatchingPair> parsedMatchingPairs = [];
-    final rawPairs = json['matching_pairs'] ?? json['pairs'];
+    dynamic rawPairs = json['matching_pairs'] ?? json['pairs'] ?? json['matching_options'];
+    if (rawPairs is String && rawPairs.trim().startsWith('[')) {
+      try {
+        rawPairs = jsonDecode(rawPairs);
+      } catch (_) {}
+    } else if (rawPairs is String && rawPairs.trim().startsWith('{')) {
+      try {
+        rawPairs = jsonDecode(rawPairs);
+      } catch (_) {}
+    }
+
     if (rawPairs is List) {
       for (final p in rawPairs) {
         if (p is Map<String, dynamic>) {
           parsedMatchingPairs.add(MatchingPair.fromJson(p));
+        } else if (p is Map) {
+          parsedMatchingPairs.add(MatchingPair.fromJson(Map<String, dynamic>.from(p)));
         }
       }
-    } else if (rawPairs is Map<String, dynamic>) {
+    } else if (rawPairs is Map) {
       rawPairs.forEach((k, v) {
-        parsedMatchingPairs.add(MatchingPair(left: k, right: v.toString()));
+        parsedMatchingPairs.add(MatchingPair(
+          left: k.toString().trim(),
+          right: v?.toString().trim() ?? '',
+        ));
       });
     }
 
     return QuestionModel(
-      id: json['id']?.toString() ?? '',
+      id: (json['id'] ?? json['question_id'] ?? DateTime.now().millisecondsSinceEpoch.toString()).toString(),
       unitId: json['unit_id']?.toString(),
-      grade: json['grade'] is int
-          ? json['grade'] as int
-          : int.tryParse(json['grade']?.toString() ?? ''),
+      grade: parseNullableInt(json['grade']),
       subject: json['subject']?.toString(),
-      unitNumber: json['unit_number'] is int
-          ? json['unit_number'] as int
-          : int.tryParse(json['unit_number']?.toString() ?? ''),
-      questionText: json['question_text'] as String? ?? json['text'] as String? ?? '',
-      questionNumber: json['question_number'] is int
-          ? json['question_number'] as int
-          : int.tryParse(json['question_number']?.toString() ?? '1') ?? 1,
-      orderIndex: json['order_index'] is int
-          ? json['order_index'] as int
-          : int.tryParse(json['order_index']?.toString() ?? '1') ?? 1,
+      unitNumber: parseNullableInt(json['unit_number']),
+      questionText: (json['question_text'] ?? json['text'] ?? json['question'] ?? '').toString().trim(),
+      questionNumber: parseInt(json['question_number'], defaultValue: 1),
+      orderIndex: parseInt(json['order_index'], defaultValue: 1),
       options: parsedOptions,
-      explanation: json['explanation'] as String?,
-      questionImageUrl: json['question_image_url'] as String? ?? json['image_url'] as String?,
+      explanation: json['explanation']?.toString().trim() ?? json['rationale']?.toString().trim(),
+      questionImageUrl: (json['question_image_url'] ?? json['image_url'] ?? json['image'])?.toString().trim(),
       questionType: resolvedType,
       correctBoolean: boolVal,
-      blankAnswer: json['blank_answer']?.toString() ?? (resolvedType == QuestionType.blankSpace ? json['correct_answer']?.toString() : null),
+      blankAnswer: json['blank_answer']?.toString().trim() ??
+          (resolvedType == QuestionType.blankSpace ? (correctAnswerStr.isNotEmpty ? correctAnswerStr : null) : null),
       acceptedAnswers: accepted,
       matchingPairs: parsedMatchingPairs,
-      caseSensitive: json['case_sensitive'] is bool ? json['case_sensitive'] as bool : false,
-      hint: json['hint'] as String?,
-      year: json['year'] as String?,
-      examCategory: json['exam_category'] as String?,
-      timeLimitSeconds: json['time_limit_seconds'] is int
-          ? json['time_limit_seconds'] as int
-          : int.tryParse(json['time_limit_seconds']?.toString() ?? '90') ?? 90,
-      difficulty: json['difficulty'] as String? ?? 'medium',
-      topic: json['topic'] as String?,
+      caseSensitive: parseBool(json['case_sensitive']),
+      hint: json['hint']?.toString().trim(),
+      year: json['year']?.toString(),
+      examCategory: json['exam_category']?.toString(),
+      timeLimitSeconds: parseInt(json['time_limit_seconds'], defaultValue: 90),
+      difficulty: json['difficulty']?.toString() ?? 'medium',
+      topic: json['topic']?.toString(),
     );
   }
 
