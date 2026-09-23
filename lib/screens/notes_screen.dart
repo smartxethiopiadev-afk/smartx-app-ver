@@ -9,6 +9,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/offline_manager.dart';
 import '../services/analytics_service.dart';
+import '../services/short_note_service.dart';
+import '../models/short_note_model.dart';
 import '../widgets/math_text.dart';
 import '../widgets/in_app_pdf_viewer_dialog.dart';
 import '../main.dart';
@@ -262,46 +264,53 @@ class _NotesScreenState extends State<NotesScreen> {
       return;
     }
 
-    // 3. Query Supabase database
+    // 3. Query Supabase database using ShortNoteService
     try {
-      final supabase = Supabase.instance.client;
-      final normalizedSub = _getNormalizedSubjectName();
+      final shortNotes = await ShortNoteService.fetchShortNotes(
+        grade: widget.grade,
+        subject: widget.subjectId,
+        unitNumber: widget.unitNumber,
+      );
 
-      List<dynamic> response = [];
+      List<Map<String, dynamic>> parsedList = shortNotes.map((n) => n.toJson()).toList();
 
-      // Primary query: check short_notes table with grade, subject, unit_number
-      try {
-        response = await supabase
-            .from('short_notes')
-            .select()
-            .eq('grade', widget.grade)
-            .ilike('subject', '%$normalizedSub%')
-            .eq('unit_number', widget.unitNumber)
-            .order('id', ascending: true);
-      } catch (e) {
-        debugPrint('[NotesScreen] short_notes query error: $e');
-        // Fallback: search with subjectId raw
+      if (parsedList.isEmpty) {
+        final supabase = Supabase.instance.client;
+        final normalizedSub = _getNormalizedSubjectName();
+
+        List<dynamic> response = [];
+
         try {
           response = await supabase
               .from('short_notes')
               .select()
               .eq('grade', widget.grade)
+              .ilike('subject', '%$normalizedSub%')
               .eq('unit_number', widget.unitNumber);
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[NotesScreen] direct short_notes query error: $e');
+        }
+
+        if (response.isEmpty) {
+          try {
+            response = await supabase
+                .from('notes')
+                .select()
+                .eq('grade', widget.grade)
+                .eq('unit_number', widget.unitNumber);
+          } catch (_) {}
+        }
+
+        for (final item in response) {
+          if (item is Map<String, dynamic>) {
+            parsedList.add(item);
+          } else if (item is Map) {
+            parsedList.add(Map<String, dynamic>.from(item));
+          }
+        }
       }
 
-      if (response.isEmpty) {
-        // Fallback check on 'notes' or 'unit_notes' tables
-        try {
-          response = await supabase
-              .from('notes')
-              .select()
-              .eq('grade', widget.grade)
-              .eq('unit_number', widget.unitNumber);
-        } catch (_) {}
-      }
-
-      if (response.isEmpty) {
+      if (parsedList.isEmpty) {
         if (mounted) {
           setState(() {
             _isLoading = false;
@@ -310,15 +319,6 @@ class _NotesScreenState extends State<NotesScreen> {
           });
         }
         return;
-      }
-
-      final List<Map<String, dynamic>> parsedList = [];
-      for (final item in response) {
-        if (item is Map<String, dynamic>) {
-          parsedList.add(item);
-        } else if (item is Map) {
-          parsedList.add(Map<String, dynamic>.from(item));
-        }
       }
 
       if (mounted) {

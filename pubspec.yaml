@@ -16,6 +16,8 @@ dependencies:
 
   # Local storage & Connectivity
   shared_preferences: ^2.2.3
+  path_provider: ^2.1.2
+  http: ^1.2.0
   carousel_slider: ^5.0.0
   connectivity_plus: ^6.0.3
   device_info_plus: ^10.1.0
