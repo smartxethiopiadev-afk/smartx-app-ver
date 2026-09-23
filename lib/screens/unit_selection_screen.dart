@@ -6,6 +6,9 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'pdf_viewer_screen.dart';
+import '../services/short_note_service.dart';
 import '../services/offline_manager.dart';
 import '../services/quiz_service.dart';
 import '../main.dart';
@@ -148,6 +151,55 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
         onSuccess();
       },
     );
+  }
+
+  Future<void> _openShortNotePdf(int unitNumber) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.hideCurrentSnackBar();
+
+    String? pdfUrl;
+    try {
+      // Query short_notes by grade, subject (case-insensitive), and unit_number to get pdf_url
+      pdfUrl = await ShortNoteService.getPdfUrl(
+        grade: widget.grade,
+        subject: widget.subjectId,
+        unitNumber: unitNumber,
+      );
+
+      // If not found with subjectId, fallback to enTitle
+      if ((pdfUrl == null || pdfUrl.trim().isEmpty) && widget.enTitle.isNotEmpty) {
+        pdfUrl = await ShortNoteService.getPdfUrl(
+          grade: widget.grade,
+          subject: widget.enTitle,
+          unitNumber: unitNumber,
+        );
+      }
+    } catch (e) {
+      debugPrint('[UnitSelectionScreen] Error querying short_notes pdf_url: $e');
+    }
+
+    if (!mounted) return;
+
+    if (pdfUrl != null && pdfUrl.trim().isNotEmpty) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => PdfViewerScreen(
+            pdfUrl: pdfUrl!.trim(),
+            title: 'Unit $unitNumber Short Note',
+            subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
+          ),
+        ),
+      );
+    } else {
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('PDF link not available for this unit'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   void _showUnitOptionsSheet(BuildContext context, int unitNumber, String unitId, String unitTitle, bool isDownloaded) {
@@ -1132,10 +1184,10 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
           List<Map<String, dynamic>> fetchedNotes = [];
           
           try {
-            // First try fetching from modern short_notes table (HTML/CSS notes)
+            // Fetch from short_notes table with current schema (grade, subject, unit_number, pdf_url)
             final shortNotesResponse = await Supabase.instance.client
                 .from('short_notes')
-                .select('id, grade, subject, unit_number, title, html_content, created_at')
+                .select('grade, subject, unit_number, pdf_url')
                 .eq('grade', widget.grade)
                 .eq('unit_number', activeUnitNum)
                 .ilike('subject', '%$normalizedSubject%');
@@ -1741,7 +1793,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                     final int activeUnitNum = originalIndex >= 0 ? originalIndex + 1 : index + 1;
 
                     final indexFactor = index * 100;
-                    final bool isLocked = activeUnitNum > 1 && !_isPackageUnlocked;
+                    final bool isLocked = !widget.isShortNotesMode && activeUnitNum > 1 && !_isPackageUnlocked;
                     return TweenAnimationBuilder<double>(
                       tween: Tween<double>(begin: 0.0, end: 1.0),
                       duration: Duration(milliseconds: 300 + indexFactor),
@@ -1784,28 +1836,19 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                     color: Colors.transparent,
                                     child: InkWell(
                                       onTap: () {
-                                        _checkRegistrationAndProceed(index, activeUnitNum, onSuccess: () {
+                                        if (widget.isShortNotesMode) {
                                           setState(() {
                                             _selectedUnitIndex = index;
                                           });
-                                          if (widget.isShortNotesMode) {
-                                            Navigator.of(context).push(
-                                              MaterialPageRoute(
-                                                builder: (context) => NotesScreen(
-                                                  grade: widget.grade,
-                                                  subjectId: widget.subjectId,
-                                                  unitNumber: activeUnitNum,
-                                                  unitTitle: title,
-                                                  themeColor: widget.color,
-                                                  isDarkMode: AppStateProvider.of(context).isDarkMode,
-                                                  languageCode: widget.languageCode,
-                                                ),
-                                              ),
-                                            );
-                                          } else {
+                                          _openShortNotePdf(activeUnitNum);
+                                        } else {
+                                          _checkRegistrationAndProceed(index, activeUnitNum, onSuccess: () {
+                                            setState(() {
+                                              _selectedUnitIndex = index;
+                                            });
                                             _showUnitOptionsSheet(context, activeUnitNum, unitId, title, isDownloaded);
-                                          }
-                                        });
+                                          });
+                                        }
                                       },
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
@@ -2036,6 +2079,10 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                           size: 22,
                                         ),
                                         onPressed: () {
+                                          if (widget.isShortNotesMode) {
+                                            _openShortNotePdf(activeUnitNum);
+                                            return;
+                                          }
                                           if (isLocked) {
                                             LockedUnitDialog.show(
                                               context,
