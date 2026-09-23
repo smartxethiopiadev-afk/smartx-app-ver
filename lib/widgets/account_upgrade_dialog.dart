@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../services/subscription_service.dart';
+import 'friendly_error_card.dart';
+import 'activation_code_dialog.dart';
 
 class AccountUpgradeDialog extends StatefulWidget {
   final bool isDarkMode;
@@ -132,29 +133,6 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
     }
   }
 
-  Future<void> _contactTelegram() async {
-    const telegramUrl = 'https://t.me/smart_x_help';
-    final Uri uri = Uri.parse(telegramUrl);
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        await launchUrl(uri, mode: LaunchMode.platformDefault);
-      }
-    } catch (_) {
-      if (mounted) {
-        Clipboard.setData(const ClipboardData(text: '@smart_x_help'));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('የቴሌግራም አድራሻው ተቀድቷል: @smart_x_help'),
-            backgroundColor: Color(0xFF0088CC),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final bool isLight = !widget.isDarkMode;
@@ -243,8 +221,8 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
                 const SizedBox(height: 6),
                 Text(
                   isAm
-                      ? 'በቴሌግራም (@smart_x_help) ክፍያ የፈጸሙበትን ስልክ ቁጥር እና ሙሉ ስም ያስገቡ። ስርዓቱ ፈቃድዎን አረጋግጦ በዚህ ስልክ ላይ ይዘቶቹን ይከፍታል።'
-                      : 'Enter the phone number and full name used on Telegram. The system will verify your payment and unlock content on this device.',
+                      ? 'የትምህርት ፈቃድዎን ለማረጋገጥ የተመዘገቡበትን ሙሉ ስም እና ስልክ ቁጥር ያስገቡ። ስርዓቱ ፈቃድዎን አረጋግጦ በዚህ ስልክ ላይ ይዘቶቹን ይከፍታል።'
+                      : 'Enter your registered full name and phone number. The system will securely verify your account and unlock your curriculum.',
                   style: GoogleFonts.notoSansEthiopic(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,
@@ -379,104 +357,19 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
                   },
                 ),
 
+                // User-Friendly Actionable Error Card
                 if (_errorMessage != null) ...[
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _isDeviceMismatch
-                          ? const Color(0xFFEF4444).withValues(alpha: 0.12)
-                          : const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _isDeviceMismatch
-                            ? const Color(0xFFEF4444).withValues(alpha: 0.4)
-                            : const Color(0xFFF59E0B).withValues(alpha: 0.4),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              _isDeviceMismatch ? Icons.gpp_bad_rounded : Icons.info_outline_rounded,
-                              color: _isDeviceMismatch ? const Color(0xFFEF4444) : const Color(0xFFF59E0B),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                _errorMessage!,
-                                style: GoogleFonts.notoSansEthiopic(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: _isDeviceMismatch
-                                      ? const Color(0xFFEF4444)
-                                      : (isLight ? const Color(0xFFB45309) : const Color(0xFFFBBF24)),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        // Copy Error Button for Debugging & Support
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: InkWell(
-                            onTap: () {
-                              final textToCopy = _rawErrorDetails != null && _rawErrorDetails!.isNotEmpty
-                                  ? 'Error: $_errorMessage\nDetails: $_rawErrorDetails'
-                                  : 'Error: $_errorMessage';
-                              Clipboard.setData(ClipboardData(text: textToCopy));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(isAm ? 'የስህተት መልእክቱ ተቀድቷል (Copied)' : 'Error copied to clipboard'),
-                                  duration: const Duration(seconds: 2),
-                                  behavior: SnackBarBehavior.floating,
-                                  backgroundColor: const Color(0xFF1E293B),
-                                ),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: (isLight ? Colors.white : Colors.black26),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: (_isDeviceMismatch ? const Color(0xFFEF4444) : const Color(0xFFF59E0B)).withValues(alpha: 0.4),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.copy_rounded,
-                                    size: 13,
-                                    color: _isDeviceMismatch
-                                        ? const Color(0xFFEF4444)
-                                        : (isLight ? const Color(0xFFB45309) : const Color(0xFFFBBF24)),
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    isAm ? 'ስህተቱን ቅዳ (Copy Error)' : 'Copy Error',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: _isDeviceMismatch
-                                          ? const Color(0xFFEF4444)
-                                          : (isLight ? const Color(0xFFB45309) : const Color(0xFFFBBF24)),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 12),
+                  FriendlyErrorCard(
+                    errorMessage: _errorMessage!,
+                    isDarkMode: widget.isDarkMode,
+                    languageCode: widget.languageCode,
+                    onRetry: _handleVerifyAndUpgrade,
+                    onDismiss: () {
+                      setState(() {
+                        _errorMessage = null;
+                      });
+                    },
                   ),
                 ],
 
@@ -516,18 +409,33 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
 
                 const SizedBox(height: 12),
 
-                // Telegram Admin Contact Link
+                // Secondary Action: Enter Activation Code Instead
                 SizedBox(
                   height: 42,
-                  child: TextButton.icon(
-                    onPressed: _contactTelegram,
-                    icon: const Icon(Icons.send_rounded, size: 16, color: Color(0xFF0088CC)),
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      ActivationCodeDialog.show(
+                        context,
+                        isDarkMode: widget.isDarkMode,
+                        languageCode: widget.languageCode,
+                        preferredGrade: widget.initialGrade,
+                        onActivated: widget.onSuccess,
+                      );
+                    },
+                    icon: const Icon(Icons.vpn_key_rounded, size: 16, color: Color(0xFF0284C7)),
                     label: Text(
-                      isAm ? 'ክፍያ ገና አልከፈሉም? በቴሌግራም ይክፈሉ (@smart_x_help)' : 'Not paid yet? Pay via Telegram (@smart_x_help)',
+                      isAm ? 'የማግበሪያ ኮድ አለዎት? (Activation Code)' : 'Have an Activation Code?',
                       style: GoogleFonts.notoSansEthiopic(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0088CC),
+                        color: const Color(0xFF0284C7),
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                   ),

@@ -583,7 +583,7 @@ class SubscriptionService {
         _lastFailedAttemptTime = DateTime.now();
         return const StudentUpgradeResult(
           isSuccess: false,
-          message: 'በዚህ ስልክ ቁጥር የተመዘገበ ተማሪ አልተገኘም። እባክዎ አስቀድመው በቴሌግራም (@smart_x_help) ክፍያ ፈጽመው ደረሰኝዎን ይላኩ።',
+          message: 'በዚህ ስልክ ቁጥር የተመዘገበ ተማሪ አልተገኘም። እባክዎ ሙሉ ስምዎንና ስልክ ቁጥርዎን በትክክል ያስገቡ።',
         );
       }
 
@@ -592,7 +592,7 @@ class SubscriptionService {
       if (!isActive) {
         return const StudentUpgradeResult(
           isSuccess: false,
-          message: 'ይህ መለያ በአስተዳዳሪው ታግዷል። እባክዎ ድጋፍ ያነጋግሩ (@smart_x_help)።',
+          message: 'ይህ መለያ በአስተዳዳሪው ታግዷል። እባክዎ የድጋፍ አገልግሎትን ያነጋግሩ።',
         );
       }
 
@@ -602,7 +602,7 @@ class SubscriptionService {
         if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt.toUtc())) {
           return const StudentUpgradeResult(
             isSuccess: false,
-            message: 'የደንበኝነት ምዝገባዎ ጊዜ አልቋል። እባክዎ በቴሌግራም ያድሱ (@smart_x_help)።',
+            message: 'የደንበኝነት ምዝገባዎ ጊዜ አልቋል። እባክዎ ፈቃድዎን ያድሱ።',
           );
         }
       }
@@ -615,7 +615,7 @@ class SubscriptionService {
         return const StudentUpgradeResult(
           isSuccess: false,
           isDeviceMismatch: true,
-          message: 'ይህ ስልክ ቁጥር ቀደም ሲል በሌላ ሞባይል ስልክ ላይ ተመዝግቧል! የደህንነት ስርዓቱ አንድን አካውንት ለአንድ ስልክ ብቻ ይፈቅዳል (Single-Device Protection)። መለያ ማጋራት በጥብቅ የተከለከለ ነው።',
+          message: 'ይህ ስልክ ቁጥር ቀደም ሲል በሌላ ሞባይል ስልክ ላይ ተመዝግቧል! የደህንነት ስርዓቱ አንድን አካውንት ለአንድ ስልክ ብቻ ይፈቅዳል (Single-Device Protection)።',
         );
       }
 
@@ -654,7 +654,7 @@ class SubscriptionService {
       if (pkgs.isEmpty) {
         return const StudentUpgradeResult(
           isSuccess: false,
-          message: 'ስልክ ቁጥርዎ ተገኝቷል፤ ነገር ግን እስካሁን የተፈቀደ ንቁ የትምህርት ፓኬጅ የለም። ክፍያ ፈጽመው ከሆነ እባክዎ ደረሰኝዎን በቴሌግራም (@smart_x_help) ለአድሚኑ ይላኩ።',
+          message: 'ስልክ ቁጥርዎ ተገኝቷል፤ ነገር ግን እስካሁን የተፈቀደ ንቁ የትምህርት ፓኬጅ የለም። እባክዎ መለያዎን ያረጋግጡ።',
         );
       }
 

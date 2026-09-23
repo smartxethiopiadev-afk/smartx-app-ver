@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../services/credential_auth_service.dart';
+import '../widgets/friendly_error_card.dart';
+import '../widgets/activation_code_dialog.dart';
 import 'registration_screen.dart';
 
 class LoginActivationScreen extends StatefulWidget {
@@ -255,29 +256,20 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Error Message if any
+              // Friendly Actionable Error Card
               if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(fontSize: 12, color: Color(0xFFEF4444), fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ],
-                  ),
+                FriendlyErrorCard(
+                  errorMessage: _errorMessage!,
+                  isDarkMode: widget.isDarkMode,
+                  languageCode: widget.languageCode,
+                  onRetry: _performLogin,
+                  onDismiss: () {
+                    setState(() {
+                      _errorMessage = null;
+                    });
+                  },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
               ],
 
               // Full Name Field
@@ -371,7 +363,7 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
 
               const SizedBox(height: 24),
 
-              // Don't have credentials yet? Contact Telegram Channel
+              // Have an Activation Code?
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -382,7 +374,7 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                 child: Column(
                   children: [
                     Text(
-                      isAm ? 'መለያዎን ማስከፈት ይፈልጋሉ?' : 'Need to activate your account?',
+                      isAm ? 'የማግበሪያ ኮድ አለዎት?' : 'Have an Activation Code?',
                       style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
@@ -392,27 +384,32 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                     const SizedBox(height: 4),
                     Text(
                       isAm
-                          ? 'የቴሌግራም ቻናላችንን በመቀላቀል ወይም አድሚናችንን በማነጋገር ፈጣን ፈቃድ ያግኙ።'
-                          : 'Contact our Telegram Admin to activate your subscription and unlock content.',
+                          ? 'የማግበሪያ ኮድ ካለዎት እዚህ በማስገባት በቀጥታ ይክፈቱ።'
+                          : 'Enter your curriculum code to unlock instant access.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 11.5, color: textSecondary),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
-                      onPressed: () async {
-                        final Uri telegramUri = Uri.parse('https://t.me/SmartX_Discussion');
-                        if (await canLaunchUrl(telegramUri)) {
-                          await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
-                        }
+                      onPressed: () {
+                        ActivationCodeDialog.show(
+                          context,
+                          isDarkMode: widget.isDarkMode,
+                          languageCode: widget.languageCode,
+                          preferredGrade: widget.preferredGrade,
+                          onActivated: () {
+                            Navigator.of(context).pop(true);
+                          },
+                        );
                       },
-                      icon: const Icon(Icons.send_rounded, size: 18),
+                      icon: const Icon(Icons.vpn_key_rounded, size: 18),
                       label: Text(
-                        isAm ? 'ቴሌግራም ቻናል ተቀላቀል (@SmartX_Discussion)' : 'Join Telegram Channel (@SmartX_Discussion)',
+                        isAm ? 'ማግበሪያ ኮድ አስገባ' : 'Enter Activation Code',
                         style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF0088CC),
-                        side: const BorderSide(color: Color(0xFF0088CC)),
+                        foregroundColor: const Color(0xFF0084FF),
+                        side: const BorderSide(color: Color(0xFF0084FF)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),

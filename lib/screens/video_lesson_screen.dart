@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/video_model.dart';
+import '../services/subscription_service.dart';
 import '../services/video_service.dart';
+import '../widgets/account_upgrade_dialog.dart';
 import '../widgets/youtube_video_player_dialog.dart';
 import '../services/offline_manager.dart';
 
@@ -68,7 +69,28 @@ class _VideoLessonScreenState extends State<VideoLessonScreen> {
     }
   }
 
+  void _handleUpgradeRedirection() {
+    AccountUpgradeDialog.show(
+      context,
+      isDarkMode: widget.isDarkMode,
+      languageCode: widget.languageCode,
+      initialGrade: widget.grade,
+      onSuccess: () {
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
   void _playVideo(VideoModel video) {
+    final bool isUnlocked = video.isUnlocked ||
+        video.unitNumber <= 1 ||
+        SubscriptionService.isGradeUnlockedSync(widget.grade, subject: widget.subject);
+
+    if (!isUnlocked) {
+      _handleUpgradeRedirection();
+      return;
+    }
+
     YouTubeVideoPlayerDialog.show(
       context,
       video: video,
@@ -224,6 +246,9 @@ class _VideoLessonScreenState extends State<VideoLessonScreen> {
                   itemBuilder: (context, index) {
                     final video = _videos[index];
                     final bool hasDirectStream = video.hasDirectStream;
+                    final bool isUnlocked = video.isUnlocked ||
+                        video.unitNumber <= 1 ||
+                        SubscriptionService.isGradeUnlockedSync(widget.grade, subject: widget.subject);
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 14),
@@ -263,13 +288,15 @@ class _VideoLessonScreenState extends State<VideoLessonScreen> {
                               children: [
                                 // Play Icon Button
                                 InkWell(
-                                  onTap: () => _playVideo(video),
+                                  onTap: () => !isUnlocked ? _handleUpgradeRedirection() : _playVideo(video),
                                   borderRadius: BorderRadius.circular(35),
                                   child: Container(
                                     width: 60,
                                     height: 60,
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.95),
+                                      color: !isUnlocked
+                                          ? const Color(0xFFD97706)
+                                          : Colors.white.withValues(alpha: 0.95),
                                       shape: BoxShape.circle,
                                       boxShadow: [
                                         BoxShadow(
@@ -278,11 +305,11 @@ class _VideoLessonScreenState extends State<VideoLessonScreen> {
                                         ),
                                       ],
                                     ),
-                                    child: const Center(
+                                    child: Center(
                                       child: Icon(
-                                        Icons.play_arrow_rounded,
-                                        size: 38,
-                                        color: primaryColor,
+                                        !isUnlocked ? Icons.lock_rounded : Icons.play_arrow_rounded,
+                                        size: !isUnlocked ? 28 : 38,
+                                        color: !isUnlocked ? Colors.white : primaryColor,
                                       ),
                                     ),
                                   ),
@@ -313,22 +340,30 @@ class _VideoLessonScreenState extends State<VideoLessonScreen> {
                                     ),
                                   ),
                                 ),
-                                // Source Badge (Supabase Storage vs Stream)
+                                // Source Badge / Lock Status
                                 Positioned(
                                   left: 12,
                                   top: 10,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF10B981).withValues(alpha: 0.9),
+                                      color: !isUnlocked
+                                          ? const Color(0xFFD97706)
+                                          : const Color(0xFF10B981).withValues(alpha: 0.9),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.cloud_done_rounded, size: 12, color: Colors.white),
+                                        Icon(
+                                          !isUnlocked ? Icons.lock_rounded : Icons.cloud_done_rounded,
+                                          size: 12,
+                                          color: Colors.white,
+                                        ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          hasDirectStream ? 'Supabase Storage' : 'Cloud Stream',
+                                          !isUnlocked
+                                              ? (isAm ? '🔒 ክፍያ የሚጠይቅ' : '🔒 Paid Content')
+                                              : (hasDirectStream ? 'Supabase Storage' : 'Cloud Stream'),
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 10.5,
@@ -375,17 +410,22 @@ class _VideoLessonScreenState extends State<VideoLessonScreen> {
                                   children: [
                                     Expanded(
                                       child: ElevatedButton.icon(
-                                        onPressed: () => _playVideo(video),
-                                        icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                                        onPressed: () => !isUnlocked ? _handleUpgradeRedirection() : _playVideo(video),
+                                        icon: Icon(
+                                          !isUnlocked ? Icons.vpn_key_rounded : Icons.play_arrow_rounded,
+                                          size: 18,
+                                        ),
                                         label: Text(
-                                          isAm ? 'ቪዲዮውን አጫውት' : 'Watch Lesson',
+                                          !isUnlocked
+                                              ? (isAm ? 'ዩኒቱን ለማስከፈት ያሻሽሉ' : 'Upgrade to Unlock')
+                                              : (isAm ? 'ቪዲዮውን አጫውት' : 'Watch Lesson'),
                                           style: GoogleFonts.notoSansEthiopic(
                                             fontSize: 12.5,
                                             fontWeight: FontWeight.w800,
                                           ),
                                         ),
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: primaryColor,
+                                          backgroundColor: !isUnlocked ? const Color(0xFF0284C7) : primaryColor,
                                           foregroundColor: Colors.white,
                                           padding: const EdgeInsets.symmetric(vertical: 10),
                                           shape: RoundedRectangleBorder(
@@ -398,6 +438,10 @@ class _VideoLessonScreenState extends State<VideoLessonScreen> {
                                     // Offline Download Button
                                     OutlinedButton.icon(
                                       onPressed: () async {
+                                        if (!isUnlocked) {
+                                          _handleUpgradeRedirection();
+                                          return;
+                                        }
                                         await OfflineManager.saveOfflineVideo(video);
                                         if (context.mounted) {
                                           ScaffoldMessenger.of(context).showSnackBar(
@@ -413,17 +457,24 @@ class _VideoLessonScreenState extends State<VideoLessonScreen> {
                                           );
                                         }
                                       },
-                                      icon: const Icon(Icons.download_rounded, size: 16),
+                                      icon: Icon(
+                                        !isUnlocked ? Icons.lock_rounded : Icons.download_rounded,
+                                        size: 16,
+                                        color: !isUnlocked ? const Color(0xFFD97706) : textColor,
+                                      ),
                                       label: Text(
-                                        isAm ? 'አውርድ' : 'Save',
+                                        !isUnlocked
+                                            ? (isAm ? 'ተቆልፏል' : 'Locked')
+                                            : (isAm ? 'አውርድ' : 'Save'),
                                         style: GoogleFonts.notoSansEthiopic(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w700,
+                                          color: !isUnlocked ? const Color(0xFFD97706) : textColor,
                                         ),
                                       ),
                                       style: OutlinedButton.styleFrom(
-                                        foregroundColor: textColor,
-                                        side: BorderSide(color: borderColor),
+                                        foregroundColor: !isUnlocked ? const Color(0xFFD97706) : textColor,
+                                        side: BorderSide(color: !isUnlocked ? const Color(0xFFD97706) : borderColor),
                                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(12),

@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/video_model.dart';
 import '../services/video_service.dart';
-import '../screens/login_activation_screen.dart';
+import 'account_upgrade_dialog.dart';
 
 /// Interactive "How to Start" widget that displays a video-first guide
 /// fetched directly from the Supabase database.
@@ -258,16 +258,16 @@ class HowToStartBanner extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    LoginActivationScreen.push(
+                    AccountUpgradeDialog.show(
                       context,
                       isDarkMode: isDarkMode,
                       languageCode: languageCode,
-                      preferredGrade: grade ?? 12,
+                      initialGrade: grade ?? 12,
                     );
                   },
-                  icon: const Icon(Icons.login_rounded, size: 18, color: Colors.white),
+                  icon: const Icon(Icons.vpn_key_rounded, size: 18, color: Colors.white),
                   label: Text(
-                    isAm ? 'በአካውንት ይግቡ (Student Login)' : 'Student Login',
+                    isAm ? 'አካውንት ያሻሽሉ / ማግበሪያ ያስገቡ' : 'Upgrade & Verify Account',
                     style: GoogleFonts.notoSansEthiopic(
                       fontWeight: FontWeight.w900,
                       fontSize: 13,

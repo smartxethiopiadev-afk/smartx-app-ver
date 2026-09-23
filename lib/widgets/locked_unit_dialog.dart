@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'account_upgrade_dialog.dart';
-import 'upgrade_telegram_modal.dart';
 
 class LockedUnitDialog extends StatelessWidget {
   final int grade;

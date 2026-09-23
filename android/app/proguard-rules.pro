@@ -12,3 +12,6 @@
 
 # Prevent warnings from third-party libraries
 -dontwarn io.flutter.**
+
+# Rules for flutter_pdfview
+-keep class com.github.barteksc.pdfviewer.** { *; }

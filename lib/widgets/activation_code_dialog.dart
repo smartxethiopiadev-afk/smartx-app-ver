@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/activation_service.dart';
+import 'friendly_error_card.dart';
 
 class ActivationCodeDialog extends StatefulWidget {
   final bool isDarkMode;
@@ -445,33 +446,19 @@ class _ActivationCodeDialogState extends State<ActivationCodeDialog> {
                     ),
                   ),
 
-                  // Error Message Banner
+                  // User-Friendly Actionable Error Card
                   if (_errorMessage != null) ...[
                     const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.redAccent.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                color: Colors.redAccent,
-                                fontWeight: FontWeight.w600,
-                                height: 1.3,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    FriendlyErrorCard(
+                      errorMessage: _errorMessage!,
+                      isDarkMode: widget.isDarkMode,
+                      languageCode: widget.languageCode,
+                      onRetry: _handleActivate,
+                      onDismiss: () {
+                        setState(() {
+                          _errorMessage = null;
+                        });
+                      },
                     ),
                   ],
 

@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_final_fields, prefer_const_constructors, prefer_const_literals_to_create_immutables, use_build_context_synchronously
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -198,27 +199,35 @@ class _QuizScreenState extends State<QuizScreen> {
         allQuestions: typeFiltered,
       );
 
-      final List<QuestionModel> sequentialQuestions = List<QuestionModel>.from(selectedQuestions);
-      sequentialQuestions.sort((a, b) {
-        if (a.orderIndex != b.orderIndex) {
-          return a.orderIndex.compareTo(b.orderIndex);
-        }
-        if (a.questionNumber != b.questionNumber) {
-          return a.questionNumber.compareTo(b.questionNumber);
-        }
-        return a.id.compareTo(b.id);
-      });
+      List<QuestionModel> processedQuestions = List<QuestionModel>.from(selectedQuestions);
+      if (widget.mode == QuizMode.exam) {
+        // Exam Mode: Randomize question sequence and shuffle choices
+        final random = Random();
+        processedQuestions.shuffle(random);
+        processedQuestions = processedQuestions.map((q) => q.copyWithShuffledOptions(random)).toList();
+      } else {
+        // Practice Mode: Sequential ordering by orderIndex or questionNumber
+        processedQuestions.sort((a, b) {
+          if (a.orderIndex != b.orderIndex) {
+            return a.orderIndex.compareTo(b.orderIndex);
+          }
+          if (a.questionNumber != b.questionNumber) {
+            return a.questionNumber.compareTo(b.questionNumber);
+          }
+          return a.id.compareTo(b.id);
+        });
+      }
 
       if (mounted) {
         setState(() {
-          _questions = sequentialQuestions;
-          _questionKeys = List.generate(sequentialQuestions.length, (_) => GlobalKey());
+          _questions = processedQuestions;
+          _questionKeys = List.generate(processedQuestions.length, (_) => GlobalKey());
           _isLoading = false;
         });
 
         // Initialize blank controllers
-        for (int i = 0; i < sequentialQuestions.length; i++) {
-          if (sequentialQuestions[i].isBlankSpace) {
+        for (int i = 0; i < processedQuestions.length; i++) {
+          if (processedQuestions[i].isBlankSpace) {
             _getBlankController(i);
           }
         }

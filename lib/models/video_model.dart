@@ -88,6 +88,9 @@ class VideoModel {
     };
   }
 
+  /// Returns true if this video is unlocked by default (e.g. Unit 1 content)
+  bool get isUnlocked => unitNumber <= 1;
+
   /// Returns true if this video has a direct secure streaming URL (MP4, HLS, Supabase Storage)
   bool get hasDirectStream => (videoUrl != null && videoUrl!.isNotEmpty) || (storagePath != null && storagePath!.isNotEmpty);
 

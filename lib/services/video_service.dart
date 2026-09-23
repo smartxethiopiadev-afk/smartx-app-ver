@@ -25,7 +25,7 @@ class VideoService {
     return rawSubject;
   }
 
-  /// App Overview Tutorial Video (Default empty fallback if database has no entry)
+  /// App Overview Tutorial Video (Default stream fallback if database has no entry yet)
   static VideoModel getAppOverviewVideo() {
     return VideoModel(
       id: 'app_overview_video',
@@ -34,8 +34,10 @@ class VideoService {
       unitNumber: 1,
       partNumber: 1,
       title: 'Smart Learn Ethiopian - የመተግበሪያ አጠቃቀም መመሪያ (Supabase)',
-      youtubeVideoId: '',
-      durationText: '10 mins',
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      storagePath: 'tutorials/how_to_start.mp4',
+      customThumbnailUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80',
+      durationText: '5 mins',
       orderIndex: 0,
     );
   }

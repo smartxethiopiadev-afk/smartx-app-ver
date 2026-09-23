@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'login_activation_screen.dart';
+import '../widgets/account_upgrade_dialog.dart';
 
 class UpgradeRegistrationScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -523,15 +523,14 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
 
             const SizedBox(height: 10),
 
-            // Secondary Action: I Have Credentials (Login)
+            // Secondary Action: Verify & Activate Account
             OutlinedButton.icon(
               onPressed: () async {
-                await LoginActivationScreen.push(
+                await AccountUpgradeDialog.show(
                   context,
                   isDarkMode: widget.isDarkMode,
                   languageCode: widget.languageCode,
-                  preferredGrade: _selectedGrade,
-                  preferredSubject: _selectedSubject,
+                  initialGrade: _selectedGrade,
                 );
               },
               style: OutlinedButton.styleFrom(
@@ -544,14 +543,14 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
                 ),
               ),
               icon: Icon(
-                Icons.key_rounded,
+                Icons.vpn_key_rounded,
                 size: 18,
                 color: isLight ? const Color(0xFF0F172A) : Colors.white,
               ),
               label: Text(
                 isAm
-                    ? 'የይለፍ ቃል አለኝ (Login)'
-                    : 'I already have credentials (Login)',
+                    ? 'አካውንት ያረጋግጡና ያንቁ (Verify & Unlock)'
+                    : 'Verify & Activate Account',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,

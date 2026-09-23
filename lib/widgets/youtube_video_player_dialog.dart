@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/video_model.dart';
 import '../services/analytics_service.dart';
 import '../services/offline_manager.dart';
+import '../services/subscription_service.dart';
+import 'account_upgrade_dialog.dart';
 
 class YouTubeVideoPlayerDialog extends StatefulWidget {
   final VideoModel video;
@@ -101,7 +103,26 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
     }
   }
 
+  void _handleUpgradeRedirection() {
+    Navigator.of(context).pop();
+    AccountUpgradeDialog.show(
+      context,
+      isDarkMode: widget.isDarkMode,
+      languageCode: widget.languageCode,
+      initialGrade: widget.video.grade,
+    );
+  }
+
   Future<void> _launchVideoDirect() async {
+    final bool isUnlocked = widget.video.isUnlocked ||
+        widget.video.unitNumber <= 1 ||
+        SubscriptionService.isGradeUnlockedSync(widget.video.grade, subject: widget.video.subject);
+
+    if (!isUnlocked) {
+      _handleUpgradeRedirection();
+      return;
+    }
+
     final String urlStr = widget.video.hasDirectStream 
         ? (widget.video.videoUrl ?? '')
         : 'https://www.youtube.com/watch?v=${widget.video.youtubeVideoId}';
@@ -131,6 +152,10 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
         isLight ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final Color subColor =
         isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+
+    final bool isUnlocked = widget.video.isUnlocked ||
+        widget.video.unitNumber <= 1 ||
+        SubscriptionService.isGradeUnlockedSync(widget.video.grade, subject: widget.video.subject);
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.88,
@@ -257,23 +282,43 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
                         ),
                         child: Center(
                           child: Container(
-                            width: 60,
-                            height: 60,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFEF4444),
-                              shape: BoxShape.circle,
+                              color: !isUnlocked
+                                  ? const Color(0xFFD97706)
+                                  : const Color(0xFFEF4444),
+                              borderRadius: BorderRadius.circular(30),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFFEF4444).withValues(alpha: 0.4),
+                                  color: (!isUnlocked
+                                          ? const Color(0xFFD97706)
+                                          : const Color(0xFFEF4444))
+                                      .withValues(alpha: 0.4),
                                   blurRadius: 16,
                                   offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
-                            child: const Icon(
-                              Icons.play_arrow_rounded,
-                              color: Colors.white,
-                              size: 38,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  !isUnlocked ? Icons.lock_rounded : Icons.play_arrow_rounded,
+                                  color: Colors.white,
+                                  size: 26,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  !isUnlocked
+                                      ? (isAmharic ? 'የተቆለፈ • ለማስከፈት ይንኩ' : 'Locked • Tap to Upgrade')
+                                      : (isAmharic ? 'ቪዲዮ አጫውት' : 'Watch Video'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -370,14 +415,20 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
 
                   const SizedBox(height: 16),
 
-                  // Watch Video CTA Button
+                  // Watch Video / Upgrade CTA Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: _launchVideoDirect,
-                      icon: const Icon(Icons.play_circle_filled_rounded, size: 20, color: Colors.white),
+                      onPressed: !isUnlocked ? _handleUpgradeRedirection : _launchVideoDirect,
+                      icon: Icon(
+                        !isUnlocked ? Icons.vpn_key_rounded : Icons.play_circle_filled_rounded,
+                        size: 20,
+                        color: Colors.white,
+                      ),
                       label: Text(
-                        isAmharic ? 'ቪዲዮውን አጫውት (Watch Video)' : 'Play Video Lesson',
+                        !isUnlocked
+                            ? (isAmharic ? 'ዩኒቱን ለማስከፈት አካውንትዎን ያሻሽሉ' : 'Upgrade Account to Unlock Video')
+                            : (isAmharic ? 'ቪዲዮውን አጫውት (Watch Video)' : 'Play Video Lesson'),
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 14,
@@ -385,7 +436,7 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEF4444),
+                        backgroundColor: !isUnlocked ? const Color(0xFF0284C7) : const Color(0xFFEF4444),
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -401,43 +452,53 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: _isSavingOffline ? null : _toggleOfflineDownload,
-                      icon: _isSavingOffline
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Icon(
-                              _isOfflineSaved
-                                  ? Icons.cloud_done_rounded
-                                  : Icons.download_for_offline_rounded,
-                              size: 18,
-                              color: _isOfflineSaved
-                                  ? const Color(0xFF10B981)
-                                  : const Color(0xFF0084FF),
-                            ),
+                      onPressed: !isUnlocked
+                          ? _handleUpgradeRedirection
+                          : (_isSavingOffline ? null : _toggleOfflineDownload),
+                      icon: !isUnlocked
+                          ? const Icon(Icons.lock_rounded, size: 18, color: Color(0xFFD97706))
+                          : (_isSavingOffline
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : Icon(
+                                  _isOfflineSaved
+                                      ? Icons.cloud_done_rounded
+                                      : Icons.download_for_offline_rounded,
+                                  size: 18,
+                                  color: _isOfflineSaved
+                                      ? const Color(0xFF10B981)
+                                      : const Color(0xFF0084FF),
+                                )),
                       label: Text(
-                        _isOfflineSaved
-                            ? (isAmharic
-                                ? 'ከመስመር ውጭ ወርዷል (Downloaded)'
-                                : 'Available Offline')
-                            : (isAmharic
-                                ? 'ከመስመር ውጭ ለማየት አውርድ'
-                                : 'Download for Offline'),
+                        !isUnlocked
+                            ? (isAmharic ? 'ለማውረድ አካውንትዎን ያሻሽሉ' : 'Upgrade Required to Download')
+                            : (_isOfflineSaved
+                                ? (isAmharic
+                                    ? 'ከመስመር ውጭ ወርዷል (Downloaded)'
+                                    : 'Available Offline')
+                                : (isAmharic
+                                    ? 'ከመስመር ውጭ ለማየት አውርድ'
+                                    : 'Download for Offline')),
                         style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
-                          color: _isOfflineSaved
-                              ? const Color(0xFF10B981)
-                              : const Color(0xFF0084FF),
+                          color: !isUnlocked
+                              ? const Color(0xFFD97706)
+                              : (_isOfflineSaved
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFF0084FF)),
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                          color: _isOfflineSaved
-                              ? const Color(0xFF10B981)
-                              : const Color(0xFF0084FF).withValues(alpha: 0.5),
+                          color: !isUnlocked
+                              ? const Color(0xFFD97706)
+                              : (_isOfflineSaved
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFF0084FF).withValues(alpha: 0.5)),
                           width: 1.5,
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 12),

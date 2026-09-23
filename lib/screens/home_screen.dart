@@ -10,13 +10,13 @@ import 'unit_selection_screen.dart';
 import 'video_subject_selection_screen.dart';
 import '../services/offline_manager.dart';
 import 'quiz_screen.dart';
-import 'notes_screen.dart';
+import 'pdf_viewer_screen.dart';
+import 'downloads_screen.dart';
 import 'developer_profile_screen.dart';
 import '../models/video_model.dart';
 import '../services/video_service.dart';
 import '../widgets/youtube_video_player_dialog.dart';
 import '../widgets/image_slider_carousel.dart';
-import '../widgets/video_slider_carousel.dart';
 import '../widgets/how_to_start_banner.dart';
 import '../widgets/subject_vector_widgets.dart';
 import '../widgets/interactive_subject_card.dart';
@@ -1485,16 +1485,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           borderRadius: BorderRadius.circular(14),
           onTap: () {
             if (!isUnlocked) {
-              LockedUnitDialog.show(
+              AccountUpgradeDialog.show(
                 context,
-                grade: video.grade,
-                subject: video.subject,
-                unitNumber: video.unitNumber,
-                unitTitle: video.title,
-                languageCode: widget.languageCode,
                 isDarkMode: widget.isDarkMode,
-                onUnlocked: () {
-                  setState(() {});
+                languageCode: widget.languageCode,
+                initialGrade: video.grade,
+                onSuccess: () {
+                  if (mounted) setState(() {});
                 },
               );
             } else {
@@ -2751,7 +2748,85 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   color: isLight ? const Color(0xFF475569) : const Color(0xFF94A3B8),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              // Dedicated Downloads Hub banner button
+              InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const DownloadsScreen(),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.picture_as_pdf_rounded,
+                          color: Colors.white,
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.languageCode == 'en' ? 'PDF Downloads Hub' : 'የወረዱ ፒዲኤፍ ማህደር',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              widget.languageCode == 'en'
+                                  ? 'View all saved unit notes offline'
+                                  : 'ያወረዷቸውን አጫጭር ማስታወሻዎች ይመልከቱ',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white.withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
               
               if (downloadedIds.isEmpty) ...[
                 // Beautiful guide card on how to download if empty
@@ -2952,14 +3027,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) => NotesScreen(
+                                              builder: (context) => PdfViewerScreen(
+                                                pdfUrl: '',
+                                                title: title,
+                                                subject: subject,
                                                 grade: grade,
-                                                subjectId: subject,
                                                 unitNumber: unitNum,
-                                                unitTitle: title,
-                                                themeColor: color,
-                                                isDarkMode: widget.isDarkMode,
-                                                languageCode: widget.languageCode,
                                               ),
                                             ),
                                           );

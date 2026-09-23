@@ -8,12 +8,17 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../main.dart';
+import '../services/offline_manager.dart';
+import '../services/short_note_service.dart';
 
-/// Dedicated In-App PDF Viewer Screen for displaying Short Note PDFs.
+/// Ultra High-Resolution In-App PDF Viewer Screen with complete Dark Mode,
+/// Invert Colors toggle, page navigation, and offline caching support.
 class PdfViewerScreen extends StatefulWidget {
   final String pdfUrl;
   final String title;
   final String? subject;
+  final int? grade;
+  final int? unitNumber;
   final String? localFilePath;
 
   const PdfViewerScreen({
@@ -21,6 +26,8 @@ class PdfViewerScreen extends StatefulWidget {
     required this.pdfUrl,
     required this.title,
     this.subject,
+    this.grade,
+    this.unitNumber,
     this.localFilePath,
   });
 
@@ -30,6 +37,7 @@ class PdfViewerScreen extends StatefulWidget {
 
 class _PdfViewerScreenState extends State<PdfViewerScreen> {
   String? _localPath;
+  String _effectivePdfUrl = '';
   bool _isLoading = true;
   bool _hasError = false;
   String _errorMessage = '';
@@ -38,11 +46,44 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   int _currentPage = 0;
   bool _isReady = false;
   bool _swipeHorizontal = false;
+  bool _isNightMode = false;
+  bool _nightModeExplicitlySet = false;
+  bool _isSavingOffline = false;
+  bool _isDownloaded = false;
+
+  PDFViewController? _pdfViewController;
 
   @override
   void initState() {
     super.initState();
+    _effectivePdfUrl = widget.pdfUrl;
+    _checkOfflineStatus();
     _loadPdf();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_nightModeExplicitlySet) {
+      final isDark = AppStateProvider.of(context).isDarkMode;
+      _isNightMode = isDark;
+    }
+  }
+
+  String get _cleanUnitId {
+    final grade = widget.grade ?? 9;
+    final sub = (widget.subject ?? 'general').toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+    final unit = widget.unitNumber ?? 1;
+    return 'g${grade}_${sub}_u$unit';
+  }
+
+  Future<void> _checkOfflineStatus() async {
+    final hasOffline = await OfflineManager.hasOfflinePdf(_cleanUnitId);
+    if (mounted) {
+      setState(() {
+        _isDownloaded = hasOffline;
+      });
+    }
   }
 
   Future<void> _loadPdf() async {
@@ -53,51 +94,101 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     });
 
     try {
-      // 1. Check if localFilePath is provided and exists
+      // 1. Check if localFilePath was provided and exists (e.g. from Downloads Hub)
       if (widget.localFilePath != null && widget.localFilePath!.isNotEmpty) {
         final file = File(widget.localFilePath!);
         if (await file.exists()) {
-          setState(() {
-            _localPath = file.path;
-            _isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              _localPath = file.path;
+              _isDownloaded = true;
+              _isLoading = false;
+            });
+          }
           return;
         }
       }
 
-      // 2. Validate URL
-      final url = widget.pdfUrl.trim();
+      // 2. Check if already stored in OfflineManager
+      final offlineModel = await OfflineManager.getOfflinePdfModel(_cleanUnitId);
+      if (offlineModel != null && offlineModel.localPath.isNotEmpty) {
+        final cachedFile = File(offlineModel.localPath);
+        if (await cachedFile.exists()) {
+          if (mounted) {
+            setState(() {
+              _localPath = cachedFile.path;
+              _isDownloaded = true;
+              _isLoading = false;
+            });
+          }
+          return;
+        }
+      }
+
+      // 3. Resolve PDF URL (if not passed, query ShortNoteService)
+      String url = _effectivePdfUrl.trim();
+      if (url.isEmpty && widget.grade != null && widget.subject != null && widget.unitNumber != null) {
+        final fetched = await ShortNoteService.getPdfUrl(
+          grade: widget.grade!,
+          subject: widget.subject!,
+          unitNumber: widget.unitNumber!,
+        );
+        if (fetched != null && fetched.isNotEmpty) {
+          url = fetched.trim();
+          _effectivePdfUrl = url;
+        }
+      }
+
       if (url.isEmpty) {
-        setState(() {
-          _hasError = true;
-          _errorMessage = 'PDF link not available for this unit';
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _hasError = true;
+            _errorMessage = 'PDF link not available for this unit.';
+            _isLoading = false;
+          });
+        }
         return;
       }
 
-      // 3. Web platform fallback
+      // 4. Web platform handling
       if (kIsWeb) {
-        setState(() {
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
         return;
       }
 
-      // 4. Download PDF to temporary cache for Android/iOS native viewing
+      // 5. Download and cache PDF to secure local device storage
       final uri = Uri.parse(url);
-      final response = await http.get(uri).timeout(const Duration(seconds: 30));
+      final response = await http.get(uri).timeout(const Duration(seconds: 40));
 
       if (response.statusCode == 200) {
         final bytes = response.bodyBytes;
-        final dir = await getTemporaryDirectory();
-        final filename = 'pdf_${DateTime.now().millisecondsSinceEpoch}.pdf';
-        final file = File('${dir.path}/$filename');
+        final dir = await getApplicationDocumentsDirectory();
+        final downloadsDir = Directory('${dir.path}/downloads');
+        if (!await downloadsDir.exists()) {
+          await downloadsDir.create(recursive: true);
+        }
+
+        final file = File('${downloadsDir.path}/$_cleanUnitId.pdf');
         await file.writeAsBytes(bytes, flush: true);
+
+        // Record in offline manager catalog
+        await OfflineManager.saveOfflinePdf(
+          unitId: _cleanUnitId,
+          pdfUrl: url,
+          title: widget.title,
+          subject: widget.subject,
+          grade: widget.grade,
+          unit: widget.unitNumber,
+        );
 
         if (mounted) {
           setState(() {
             _localPath = file.path;
+            _isDownloaded = true;
             _isLoading = false;
           });
         }
@@ -109,26 +200,125 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       if (mounted) {
         setState(() {
           _hasError = true;
-          _errorMessage = 'Unable to load PDF document. Please check your internet connection.';
+          _errorMessage = 'Unable to load PDF document. Please check your internet connection and try again.';
           _isLoading = false;
         });
       }
     }
   }
 
+  Future<void> _saveToDownloads() async {
+    if (_isSavingOffline || _effectivePdfUrl.isEmpty) return;
+    setState(() => _isSavingOffline = true);
+
+    try {
+      await OfflineManager.downloadAndSavePdfFile(
+        unitId: _cleanUnitId,
+        pdfUrl: _effectivePdfUrl,
+        title: widget.title,
+        subject: widget.subject,
+        grade: widget.grade,
+        unit: widget.unitNumber,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isSavingOffline = false;
+          _isDownloaded = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Saved to Downloads Hub! (Available Offline)',
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSavingOffline = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save download: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _jumpToPageDialog() {
+    if (_totalPages <= 1) return;
+    final controller = TextEditingController(text: '${_currentPage + 1}');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Jump to Page',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+        ),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: 'Page Number (1 - $_totalPages)',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final val = int.tryParse(controller.text.trim());
+              if (val != null && val >= 1 && val <= _totalPages) {
+                _pdfViewController?.setPage(val - 1);
+                Navigator.of(ctx).pop();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Go'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appConfig = AppStateProvider.of(context);
-    final isDarkMode = appConfig.isDarkMode;
-    final bgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
-    final cardBg = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
-    final textColor = isDarkMode ? Colors.white : const Color(0xFF0F172A);
-    final subTextColor = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final isDark = appConfig.isDarkMode;
+
+    // Dark Mode background enforces #121212 for ultra-clean contrast
+    final Color bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF8FAFC);
+    final Color cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final Color textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final Color subTextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        elevation: 1,
+        elevation: 0.5,
         backgroundColor: cardBg,
         iconTheme: IconThemeData(color: textColor),
         title: Column(
@@ -140,7 +330,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 16,
+                fontSize: 15.5,
                 fontWeight: FontWeight.w700,
                 color: textColor,
               ),
@@ -157,9 +347,25 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           ],
         ),
         actions: [
-          if (_isReady && _totalPages > 0 && !kIsWeb) ...[
+          // Dark Mode / Invert PDF Colors Toggle
+          IconButton(
+            tooltip: _isNightMode ? 'Normal Colors' : 'Dark Mode / Invert Colors',
+            icon: Icon(
+              _isNightMode ? Icons.nightlight_round : Icons.wb_sunny_rounded,
+              color: _isNightMode ? const Color(0xFFFBBF24) : textColor,
+            ),
+            onPressed: () {
+              setState(() {
+                _nightModeExplicitlySet = true;
+                _isNightMode = !_isNightMode;
+              });
+            },
+          ),
+
+          // Horizontal / Vertical Layout Toggle
+          if (_isReady && _totalPages > 0 && !kIsWeb)
             IconButton(
-              tooltip: _swipeHorizontal ? 'Vertical Scroll' : 'Horizontal Scroll',
+              tooltip: _swipeHorizontal ? 'Vertical View' : 'Horizontal View',
               icon: Icon(
                 _swipeHorizontal ? Icons.swap_vert_rounded : Icons.swap_horiz_rounded,
                 color: textColor,
@@ -170,41 +376,126 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                 });
               },
             ),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2563EB).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  '${_currentPage + 1} / $_totalPages',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF2563EB),
-                  ),
-                ),
-              ),
+
+          // Download / Offline Hub Save Button
+          if (!kIsWeb)
+            IconButton(
+              tooltip: _isDownloaded ? 'Downloaded (Offline)' : 'Save Offline',
+              icon: _isSavingOffline
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      _isDownloaded ? Icons.cloud_done_rounded : Icons.download_rounded,
+                      color: _isDownloaded ? const Color(0xFF10B981) : textColor,
+                    ),
+              onPressed: _isDownloaded ? null : _saveToDownloads,
             ),
-          ],
+
+          // Share Link
           IconButton(
-            tooltip: 'Share PDF',
+            tooltip: 'Share',
             icon: Icon(Icons.share_rounded, color: textColor),
             onPressed: () {
-              if (widget.pdfUrl.isNotEmpty) {
-                Share.share('Check out this Short Note PDF: ${widget.pdfUrl}');
+              if (_effectivePdfUrl.isNotEmpty) {
+                Share.share('📚 ${widget.title} - ${widget.subject ?? ""}\n$_effectivePdfUrl');
               }
             },
           ),
         ],
       ),
-      body: _buildBody(bgColor, textColor, subTextColor),
+      body: _buildBody(bgColor, cardBg, textColor, subTextColor),
+      // Bottom Navigation Toolbar for Page Stepping
+      bottomNavigationBar: (_isReady && _totalPages > 0 && !kIsWeb)
+          ? _buildBottomToolbar(cardBg, textColor, subTextColor)
+          : null,
     );
   }
 
-  Widget _buildBody(Color bgColor, Color textColor, Color subTextColor) {
+  Widget _buildBottomToolbar(Color cardBg, Color textColor, Color subTextColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: cardBg,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Previous Page Button
+            ElevatedButton.icon(
+              onPressed: _currentPage > 0
+                  ? () => _pdfViewController?.setPage(_currentPage - 1)
+                  : null,
+              icon: const Icon(Icons.chevron_left_rounded, size: 20),
+              label: const Text('Prev'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+
+            // Page Indicator & Jump To Page trigger
+            GestureDetector(
+              onTap: _jumpToPageDialog,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Page ${_currentPage + 1} of $_totalPages',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF2563EB),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.edit_note_rounded, size: 16, color: Color(0xFF2563EB)),
+                  ],
+                ),
+              ),
+            ),
+
+            // Next Page Button
+            ElevatedButton.icon(
+              onPressed: _currentPage < _totalPages - 1
+                  ? () => _pdfViewController?.setPage(_currentPage + 1)
+                  : null,
+              icon: const Icon(Icons.chevron_right_rounded, size: 20),
+              label: const Text('Next'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(Color bgColor, Color cardBg, Color textColor, Color subTextColor) {
     if (_isLoading) {
       return Center(
         child: Column(
@@ -215,16 +506,16 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              'Downloading PDF...',
+              'Rendering High-Quality PDF...',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
                 color: textColor,
               ),
             ),
             const SizedBox(height: 6),
             Text(
-              'Please wait a moment',
+              'Preparing pages & high DPI rendering',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 color: subTextColor,
@@ -256,7 +547,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
               ),
               const SizedBox(height: 20),
               Text(
-                'PDF Not Available',
+                'PDF Note Unavailable',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -327,7 +618,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () async {
-                  final uri = Uri.parse(widget.pdfUrl);
+                  final uri = Uri.parse(_effectivePdfUrl);
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
                 },
                 icon: const Icon(Icons.open_in_new_rounded, color: Colors.white),
@@ -351,48 +642,62 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       return const SizedBox.shrink();
     }
 
-    return Stack(
-      children: [
-        PDFView(
-          filePath: _localPath,
-          enableSwipe: true,
-          swipeHorizontal: _swipeHorizontal,
-          autoSpacing: true,
-          pageFling: true,
-          pageSnap: true,
-          defaultPage: _currentPage,
-          fitPolicy: FitPolicy.BOTH,
-          preventLinkNavigation: false,
-          onRender: (pages) {
-            setState(() {
-              _totalPages = pages ?? 0;
-              _isReady = true;
-            });
-          },
-          onError: (error) {
-            setState(() {
-              _hasError = true;
-              _errorMessage = error.toString();
-            });
-          },
-          onPageError: (page, error) {
-            debugPrint('[PdfViewerScreen] Page $page error: $error');
-          },
-          onPageChanged: (int? page, int? total) {
-            if (page != null) {
-              setState(() {
-                _currentPage = page;
-              });
-            }
-          },
-        ),
-        if (!_isReady)
-          const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
-            ),
+    return Container(
+      color: bgColor,
+      child: Stack(
+        children: [
+          PDFView(
+            filePath: _localPath,
+            enableSwipe: true,
+            swipeHorizontal: _swipeHorizontal,
+            autoSpacing: true,
+            pageFling: true,
+            pageSnap: true,
+            defaultPage: _currentPage,
+            fitPolicy: FitPolicy.BOTH,
+            nightMode: _isNightMode,
+            preventLinkNavigation: false,
+            onRender: (pages) {
+              if (mounted) {
+                setState(() {
+                  _totalPages = pages ?? 0;
+                  _isReady = true;
+                });
+              }
+            },
+            onError: (error) {
+              if (mounted) {
+                setState(() {
+                  _hasError = true;
+                  _errorMessage = error.toString();
+                });
+              }
+            },
+            onPageError: (page, error) {
+              debugPrint('[PdfViewerScreen] Page $page error: $error');
+            },
+            onViewCreated: (PDFViewController pdfViewController) {
+              _pdfViewController = pdfViewController;
+            },
+            onPageChanged: (int? page, int? total) {
+              if (page != null && mounted) {
+                setState(() {
+                  _currentPage = page;
+                });
+              }
+            },
           ),
-      ],
+          if (!_isReady)
+            Container(
+              color: bgColor,
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

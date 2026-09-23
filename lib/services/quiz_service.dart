@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/question_model.dart';
@@ -30,8 +31,49 @@ class QuizService {
     return rawSubject;
   }
 
-  /// Fetches questions for Practice Mode from `practice_questions` table.
-  /// Supports: 'multiple_choice', 'true_false', 'blank_space' (Fill in the blanks).
+  /// Strict grade and unit validation and duplicate removal logic
+  /// to ensure no cross-grade leakage and no repeated questions.
+  static List<QuestionModel> deduplicateAndValidate({
+    required List<QuestionModel> questions,
+    required int expectedGrade,
+    int? expectedUnit,
+  }) {
+    final seenIds = <String>{};
+    final seenTexts = <String>{};
+    final List<QuestionModel> filtered = [];
+
+    for (final q in questions) {
+      // 1. Strict Grade Validation to prevent cross-grade leaking
+      if (q.grade != null && q.grade != expectedGrade) {
+        continue;
+      }
+      // 2. Strict Unit Validation
+      if (expectedUnit != null && q.unitNumber != null && q.unitNumber != expectedUnit) {
+        continue;
+      }
+
+      // 3. Deduplication by ID & Normalized Question Text
+      final String idKey = q.id.trim();
+      final String textKey = q.questionText.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+      if (idKey.isNotEmpty && seenIds.contains(idKey)) {
+        continue;
+      }
+      if (textKey.isNotEmpty && seenTexts.contains(textKey)) {
+        continue;
+      }
+
+      if (idKey.isNotEmpty) seenIds.add(idKey);
+      if (textKey.isNotEmpty) seenTexts.add(textKey);
+      filtered.add(q);
+    }
+
+    return filtered;
+  }
+
+  /// Fetches questions for Practice Mode directly from `practice_questions` table.
+  /// Supports: 'multiple_choice', 'true_false', 'blank_space', 'matching'.
+  /// Enforces sequential order and removes duplicates.
   static Future<List<QuestionModel>> fetchPracticeQuestions({
     required int grade,
     required String subject,
@@ -40,6 +82,7 @@ class QuizService {
   }) async {
     final bool hasConn = await OfflineManager.isNetworkAvailable();
     final normSubject = _normalizeSubject(subject);
+    List<QuestionModel> results = [];
 
     if (hasConn) {
       try {
@@ -54,10 +97,10 @@ class QuizService {
           query = query.eq('question_type', questionType);
         }
 
-        final response = await query.order('order_index', ascending: true);
+        final response = await query.order('question_number', ascending: true);
 
         if (response.isNotEmpty) {
-          return (response as List<dynamic>)
+          results = (response as List<dynamic>)
               .map((json) => QuestionModel.fromJson(json as Map<String, dynamic>))
               .toList();
         }
@@ -65,32 +108,62 @@ class QuizService {
         debugPrint('[QuizService] practice_questions query note: $e. Checking fallback.');
       }
 
-      // Legacy fallback to questions table if practice_questions is empty on new database
-      try {
-        final legacyResp = await _supabase
-            .from('questions')
-            .select('*, question_options(*)')
-            .eq('grade', grade)
-            .ilike('subject', '%$normSubject%')
-            .eq('unit_number', unit)
-            .order('order_index', ascending: true);
+      // Legacy fallback to questions table if practice_questions is empty on legacy database
+      if (results.isEmpty) {
+        try {
+          final legacyResp = await _supabase
+              .from('questions')
+              .select('*, question_options(*)')
+              .eq('grade', grade)
+              .ilike('subject', '%$normSubject%')
+              .eq('unit_number', unit);
 
-        if (legacyResp.isNotEmpty) {
-          return (legacyResp as List<dynamic>)
-              .map((json) => QuestionModel.fromJson(json as Map<String, dynamic>))
-              .toList();
+          if (legacyResp.isNotEmpty) {
+            results = (legacyResp as List<dynamic>)
+                .map((json) => QuestionModel.fromJson(json as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (e) {
+          debugPrint('[QuizService] legacy questions query note: $e');
         }
-      } catch (e) {
-        debugPrint('[QuizService] legacy questions query note: $e');
       }
     }
 
-    // Seeded fallback practice questions
-    return _generateCurriculumPracticeFallback(grade, normSubject, unit);
+    // Seeded fallback practice questions if database has no rows or is offline
+    if (results.isEmpty) {
+      results = _generateCurriculumPracticeFallback(grade, normSubject, unit);
+    }
+
+    // Filter by questionType if specified (especially when using fallback)
+    if (questionType != null && questionType.isNotEmpty && questionType != 'all') {
+      results = results.where((q) {
+        if (questionType == 'multiple_choice') return q.isMultipleChoice;
+        if (questionType == 'true_false') return q.isTrueFalse;
+        if (questionType == 'blank_space') return q.isBlankSpace;
+        if (questionType == 'matching') return q.isMatching;
+        return true;
+      }).toList();
+    }
+
+    // Strict validation & deduplication
+    final validated = deduplicateAndValidate(
+      questions: results,
+      expectedGrade: grade,
+      expectedUnit: unit,
+    );
+
+    // Practice Mode: Sequential ordering by orderIndex or questionNumber
+    validated.sort((a, b) {
+      if (a.orderIndex != b.orderIndex) return a.orderIndex.compareTo(b.orderIndex);
+      if (a.questionNumber != b.questionNumber) return a.questionNumber.compareTo(b.questionNumber);
+      return a.id.compareTo(b.id);
+    });
+
+    return validated;
   }
 
-  /// Fetches questions for Exam Mode from `exam_questions` table.
-  /// Strictly MULTIPLE CHOICE ONLY questions for timed test evaluation.
+  /// Fetches questions for Exam Mode from `exam_questions` (or dynamic practice_questions MCQ pool).
+  /// Strictly multiple choice questions with randomized question order and shuffled options.
   static Future<List<QuestionModel>> fetchExamQuestions({
     required int grade,
     required String subject,
@@ -100,8 +173,10 @@ class QuizService {
   }) async {
     final bool hasConn = await OfflineManager.isNetworkAvailable();
     final normSubject = _normalizeSubject(subject);
+    List<QuestionModel> results = [];
 
     if (hasConn) {
+      // 1. Try exam_questions table first
       try {
         var query = _supabase
             .from('exam_questions')
@@ -117,47 +192,86 @@ class QuizService {
           query = query.eq('year', year);
         }
 
-        final response = await query
-            .order('order_index', ascending: true)
-            .limit(limit);
+        final response = await query.limit(limit);
 
         if (response.isNotEmpty) {
-          return (response as List<dynamic>)
+          results = (response as List<dynamic>)
               .map((json) => QuestionModel.fromJson(json as Map<String, dynamic>))
               .toList();
         }
       } catch (e) {
-        debugPrint('[QuizService] exam_questions query note: $e. Checking fallback.');
+        debugPrint('[QuizService] exam_questions query note: $e. Checking dynamic MCQ pool.');
       }
 
-      // Legacy fallback
-      try {
-        var legacyQuery = _supabase
-            .from('questions')
-            .select('*, question_options(*)')
-            .eq('grade', grade)
-            .ilike('subject', '%$normSubject%');
+      // 2. If exam_questions table has no records for this unit, query practice_questions for multiple choice questions
+      if (results.isEmpty) {
+        try {
+          var poolQuery = _supabase
+              .from('practice_questions')
+              .select('*')
+              .eq('grade', grade)
+              .ilike('subject', '%$normSubject%')
+              .eq('question_type', 'multiple_choice');
 
-        if (unit != null && unit > 0) {
-          legacyQuery = legacyQuery.eq('unit_number', unit);
+          if (unit != null && unit > 0) {
+            poolQuery = poolQuery.eq('unit_number', unit);
+          }
+
+          final poolResp = await poolQuery.limit(limit);
+          if (poolResp.isNotEmpty) {
+            results = (poolResp as List<dynamic>)
+                .map((json) => QuestionModel.fromJson(json as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (e) {
+          debugPrint('[QuizService] dynamic exam fallback from practice_questions note: $e');
         }
+      }
 
-        final legacyResp = await legacyQuery
-            .order('order_index', ascending: true)
-            .limit(limit);
+      // 3. Legacy questions fallback
+      if (results.isEmpty) {
+        try {
+          var legacyQuery = _supabase
+              .from('questions')
+              .select('*, question_options(*)')
+              .eq('grade', grade)
+              .ilike('subject', '%$normSubject%');
 
-        if (legacyResp.isNotEmpty) {
-          return (legacyResp as List<dynamic>)
-              .map((json) => QuestionModel.fromJson(json as Map<String, dynamic>))
-              .toList();
+          if (unit != null && unit > 0) {
+            legacyQuery = legacyQuery.eq('unit_number', unit);
+          }
+
+          final legacyResp = await legacyQuery.limit(limit);
+
+          if (legacyResp.isNotEmpty) {
+            results = (legacyResp as List<dynamic>)
+                .map((json) => QuestionModel.fromJson(json as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (e) {
+          debugPrint('[QuizService] legacy exam questions query note: $e');
         }
-      } catch (e) {
-        debugPrint('[QuizService] legacy exam questions query note: $e');
       }
     }
 
-    // Seeded fallback exam questions
-    return _generateCurriculumExamFallback(grade, normSubject, unit ?? 1);
+    // Seeded fallback exam questions if still empty
+    if (results.isEmpty) {
+      results = _generateCurriculumExamFallback(grade, normSubject, unit ?? 1);
+    }
+
+    // Strict validation & deduplication
+    final validated = deduplicateAndValidate(
+      questions: results,
+      expectedGrade: grade,
+      expectedUnit: unit,
+    );
+
+    // Exam Mode: Randomize question sequence and shuffle choices
+    final random = Random();
+    validated.shuffle(random);
+    final randomized = validated.map((q) => q.copyWithShuffledOptions(random)).toList();
+
+    return randomized.take(limit).toList();
   }
 
   /// General router for QuizScreen

@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/package_model.dart';
 import '../services/subscription_service.dart';
 import '../services/activation_service.dart';
+import 'friendly_error_card.dart';
 
 class UpgradeTelegramModal extends StatefulWidget {
   final int grade;
@@ -223,21 +224,14 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
         );
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result.message ??
-                (widget.languageCode == 'am'
-                    ? 'ምንም ንቁ ክፍያ አልተገኘም። በቴሌግራም አስተዳዳሪውን ያነጋግሩ (@smart_x_help)'
-                    : 'No active subscription found. Please contact admin on Telegram (@smart_x_help)'),
-          ),
-          backgroundColor: Colors.orangeAccent,
-          action: SnackBarAction(
-            label: widget.languageCode == 'am' ? 'ቴሌግራም' : 'Telegram',
-            textColor: Colors.white,
-            onPressed: _launchTelegram,
-          ),
-        ),
+      FriendlyErrorCard.showErrorSnackBar(
+        context,
+        message: result.message ??
+            (widget.languageCode == 'am'
+                ? 'ምንም ንቁ ክፍያ አልተገኘም። እባክዎ መረጃዎን ያረጋግጡ።'
+                : 'No active subscription found. Please check your details and try again.'),
+        languageCode: widget.languageCode,
+        onRetry: _handleVerifyAndUpgrade,
       );
     }
   }
@@ -312,17 +306,11 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.message),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: isAm ? 'ቴሌግራም' : 'Telegram',
-            textColor: Colors.white,
-            onPressed: _launchTelegram,
-          ),
-        ),
+      FriendlyErrorCard.showErrorSnackBar(
+        context,
+        message: result.message,
+        languageCode: widget.languageCode,
+        onRetry: _handleActivateCode,
       );
     }
   }

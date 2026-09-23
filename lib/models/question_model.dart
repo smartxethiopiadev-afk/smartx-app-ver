@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 enum QuestionType {
   multipleChoice,
@@ -171,6 +172,53 @@ class QuestionModel {
     return false;
   }
 
+  /// Unique identifier key for deduplication and caching
+  String get uniqueKey => id.isNotEmpty
+      ? id
+      : '$grade-$subject-$unitNumber-$questionNumber-${questionText.trim().toLowerCase()}';
+
+  /// Returns a copy of this question with its multiple choice options randomly shuffled.
+  /// Keys ('A', 'B', 'C', 'D') are re-assigned cleanly while preserving correctness.
+  QuestionModel copyWithShuffledOptions(Random random) {
+    if (options.length <= 1) return this;
+    final shuffled = List<QuestionOption>.from(options)..shuffle(random);
+    final reKeyed = <QuestionOption>[];
+    for (int i = 0; i < shuffled.length; i++) {
+      final key = String.fromCharCode(65 + i);
+      reKeyed.add(QuestionOption(
+        key: key,
+        text: shuffled[i].text,
+        isCorrect: shuffled[i].isCorrect,
+        explanation: shuffled[i].explanation,
+      ));
+    }
+    return QuestionModel(
+      id: id,
+      unitId: unitId,
+      grade: grade,
+      subject: subject,
+      unitNumber: unitNumber,
+      questionText: questionText,
+      questionNumber: questionNumber,
+      orderIndex: orderIndex,
+      options: reKeyed,
+      explanation: explanation,
+      questionImageUrl: questionImageUrl,
+      questionType: questionType,
+      correctBoolean: correctBoolean,
+      blankAnswer: blankAnswer,
+      acceptedAnswers: acceptedAnswers,
+      matchingPairs: matchingPairs,
+      caseSensitive: caseSensitive,
+      hint: hint,
+      year: year,
+      examCategory: examCategory,
+      timeLimitSeconds: timeLimitSeconds,
+      difficulty: difficulty,
+      topic: topic,
+    );
+  }
+
   factory QuestionModel.fromJson(Map<String, dynamic> json) {
     // Helpers for safe type parsing
     int? parseNullableInt(dynamic val) {
@@ -282,6 +330,23 @@ class QuestionModel {
       addIfPresent('B', json['option_b']);
       addIfPresent('C', json['option_c']);
       addIfPresent('D', json['option_d']);
+    }
+
+    // Match options with correctAnswerStr if none has been marked isCorrect
+    if (correctAnswerStr.isNotEmpty && !parsedOptions.any((o) => o.isCorrect)) {
+      for (int i = 0; i < parsedOptions.length; i++) {
+        final opt = parsedOptions[i];
+        final bool keyMatches = opt.key != null && opt.key!.toUpperCase() == correctAnswerStr.toUpperCase();
+        final bool textMatches = opt.text.trim().toLowerCase() == correctAnswerStr.toLowerCase();
+        if (keyMatches || textMatches) {
+          parsedOptions[i] = QuestionOption(
+            key: opt.key,
+            text: opt.text,
+            isCorrect: true,
+            explanation: opt.explanation,
+          );
+        }
+      }
     }
 
     // 3. For True / False, populate default True/False options if none provided

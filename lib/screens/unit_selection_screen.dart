@@ -6,17 +6,17 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'pdf_viewer_screen.dart';
+import 'downloads_screen.dart';
 import '../services/short_note_service.dart';
 import '../services/offline_manager.dart';
 import '../services/quiz_service.dart';
 import '../main.dart';
 import 'quiz_screen.dart';
-import 'notes_screen.dart';
 import '../services/analytics_service.dart';
 import '../services/subscription_service.dart';
 import '../widgets/locked_unit_dialog.dart';
+import '../widgets/quiz_selection_dialogs.dart';
 import '../data/curriculum_units.dart';
 
 class UnitSelectionScreen extends StatefulWidget {
@@ -157,6 +157,31 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     scaffoldMessenger.hideCurrentSnackBar();
 
+    // Enforce subscription check: Unit 1 is free trial; Unit 2+ requires active subscription
+    final bool isAccessible = await SubscriptionService.isUnitAccessible(
+      widget.grade,
+      unitNumber,
+      subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
+    );
+
+    if (!isAccessible) {
+      if (!mounted) return;
+      LockedUnitDialog.show(
+        context,
+        grade: widget.grade,
+        subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
+        unitNumber: unitNumber,
+        unitTitle: 'Unit $unitNumber Short Note',
+        languageCode: widget.languageCode,
+        isDarkMode: AppStateProvider.of(context).isDarkMode,
+        onUnlocked: () {
+          _checkRegistrationStatus();
+          _openShortNotePdf(unitNumber);
+        },
+      );
+      return;
+    }
+
     String? pdfUrl;
     try {
       // Query short_notes by grade, subject (case-insensitive), and unit_number to get pdf_url
@@ -187,6 +212,8 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
             pdfUrl: pdfUrl!.trim(),
             title: 'Unit $unitNumber Short Note',
             subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
+            grade: widget.grade,
+            unitNumber: unitNumber,
           ),
         ),
       );
@@ -203,215 +230,63 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
   }
 
   void _showUnitOptionsSheet(BuildContext context, int unitNumber, String unitId, String unitTitle, bool isDownloaded) {
-    final bool isDarkMode = AppStateProvider.of(context).isDarkMode;
-    final bool isLight = !isDarkMode;
-    final Color sheetBg = isLight ? Colors.white : const Color(0xFF0F172A);
-    final Color headerColor = isLight ? const Color(0xFF0F172A) : Colors.white;
-    final Color descColor = isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
-
-    showModalBottomSheet(
+    QuizSelectionDialogs.showModeSelectionModal(
       context: context,
-      backgroundColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) {
-        return Material(
-          color: sheetBg,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          clipBehavior: Clip.antiAlias,
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 38,
-                      height: 4.5,
-                      decoration: BoxDecoration(
-                        color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
+      grade: widget.grade,
+      subject: widget.languageCode == 'am' ? widget.amTitle : widget.enTitle,
+      unitNumber: unitNumber,
+      unitTitle: unitTitle,
+      onModeChosen: (mode) {
+        if (mode == QuizMode.practice) {
+          // Trigger second pop-up modal: Choose Question Type (MCQs, True/False, Blank Space, Matching)
+          QuizSelectionDialogs.showQuestionTypeModal(
+            context: context,
+            grade: widget.grade,
+            subject: widget.languageCode == 'am' ? widget.amTitle : widget.enTitle,
+            unitNumber: unitNumber,
+            onTypeSelected: (selectedQuestionType) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => QuizScreen(
+                    grade: widget.grade,
+                    subject: widget.subjectId,
+                    unit: unitNumber,
+                    mode: QuizMode.practice,
+                    initialQuestionType: selectedQuestionType,
+                    isOffline: isDownloaded,
+                    offlineUnitId: isDownloaded ? 'g${widget.grade}_${unitId}_quiz' : null,
                   ),
-                  const SizedBox(height: 24),
-                  Text(
-                    widget.languageCode == 'en' ? "Unit Activities" : "የክፍሉ ተግባራት",
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w900,
-                      color: headerColor,
-                      letterSpacing: -0.4,
-                    ),
+                ),
+              ).then((_) {
+                _loadBestScores();
+              });
+            },
+          );
+        } else {
+          // Exam Mode: Show confirmation modal with exam rules & start trigger
+          QuizSelectionDialogs.showExamConfirmationModal(
+            context: context,
+            grade: widget.grade,
+            subject: widget.languageCode == 'am' ? widget.amTitle : widget.enTitle,
+            unitNumber: unitNumber,
+            onStartExam: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => QuizScreen(
+                    grade: widget.grade,
+                    subject: widget.subjectId,
+                    unit: unitNumber,
+                    mode: QuizMode.exam,
+                    isOffline: isDownloaded,
+                    offlineUnitId: isDownloaded ? 'g${widget.grade}_${unitId}_quiz' : null,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.languageCode == 'en' 
-                        ? "Choose how you want to study for Unit $unitNumber" 
-                        : "ለክፍል $unitNumber የሚፈልጉትን ተግባር ይምረጡ",
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: descColor,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-
-                  // 2. Practice Mode Card
-                  InkWell(
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      final startQuizAction = () {
-                        _showQuizStartDialog(
-                          mode: QuizMode.practice,
-                          unitNumber: unitNumber,
-                          onStart: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => QuizScreen(
-                                  grade: widget.grade,
-                                  subject: widget.subjectId,
-                                  unit: unitNumber,
-                                  mode: QuizMode.practice,
-                                  isOffline: isDownloaded,
-                                  offlineUnitId: isDownloaded ? 'g${widget.grade}_${unitId}_quiz' : null,
-                                ),
-                              ),
-                            ).then((_) {
-                              _loadBestScores();
-                            });
-                          },
-                        );
-                      };
-                      startQuizAction();
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.school_rounded, color: Color(0xFF3B82F6), size: 24),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.languageCode == 'en' ? "Practice Mode" : "የልምምድ ዓይነት",
-                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: headerColor),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  widget.languageCode == 'en' 
-                                      ? "Immediate answers and explanations." 
-                                      : "ፈጣን መልሶችን እና ማብራሪያዎችን ያግኙ",
-                                  style: TextStyle(fontSize: 11.5, color: descColor, fontWeight: FontWeight.w500),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(Icons.chevron_right_rounded, color: descColor, size: 20),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  // 3. Exam Mode Card
-                  InkWell(
-                    onTap: () {
-                      Navigator.of(ctx).pop();
-                      final startQuizAction = () {
-                        _showQuizStartDialog(
-                          mode: QuizMode.exam,
-                          unitNumber: unitNumber,
-                          onStart: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => QuizScreen(
-                                  grade: widget.grade,
-                                  subject: widget.subjectId,
-                                  unit: unitNumber,
-                                  mode: QuizMode.exam,
-                                  isOffline: isDownloaded,
-                                  offlineUnitId: isDownloaded ? 'g${widget.grade}_${unitId}_quiz' : null,
-                                ),
-                              ),
-                            ).then((_) {
-                              _loadBestScores();
-                            });
-                          },
-                        );
-                      };
-                      startQuizAction();
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF1E293B),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEF4444).withValues(alpha: 0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.timer_rounded, color: Color(0xFFEF4444), size: 24),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.languageCode == 'en' ? "Exam Mode" : "የፈተና ዓይነት",
-                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: headerColor),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  widget.languageCode == 'en' 
-                                      ? "Timed, no instant answers, final score only." 
-                                      : "በጊዜ የተገደበ ፈተና ፣ ፈጣን መልስ የሌለው ፣ የመጨረሻ ውጤት ብቻ",
-                                  style: TextStyle(fontSize: 11.5, color: descColor, fontWeight: FontWeight.w500),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(Icons.chevron_right_rounded, color: descColor, size: 20),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
+                ),
+              ).then((_) {
+                _loadBestScores();
+              });
+            },
+          );
+        }
       },
     );
   }
@@ -1504,6 +1379,20 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
         ),
         actions: [
           IconButton(
+            tooltip: 'Downloads Hub',
+            icon: Icon(Icons.download_done_rounded, color: headerTextColor, size: 20),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => DownloadsScreen(
+                    initialGrade: widget.grade,
+                    initialSubject: widget.enTitle,
+                  ),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: Icon(Icons.info_outline_rounded, color: headerTextColor, size: 20),
             onPressed: _showInfoSheet,
           ),
@@ -1724,35 +1613,6 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                   ),
                 ),
 
-              if (!_isPackageUnlocked)
-                Container(
-                  margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.stars_rounded, color: Color(0xFF10B981), size: 22),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          languageCode == 'am'
-                              ? 'ክፍል 1 ነፃ ነው! ክፍል 2 እና ቀጣዮቹን በ 50 ብር ብቻ ይክፈቱ (አድሚን: @smart_x_help)'
-                              : 'Unit 1 is free! Unlock remaining units for 50 ETB (Admin: @smart_x_help)',
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF10B981),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
               if (filteredUnits.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
@@ -1840,7 +1700,9 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                           setState(() {
                                             _selectedUnitIndex = index;
                                           });
-                                          _openShortNotePdf(activeUnitNum);
+                                          _checkRegistrationAndProceed(index, activeUnitNum, onSuccess: () {
+                                            _openShortNotePdf(activeUnitNum);
+                                          });
                                         } else {
                                           _checkRegistrationAndProceed(index, activeUnitNum, onSuccess: () {
                                             setState(() {
@@ -1915,7 +1777,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                                         border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
                                                       ),
                                                       child: Text(
-                                                        languageCode == 'am' ? '🔒 50 ብር • ለመክፈት ይንኩ' : '🔒 50 ETB • Tap to unlock',
+                                                        languageCode == 'am' ? '🔒 ተቆልፏል • ለመክፈት ይንኩ' : '🔒 Locked • Tap to unlock',
                                                         style: const TextStyle(
                                                           fontSize: 10,
                                                           fontWeight: FontWeight.w800,
@@ -2079,10 +1941,6 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                           size: 22,
                                         ),
                                         onPressed: () {
-                                          if (widget.isShortNotesMode) {
-                                            _openShortNotePdf(activeUnitNum);
-                                            return;
-                                          }
                                           if (isLocked) {
                                             LockedUnitDialog.show(
                                               context,
@@ -2094,8 +1952,17 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                               isDarkMode: AppStateProvider.of(context).isDarkMode,
                                               onUnlocked: () {
                                                 _checkRegistrationStatus();
+                                                if (widget.isShortNotesMode) {
+                                                  _openShortNotePdf(activeUnitNum);
+                                                }
                                               },
                                             );
+                                            return;
+                                          }
+                                          if (widget.isShortNotesMode) {
+                                            _checkRegistrationAndProceed(index, activeUnitNum, onSuccess: () {
+                                              _openShortNotePdf(activeUnitNum);
+                                            });
                                             return;
                                           }
                                           _checkRegistrationAndProceed(index, activeUnitNum, onSuccess: () {

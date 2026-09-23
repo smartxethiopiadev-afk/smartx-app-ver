@@ -134,8 +134,8 @@ class ActivationService {
                 status: ActivationStatus.invalidCode,
                 isSuccess: false,
                 message: isAmharic
-                    ? 'የተሳሳተ የማግበሪያ ኮድ። እባክዎ በትክክል ያረጋግጡ ወይም አስተዳዳሪውን በቴሌግራም ያነጋግሩ (@smart_x_help)'
-                    : 'Invalid activation code. Please verify your code or contact Smart Learn Admin on Telegram (@smart_x_help).',
+                    ? 'የተሳሳተ የማግበሪያ ኮድ። እባክዎ በትክክል መጻፍዎን ያረጋግጡና እንደገና ይሞክሩ።'
+                    : 'Invalid activation code. Please double-check your code and try again.',
               );
             }
           }
@@ -157,8 +157,8 @@ class ActivationService {
           status: ActivationStatus.invalidCode,
           isSuccess: false,
           message: isAmharic
-              ? 'የተሳሳተ የማግበሪያ ኮድ። እባክዎ በትክክል ያረጋግጡ ወይም አስተዳዳሪውን በቴሌግራም ያነጋግሩ (@smart_x_help)'
-              : 'Invalid activation code. Please verify your code or contact Smart Learn Admin on Telegram (@smart_x_help).',
+              ? 'የተሳሳተ የማግበሪያ ኮድ። እባክዎ በትክክል መጻፍዎን ያረጋግጡና እንደገና ይሞክሩ።'
+              : 'Invalid activation code. Please double-check your code and try again.',
         );
       }
 
