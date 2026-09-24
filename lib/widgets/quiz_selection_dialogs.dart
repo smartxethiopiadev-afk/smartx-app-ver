@@ -206,13 +206,6 @@ class QuizSelectionDialogs {
         'icon': Icons.edit_note_rounded,
         'color': const Color(0xFF9333EA), // Purple
       },
-      {
-        'id': 'matching',
-        'title': isAm ? "ማዛመድ (Matching)" : "Matching Pairs",
-        'subtitle': isAm ? "ቃላትን ከትክክለኛ ትርጓሜያቸውና ቀመሮቻቸው ጋር ያዛምዱ" : "Connect terms, units, and definitions with their pairs",
-        'icon': Icons.compare_arrows_rounded,
-        'color': const Color(0xFFD97706), // Amber
-      },
     ];
 
     return showModalBottomSheet(

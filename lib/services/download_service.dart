@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import '../models/question_model.dart';
 import '../models/offline_package_model.dart';
 import 'offline_manager.dart';
 import 'quiz_service.dart';
@@ -184,9 +183,17 @@ class DownloadService {
           if (!await downloadsDir.exists()) {
             await downloadsDir.create(recursive: true);
           }
-          final file = File('${downloadsDir.path}/$cleanId.pdf');
-          await file.writeAsBytes(bytes, flush: true);
-          localPath = file.path;
+
+          // Atomic write: write to .tmp file first, then rename
+          final tmpFile = File('${downloadsDir.path}/$cleanId.pdf.tmp');
+          await tmpFile.writeAsBytes(bytes, flush: true);
+
+          final targetFile = File('${downloadsDir.path}/$cleanId.pdf');
+          if (await targetFile.exists()) {
+            await targetFile.delete();
+          }
+          await tmpFile.rename(targetFile.path);
+          localPath = targetFile.path;
         } else {
           fileSize = 1024 * 350;
         }
@@ -231,7 +238,7 @@ class DownloadService {
     }
   }
 
-  /// Download full Practice and Exam question package for a unit
+  /// Download full Practice and Exam question package for a unit directly from database
   static Future<OfflineQuestionPackage> downloadQuestionPackage({
     required String unitId,
     required String title,
@@ -255,9 +262,9 @@ class DownloadService {
     ));
 
     try {
-      if (onProgress != null) onProgress(0.15, 'Fetching Practice Questions...');
+      if (onProgress != null) onProgress(0.15, 'Fetching Practice Questions from database...');
 
-      // 1. Fetch practice questions (all types)
+      // 1. Fetch practice questions directly from Supabase
       final practiceQuestions = await QuizService.fetchPracticeQuestions(
         grade: grade,
         subject: subject,
@@ -266,9 +273,9 @@ class DownloadService {
       );
 
       _updateTask(_activeTasks[taskId]!.copyWith(progress: 0.45));
-      if (onProgress != null) onProgress(0.50, 'Fetching Exam Questions...');
+      if (onProgress != null) onProgress(0.50, 'Fetching Exam Questions from database...');
 
-      // 2. Fetch exam questions
+      // 2. Fetch exam questions directly from Supabase
       final examQuestions = await QuizService.fetchExamQuestions(
         grade: grade,
         subject: subject,
@@ -278,22 +285,9 @@ class DownloadService {
       _updateTask(_activeTasks[taskId]!.copyWith(progress: 0.75));
       if (onProgress != null) onProgress(0.80, 'Validating and saving offline database...');
 
-      // Ensure we have questions or fallback
-      List<QuestionModel> finalPractice = practiceQuestions;
-      List<QuestionModel> finalExam = examQuestions;
-
-      if (finalPractice.isEmpty && finalExam.isEmpty) {
-        final generic = await QuizService.fetchQuestions(
-          grade: grade,
-          subject: subject,
-          unit: unit,
-          mode: QuizMode.practice,
-        );
-        finalPractice = generic;
-      }
-
-      if (finalPractice.isEmpty && finalExam.isEmpty) {
-        throw Exception('No questions available in database for Grade $grade $subject Unit $unit');
+      // If database has no questions for this grade/unit, inform clearly (no fake mock questions)
+      if (practiceQuestions.isEmpty && examQuestions.isEmpty) {
+        throw Exception('ለክፍል $grade $subject ምዕራፍ $unit ጥያቄዎች በዳታቤዝ ውስጥ ገና አልተገኙም (Coming Soon)');
       }
 
       // 3. Save to offline persistent storage
@@ -303,8 +297,8 @@ class DownloadService {
         subject: subject,
         grade: grade,
         unit: unit,
-        practiceQuestions: finalPractice,
-        examQuestions: finalExam,
+        practiceQuestions: practiceQuestions,
+        examQuestions: examQuestions,
       );
 
       _updateTask(_activeTasks[taskId]!.copyWith(
@@ -326,12 +320,12 @@ class DownloadService {
             subject: subject,
             grade: grade,
             unit: unit,
-            totalQuestions: finalPractice.length + finalExam.length,
-            mcqCount: finalPractice.where((q) => q.isMultipleChoice).length,
-            trueFalseCount: finalPractice.where((q) => q.isTrueFalse).length,
-            blankCount: finalPractice.where((q) => q.isBlankSpace).length,
-            matchingCount: finalPractice.where((q) => q.questionType == QuestionType.matching).length,
-            examCount: finalExam.length,
+            totalQuestions: practiceQuestions.length + examQuestions.length,
+            mcqCount: practiceQuestions.where((q) => q.isMultipleChoice).length,
+            trueFalseCount: practiceQuestions.where((q) => q.isTrueFalse).length,
+            blankCount: practiceQuestions.where((q) => q.isBlankSpace).length,
+            matchingCount: 0,
+            examCount: examQuestions.length,
             downloadedAt: DateTime.now().millisecondsSinceEpoch,
             payloadSizeBytes: 1024 * 28,
           );

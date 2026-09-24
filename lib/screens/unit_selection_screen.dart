@@ -523,7 +523,6 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
     bool hasPracticeMcq = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'multiple_choice');
     bool hasPracticeTf = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'true_false');
     bool hasPracticeBlank = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'blank_space');
-    bool hasPracticeMatching = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'matching');
 
     if (!mounted) return;
 
@@ -533,7 +532,6 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
     double? mcqProgress;
     double? tfProgress;
     double? blankProgress;
-    double? matchingProgress;
 
     showModalBottomSheet(
       context: context,
@@ -776,37 +774,6 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                             setModalState(() {
                               blankProgress = null;
                               hasPracticeBlank = updated;
-                            });
-                            _loadOfflineDownloads();
-                          },
-                          cardBg: cardBg,
-                          textColor: textColor,
-                          subColor: subColor,
-                        ),
-                        const SizedBox(height: 10),
-
-                        // 3d. Matching (Independent)
-                        _buildDownloadOptionTile(
-                          title: 'አዛምድ (Matching Questions)',
-                          subtitle: 'ጽንሰ-ሀሳብን ከትርጉም ማዛመድ',
-                          icon: Icons.sync_alt_rounded,
-                          iconColor: const Color(0xFFF59E0B),
-                          isDownloaded: hasPracticeMatching,
-                          isDownloading: matchingProgress != null,
-                          progress: matchingProgress,
-                          onDownload: () async {
-                            setModalState(() => matchingProgress = 0.1);
-                            await _downloadUnitQuestionsSeparately(
-                              cleanUnitId: cleanUnitId,
-                              activeUnitNum: activeUnitNum,
-                              mode: 'practice',
-                              type: 'matching',
-                              onProgress: (p) => setModalState(() => matchingProgress = p),
-                            );
-                            final updated = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'matching');
-                            setModalState(() {
-                              matchingProgress = null;
-                              hasPracticeMatching = updated;
                             });
                             _loadOfflineDownloads();
                           },

@@ -358,6 +358,8 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
     final subColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
     final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
 
+    final isAm = appConfig.languageCode == 'am';
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
@@ -365,9 +367,9 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
         backgroundColor: cardBg,
         iconTheme: IconThemeData(color: textColor),
         title: Text(
-          'Downloads & Offline Hub',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 18,
+          isAm ? 'ከመስመር ውጭ ማዕከል (Offline Hub)' : 'Downloads & Offline Hub',
+          style: GoogleFonts.notoSansEthiopic(
+            fontSize: 17,
             fontWeight: FontWeight.w800,
             color: textColor,
           ),
@@ -375,12 +377,12 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
         actions: [
           if (_allPdfs.isNotEmpty || _allQuestionPkgs.isNotEmpty)
             IconButton(
-              tooltip: 'Clear All Downloads',
+              tooltip: isAm ? 'ሁሉንም አጥፋ' : 'Clear All Downloads',
               icon: const Icon(Icons.delete_sweep_rounded, color: Color(0xFFEF4444)),
               onPressed: _confirmClearAllDownloads,
             ),
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: isAm ? 'አድስ' : 'Refresh',
             icon: Icon(Icons.refresh_rounded, color: textColor),
             onPressed: _loadAllDownloads,
           ),
@@ -391,16 +393,16 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
           unselectedLabelColor: subColor,
           indicatorColor: const Color(0xFF2563EB),
           indicatorWeight: 3,
-          labelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 13),
-          unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13),
+          labelStyle: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w800, fontSize: 13),
+          unselectedLabelStyle: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w600, fontSize: 13),
           tabs: [
             Tab(
-              icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
-              text: 'PDF Notes (${_allPdfs.length})',
+              icon: const Icon(Icons.menu_book_rounded, size: 20),
+              text: isAm ? 'አጭር ማስታወሻ (${_allPdfs.length})' : 'Short Notes (${_allPdfs.length})',
             ),
             Tab(
               icon: const Icon(Icons.quiz_rounded, size: 20),
-              text: 'Question Sets (${_allQuestionPkgs.length})',
+              text: isAm ? 'ጥያቄዎች (${_allQuestionPkgs.length})' : 'Questions (${_allQuestionPkgs.length})',
             ),
           ],
         ),

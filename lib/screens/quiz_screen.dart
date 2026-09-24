@@ -1048,12 +1048,14 @@ class _QuizScreenState extends State<QuizScreen> {
     if (_errorMessage != null || _questions.isEmpty) {
       final bool isLight = Theme.of(context).brightness == Brightness.light;
       final bool isAm = AppStateProvider.of(context).languageCode == 'am';
+      final String unitLabel = 'Grade ${widget.grade} • Unit ${widget.unit ?? 1}';
+      
       return Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 480),
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(28.0),
             decoration: BoxDecoration(
               color: isLight ? Colors.white : const Color(0xFF1E293B),
               borderRadius: BorderRadius.circular(24),
@@ -1061,32 +1063,86 @@ class _QuizScreenState extends State<QuizScreen> {
                 color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
                 width: 1.5,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.2),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.quiz_outlined, size: 56, color: _getSubjectThemeColor()),
-                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _getSubjectThemeColor().withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.hourglass_top_rounded, size: 48, color: _getSubjectThemeColor()),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getSubjectThemeColor().withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    unitLabel,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: _getSubjectThemeColor(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Text(
-                  isAm ? "ጥያቄዎች አልተገኙም" : "No Questions Available",
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                  isAm ? "በቅርቡ ይጫናል (Coming Soon)" : "Coming Soon",
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  _errorMessage ?? (isAm ? "ለዚህ ዩኒት እስካሁን የተጫነ የጥያቄ ባንክ የለም።" : "No questions have been published for this unit yet."),
+                  _errorMessage ??
+                      (isAm
+                          ? "ለዚህ የትምህርት ክፍል የተዘጋጁ ጥያቄዎች በቅርቡ በዳታቤዝ ውስጥ ይጫናሉ። እባክዎ ትንሽ ቆይተው እንደገና ይሞክሩ።"
+                          : "Curriculum questions for this unit are being prepared and will be available soon. Please check back later."),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: isLight ? Colors.black54 : Colors.white60),
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    height: 1.5,
+                    color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                  ),
                 ),
                 const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: _loadQuestions,
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: Text(isAm ? "እንደገና ሞክር" : "Retry"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _getSubjectThemeColor(),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                      label: Text(isAm ? "ተመለስ" : "Go Back"),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: _loadQuestions,
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: Text(isAm ? "እንደገና ሞክር" : "Retry"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _getSubjectThemeColor(),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
