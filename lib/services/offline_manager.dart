@@ -12,6 +12,7 @@ import '../models/worksheet_model.dart';
 import '../models/video_model.dart';
 import '../models/offline_package_model.dart';
 import 'device_service.dart';
+import 'subscription_service.dart';
 
 class OfflinePdfModel {
   final String unitId;
@@ -707,6 +708,10 @@ class OfflineManager {
     await init();
     final bool tamperOk = await DeviceService.verifyOfflineTamperIntegrity();
     if (!tamperOk) return [];
+    if (await isExpired(unitId)) {
+      debugPrint('[OfflineManager] Offline questions for $unitId is expired. Access blocked.');
+      return [];
+    }
     final clean = cleanKey(unitId);
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -747,6 +752,10 @@ class OfflineManager {
     await init();
     final bool tamperOk = await DeviceService.verifyOfflineTamperIntegrity();
     if (!tamperOk) return [];
+    if (await isExpired(unitId)) {
+      debugPrint('[OfflineManager] Offline notes for $unitId is expired. Access blocked.');
+      return [];
+    }
     final cleanId = cleanKey(unitId);
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -798,6 +807,10 @@ class OfflineManager {
     await init();
     final bool tamperOk = await DeviceService.verifyOfflineTamperIntegrity();
     if (!tamperOk) return [];
+    if (await isExpired(unitId)) {
+      debugPrint('[OfflineManager] Offline worksheets for $unitId is expired. Access blocked.');
+      return [];
+    }
     final cleanId = cleanKey(unitId);
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -894,6 +907,17 @@ class OfflineManager {
   }
 
   static Future<bool> isExpired(String unitId) async {
+    final meta = _parseMetadata(unitId);
+    final unitNum = meta['unit'] ?? 1;
+    // Unit 1 is always 100% free trial (never expires)
+    if (unitNum <= 1) return false;
+
+    // Check if subscription or time limit set in database has expired
+    final bool subExpired = await SubscriptionService.isSubscriptionExpired();
+    if (subExpired) {
+      return true;
+    }
+
     return false;
   }
 

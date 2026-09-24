@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/package_model.dart';
+import '../services/device_service.dart';
 import '../services/subscription_service.dart';
 import 'friendly_error_card.dart';
 

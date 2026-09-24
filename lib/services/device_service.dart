@@ -10,6 +10,7 @@ enum DeviceBindingStatus {
   mismatch,
   noSubscription,
   inactive,
+  expired,
   offlineTampered,
   networkError,
 }
@@ -37,7 +38,7 @@ class DeviceService {
   static const String _verifiedBindingKey = 'smartx_verified_device_binding';
   static String? _cachedDeviceId;
 
-  /// Binds the current device to the student's subscription and records verification
+  /// Binds the current device to the student's profile in the `students` table
   static Future<void> bindDeviceToSubscription(String phoneNumber, String packageId) async {
     try {
       final String currentDeviceId = await getDeviceId();
@@ -48,8 +49,11 @@ class DeviceService {
       final cleanPhone = phoneNumber.replaceAll(RegExp(r'\s+'), '').trim();
 
       await supabase
-          .from('user_subscriptions')
-          .update({'device_id': currentDeviceId})
+          .from('students')
+          .update({
+            'device_id': currentDeviceId,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
           .eq('phone_number', cleanPhone);
     } catch (e) {
       debugPrint('[DeviceService] bindDeviceToSubscription notice: $e');
@@ -72,7 +76,6 @@ class DeviceService {
 
       if (!kIsWeb && Platform.isAndroid) {
         final androidInfo = await deviceInfo.androidInfo;
-        // Android ID is unique per device/app signing key
         final String rawId = androidInfo.id.isNotEmpty
             ? androidInfo.id
             : (androidInfo.fingerprint.isNotEmpty
@@ -80,8 +83,6 @@ class DeviceService {
                 : '${androidInfo.manufacturer}_${androidInfo.model}_${androidInfo.hardware}');
         
         final cleanId = 'AND_${rawId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '').toUpperCase()}';
-        
-        // Truncate to reasonable length while preserving uniqueness
         final formattedId = cleanId.length > 32 ? cleanId.substring(0, 32) : cleanId;
         _cachedDeviceId = formattedId;
         await prefs.setString(_localDeviceIdKey, formattedId);
@@ -139,7 +140,7 @@ class DeviceService {
     }
   }
 
-  /// Strict Single-Device Binding check against Supabase
+  /// Strict Single-Device Binding check against Supabase `students` table
   static Future<DeviceBindingResult> verifyAndBindSubscription({
     required String phoneNumber,
     required String packageId,
@@ -158,69 +159,53 @@ class DeviceService {
     try {
       final supabase = Supabase.instance.client;
 
-      // Query user_subscriptions for this phone & package
-      final response = await supabase
-          .from('user_subscriptions')
-          .select('id, phone_number, package_id, device_id, is_active')
+      // Query students table directly
+      final targetRecord = await supabase
+          .from('students')
+          .select('id, full_name, phone_number, grade, device_id, unlocked_packages, subscription_status, subscription_expires_at, is_active')
           .eq('phone_number', cleanPhone)
-          .eq('package_id', packageId)
           .maybeSingle();
-
-      if (response == null) {
-        // Also check for general grade or all-inclusive pack
-        final altResponse = await supabase
-            .from('user_subscriptions')
-            .select('id, phone_number, package_id, device_id, is_active')
-            .eq('phone_number', cleanPhone)
-            .eq('is_active', true);
-
-        if (altResponse.isEmpty) {
-          return DeviceBindingResult(
-            status: DeviceBindingStatus.noSubscription,
-            currentDeviceId: currentDeviceId,
-            message: 'No active subscription found for $cleanPhone.',
-          );
-        }
-      }
-
-      final targetRecord = response ?? (await supabase
-          .from('user_subscriptions')
-          .select('id, phone_number, package_id, device_id, is_active')
-          .eq('phone_number', cleanPhone)
-          .eq('is_active', true)
-          .order('activated_at', ascending: false)
-          .limit(1)
-          .maybeSingle());
 
       if (targetRecord == null) {
         return DeviceBindingResult(
           status: DeviceBindingStatus.noSubscription,
           currentDeviceId: currentDeviceId,
-          message: 'No subscription found for this account.',
+          message: 'No student record found for $cleanPhone. Please register first.',
         );
       }
 
-      final bool isActive = targetRecord['is_active'] as bool? ?? false;
+      final bool isActive = targetRecord['is_active'] as bool? ?? true;
       if (!isActive) {
         return DeviceBindingResult(
           status: DeviceBindingStatus.inactive,
           currentDeviceId: currentDeviceId,
-          message: 'This subscription is currently inactive. Please contact admin.',
+          message: 'This account is currently inactive. Please contact admin (@smart_x_help).',
         );
       }
 
-      final String? registeredDeviceId = targetRecord['device_id'] as String?;
-      final dynamic recordId = targetRecord['id'];
+      // Check Expiration timestamp
+      if (targetRecord['subscription_expires_at'] != null) {
+        final expiresAt = DateTime.tryParse(targetRecord['subscription_expires_at'].toString());
+        if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt.toUtc())) {
+          return DeviceBindingResult(
+            status: DeviceBindingStatus.expired,
+            currentDeviceId: currentDeviceId,
+            message: 'የደንበኝነት ምዝገባዎ ጊዜ አልቋል። እባክዎ ያድሱ። / Subscription has expired.',
+          );
+        }
+      }
+
+      final String? registeredDeviceId = (targetRecord['device_id'] as String?)?.trim();
 
       // Scenario A: First time activation OR Admin Reset (device_id is null or empty)
-      if (registeredDeviceId == null || registeredDeviceId.trim().isEmpty) {
+      if (registeredDeviceId == null || registeredDeviceId.isEmpty) {
         await supabase
-            .from('user_subscriptions')
+            .from('students')
             .update({
               'device_id': currentDeviceId,
-              'activated_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toUtc().toIso8601String(),
             })
-            .eq('id', recordId);
+            .eq('phone_number', cleanPhone);
 
         // Save local verification
         final prefs = await SharedPreferences.getInstance();
@@ -254,7 +239,7 @@ class DeviceService {
         status: DeviceBindingStatus.mismatch,
         currentDeviceId: currentDeviceId,
         registeredDeviceId: registeredDeviceId,
-        message: 'This account is already bound to another phone ($registeredDeviceId). Subscriptions are strictly valid for 1 device.',
+        message: 'ይህ አካውንት በሌላ ስልክ ($registeredDeviceId) ላይ ተመዝግቧል። የደህንነት ስርዓቱ 1 አካውንት ለአንድ ስልክ ብቻ ይፈቅዳል።',
       );
     } catch (e) {
       debugPrint('[DeviceService] Subscription verification error: $e');

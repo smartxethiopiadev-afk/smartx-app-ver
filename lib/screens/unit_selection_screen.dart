@@ -125,7 +125,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       return;
     }
 
-    // Query active subscription from Supabase user_subscriptions with device binding
+    // Query active subscription from Supabase students table with device binding and expiry verification
     final bool isAllowed = await SubscriptionService.checkSubscriptionAccess(
       grade: widget.grade,
       subject: widget.enTitle,

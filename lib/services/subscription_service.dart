@@ -3,17 +3,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'device_service.dart';
 
-class DeviceBindingResult {
-  final bool isAllowed;
-  final String? message;
-  const DeviceBindingResult({required this.isAllowed, this.message});
-}
-
 class SubscriptionService {
   static const String _unlockedKey = 'smartx_unlocked_packages';
+  static const String _expiresAtKey = 'smartx_subscription_expires_at';
+  static const String _statusKey = 'smartx_subscription_status';
   static Set<String> _unlockedPackages = {};
   static bool _isLoaded = false;
   static final List<VoidCallback> _listeners = [];
+
+  // Security & Brute-force rate limiting
+  static int _failedAttemptsCount = 0;
+  static DateTime? _lastFailedAttemptTime;
 
   static void addListener(VoidCallback listener) {
     if (!_listeners.contains(listener)) {
@@ -72,10 +72,59 @@ class SubscriptionService {
       if (savedList != null) {
         _unlockedPackages = savedList.toSet();
       }
+
+      // Check if current cached subscription has expired
+      final String? expStr = prefs.getString(_expiresAtKey);
+      if (expStr != null && expStr.isNotEmpty) {
+        final expiresAt = DateTime.tryParse(expStr);
+        if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt.toUtc())) {
+          _unlockedPackages.clear();
+          await prefs.setStringList(_unlockedKey, []);
+          await prefs.setString(_statusKey, 'expired');
+        }
+      }
+
       _isLoaded = true;
     } catch (e) {
       debugPrint("[SubscriptionService] Init error: $e");
     }
+  }
+
+  /// Checks if the current subscription or package access has expired
+  static Future<bool> isSubscriptionExpired() async {
+    await init();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? expStr = prefs.getString(_expiresAtKey);
+      if (expStr != null && expStr.isNotEmpty) {
+        final expiresAt = DateTime.tryParse(expStr);
+        if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt.toUtc())) {
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  /// Returns the expiration date or null if lifetime
+  static Future<DateTime?> getSubscriptionExpiresAt() async {
+    await init();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? expStr = prefs.getString(_expiresAtKey);
+      if (expStr != null && expStr.isNotEmpty) {
+        return DateTime.tryParse(expStr);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Returns remaining minutes until subscription expires, or -1 if expired, null if unlimited
+  static Future<int?> getRemainingMinutes() async {
+    final exp = await getSubscriptionExpiresAt();
+    if (exp == null) return null;
+    final diff = exp.difference(DateTime.now().toUtc()).inMinutes;
+    return diff > 0 ? diff : 0;
   }
 
   static Future<void> setUnlockedPackages(List<String> packages) async {
@@ -86,7 +135,18 @@ class SubscriptionService {
     _notifyListeners();
   }
 
-  /// Silently validate device binding and sync active subscriptions in background
+  /// Unlocks a specific package
+  static Future<void> unlockPackage(String packageId) async {
+    await init();
+    if (!_unlockedPackages.contains(packageId)) {
+      _unlockedPackages.add(packageId);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_unlockedKey, _unlockedPackages.toList());
+      _notifyListeners();
+    }
+  }
+
+  /// Silently validate device binding and sync active subscriptions in background directly with `students` table
   static Future<void> validateAndSyncWithDatabase() async {
     try {
       await init();
@@ -97,22 +157,39 @@ class SubscriptionService {
       final phone = prefs.getString('user_phoneNumber') ?? prefs.getString('phone_number');
 
       if (phone != null && phone.isNotEmpty) {
+        final cleanPhone = sanitizeEthiopianPhone(phone);
         final client = Supabase.instance.client;
         final resp = await client
-            .from('user_subscriptions')
-            .select('package_id, is_active')
-            .eq('phone_number', phone)
-            .eq('device_id', devId)
-            .eq('is_active', true);
+            .from('students')
+            .select('unlocked_packages, subscription_status, subscription_expires_at, is_active, device_id')
+            .eq('phone_number', cleanPhone)
+            .maybeSingle();
 
-        if (resp.isNotEmpty) {
-          final List<String> activePkgs = (resp as List)
-              .map((e) => e['package_id']?.toString() ?? '')
-              .where((s) => s.isNotEmpty)
-              .toList();
+        if (resp != null) {
+          final bool isActive = resp['is_active'] as bool? ?? true;
+          final String? regDev = (resp['device_id'] as String?)?.trim();
 
-          for (final pkg in activePkgs) {
-            await unlockPackage(pkg);
+          // Expiration check
+          if (resp['subscription_expires_at'] != null) {
+            final expStr = resp['subscription_expires_at'].toString();
+            await prefs.setString(_expiresAtKey, expStr);
+            final expiresAt = DateTime.tryParse(expStr);
+            if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt.toUtc())) {
+              // Expired!
+              _unlockedPackages.clear();
+              await prefs.setStringList(_unlockedKey, []);
+              await prefs.setString(_statusKey, 'expired');
+              _notifyListeners();
+              return;
+            }
+          }
+
+          if (isActive && (regDev == null || regDev.isEmpty || regDev == devId)) {
+            final List<dynamic>? rawPkgs = resp['unlocked_packages'] as List<dynamic>?;
+            if (rawPkgs != null) {
+              final pkgs = rawPkgs.map((e) => e.toString()).toList();
+              await setUnlockedPackages(pkgs);
+            }
           }
         }
       }
@@ -124,6 +201,7 @@ class SubscriptionService {
   /// Check if a specific package is unlocked
   static Future<bool> isPackageUnlocked(String packageId) async {
     await init();
+    if (await isSubscriptionExpired()) return false;
     return _unlockedPackages.contains(packageId) ||
         _unlockedPackages.contains('all_inclusive') ||
         _unlockedPackages.contains('all_grades') ||
@@ -134,6 +212,7 @@ class SubscriptionService {
   /// Check if a specific Grade package or subject is unlocked
   static Future<bool> isGradeUnlocked(int grade, {String? subject}) async {
     await init();
+    if (await isSubscriptionExpired()) return false;
 
     // 1. Check all-inclusive / all-grades master subscriptions
     if (_unlockedPackages.contains('pkg_all_grades') ||
@@ -164,7 +243,7 @@ class SubscriptionService {
 
   /// Core Business Rule:
   /// Unit 1 is ALWAYS 100% FREE for all subjects and grades (Trial mode).
-  /// Unit 2+ requires an active package unlock or student subscription.
+  /// Unit 2+ requires an active package unlock or student subscription that is not expired.
   static Future<bool> isUnitAccessible(int grade, int unitNumber, {String? subject}) async {
     if (unitNumber <= 1) {
       return true; // Unit 1 is 100% FREE!
@@ -203,61 +282,23 @@ class SubscriptionService {
     return false;
   }
 
+  /// Synchronous check if a specific unit is accessible
   static bool isUnitAccessibleSync(int grade, int unitNumber, {String? subject}) {
     if (unitNumber <= 1) {
-      return true; // Unit 1 is 100% FREE
-    }
-
-    // Check all-inclusive master subscriptions
-    if (_unlockedPackages.contains('pkg_all_grades') ||
-        _unlockedPackages.contains('all_grades') ||
-        _unlockedPackages.contains('all_inclusive') ||
-        _unlockedPackages.contains('pkg_all_inclusive') ||
-        _unlockedPackages.contains('pkg_all_inclusive_g$grade')) {
       return true;
     }
-
-    // Check full grade package
-    final String targetPkg = 'pkg_grade_$grade';
-    if (_unlockedPackages.contains(targetPkg) || _unlockedPackages.contains('grade_$grade')) {
-      return true;
-    }
-
-    // Check individual subject package
-    if (subject != null && subject.trim().isNotEmpty) {
-      final String slug = normalizeSubjectSlug(subject);
-      final String specificSubjectPkg = 'pkg_g${grade}_$slug';
-      if (_unlockedPackages.contains(specificSubjectPkg) || _unlockedPackages.contains(slug)) {
-        return true;
-      }
-    }
-
-    return false;
+    return isGradeUnlockedSync(grade, subject: subject);
   }
 
-  /// Unlocks a package locally and persists in SharedPreferences
-  static Future<void> unlockPackage(String packageId) async {
-    await init();
-    _unlockedPackages.add(packageId);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_unlockedKey, _unlockedPackages.toList());
-    _notifyListeners();
-  }
-
-  /// Unlocks all content for a specific grade
-  static Future<void> unlockGrade(int grade) async {
-    await unlockPackage('pkg_grade_$grade');
-  }
-
-  /// Syncs subscriptions against `students.unlocked_packages` and enforces `students.device_id == currentDeviceId`.
-  /// Strictly checks database state without granting unauthorized unlocks.
+  /// Syncs subscriptions against `students` table and enforces `students.device_id == currentDeviceId` and expiry.
   static Future<bool> syncWithSupabase(String phoneNumber) async {
-    final cleanPhone = phoneNumber.replaceAll(RegExp(r'\s+'), '').trim();
+    final cleanPhone = sanitizeEthiopianPhone(phoneNumber);
     if (cleanPhone.isEmpty) return false;
 
     try {
       final supabase = Supabase.instance.client;
       final currentDeviceId = await DeviceService.getDeviceId();
+      final prefs = await SharedPreferences.getInstance();
 
       final response = await supabase
           .from('students')
@@ -271,13 +312,21 @@ class SubscriptionService {
       final bool isActive = response['is_active'] as bool? ?? true;
       if (!isActive) return false;
 
-      // 2. Expiration check
+      // 2. Expiration check (minutes / timestamp from DB)
       if (response['subscription_expires_at'] != null) {
-        final expiresAt = DateTime.tryParse(response['subscription_expires_at'].toString());
+        final expStr = response['subscription_expires_at'].toString();
+        await prefs.setString(_expiresAtKey, expStr);
+        final expiresAt = DateTime.tryParse(expStr);
         if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt.toUtc())) {
-          debugPrint('[SubscriptionService] Subscription expired for $cleanPhone');
+          debugPrint('[SubscriptionService] Subscription expired for $cleanPhone at $expStr');
+          _unlockedPackages.clear();
+          await prefs.setStringList(_unlockedKey, []);
+          await prefs.setString(_statusKey, 'expired');
+          _notifyListeners();
           return false;
         }
+      } else {
+        await prefs.remove(_expiresAtKey);
       }
 
       // 3. Single device hardware binding enforcement
@@ -293,16 +342,16 @@ class SubscriptionService {
           debugPrint('[SubscriptionService] Auto-bind error: $e');
         }
       } else if (boundDev != currentDeviceId) {
-        // Device mismatch locked! Strict anti-account sharing
         debugPrint('[SubscriptionService] Device mismatch: registered $boundDev vs current $currentDeviceId');
         return false;
       }
 
-      // 4. Extract strictly genuine unlocked packages
+      // 4. Extract genuine unlocked packages
       final List<dynamic>? rawPkgs = response['unlocked_packages'] as List<dynamic>?;
       final List<String> pkgs = rawPkgs != null ? rawPkgs.map((e) => e.toString()).toList() : [];
 
       await setUnlockedPackages(pkgs);
+      await prefs.setString(_statusKey, response['subscription_status']?.toString() ?? 'active');
       return true;
     } catch (e) {
       debugPrint("[SubscriptionService] Supabase sync packages error: $e");
@@ -321,6 +370,10 @@ class SubscriptionService {
     }
 
     await init();
+
+    if (await isSubscriptionExpired()) {
+      return false;
+    }
 
     if (isUnitAccessibleSync(grade, unitNumber, subject: subject)) {
       return true;
@@ -342,236 +395,76 @@ class SubscriptionService {
     return false;
   }
 
+  /// Unlocks a specific grade package
+  static Future<void> unlockGrade(int grade) async {
+    await unlockPackage('pkg_grade_$grade');
+  }
+
   /// Verifies if phone has legitimate access to packageId and enforces hardware device binding.
-  /// Strictly rejects non-paying or mismatched devices.
   static Future<DeviceBindingResult> syncWithSupabaseAndVerifyDevice(
     String phoneNumber, {
     String? packageId,
   }) async {
-    final cleanPhone = phoneNumber.replaceAll(RegExp(r'\s+'), '').trim();
+    final cleanPhone = sanitizeEthiopianPhone(phoneNumber);
     if (cleanPhone.isEmpty) {
-      return const DeviceBindingResult(
-        isAllowed: false,
+      final currentDev = await DeviceService.getDeviceId();
+      return DeviceBindingResult(
+        status: DeviceBindingStatus.noSubscription,
+        currentDeviceId: currentDev,
         message: 'ስልክ ቁጥር ባዶ መሆን አይችልም። / Phone number cannot be empty.',
       );
     }
 
-    try {
-      final supabase = Supabase.instance.client;
-      final currentDeviceId = await DeviceService.getDeviceId();
-
-      final res = await supabase
-          .from('students')
-          .select('device_id, unlocked_packages, subscription_status, subscription_expires_at, is_active')
-          .eq('phone_number', cleanPhone)
-          .maybeSingle();
-
-      if (res == null) {
-        return const DeviceBindingResult(
-          isAllowed: false,
-          message: 'ምንም ንቁ መለያ አልተገኘም። እባክዎ አስቀድመው ይመዝገቡ ወይም በቴሌግራም አስተዳዳሪውን ያነጋግሩ (@smart_x_help)',
-        );
-      }
-
-      // Check isActive
-      final bool isActive = res['is_active'] as bool? ?? true;
-      if (!isActive) {
-        return const DeviceBindingResult(
-          isAllowed: false,
-          message: 'ይህ መለያ በአሁኑ ጊዜ አገልግሎቱ ተቋርጧል። / Account is inactive.',
-        );
-      }
-
-      // Check Expiration
-      if (res['subscription_expires_at'] != null) {
-        final expiresAt = DateTime.tryParse(res['subscription_expires_at'].toString());
-        if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt.toUtc())) {
-          return const DeviceBindingResult(
-            isAllowed: false,
-            message: 'የምዝገባ ጊዜዎ አልቋል። እባክዎ ያድሱ። / Subscription has expired.',
-          );
-        }
-      }
-
-      // Device Binding Check
-      final String? registeredDeviceId = (res['device_id'] as String?)?.trim();
-      if (registeredDeviceId != null &&
-          registeredDeviceId.isNotEmpty &&
-          registeredDeviceId != currentDeviceId) {
-        return const DeviceBindingResult(
-          isAllowed: false,
-          message: 'ይህ ስልክ ቁጥር በሌላ መሳሪያ ላይ የተመዘገበ ነው። የደህንነት ስርዓቱ 1 መለያ ለአንድ ስልክ ብቻ ይፈቅዳል።',
-        );
-      }
-
-      // First time binding
-      if (registeredDeviceId == null || registeredDeviceId.isEmpty) {
-        try {
-          await supabase.from('students').update({
-            'device_id': currentDeviceId,
-            'updated_at': DateTime.now().toUtc().toIso8601String(),
-          }).eq('phone_number', cleanPhone);
-        } catch (e) {
-          debugPrint('[SubscriptionService] Auto-bind error: $e');
-        }
-      }
-
-      final List<dynamic>? rawPkgs = res['unlocked_packages'] as List<dynamic>?;
-      final List<String> pkgs = rawPkgs != null
-          ? rawPkgs.map((e) => e.toString()).toList()
-          : [];
-
-      // Check if requested packageId is legitimately unlocked
-      if (packageId != null) {
-        final bool hasAccess = pkgs.contains(packageId) ||
-            pkgs.contains('all_grades') ||
-            pkgs.contains('pkg_all_grades') ||
-            pkgs.contains('all_inclusive') ||
-            pkgs.contains('pkg_all_inclusive');
-
-        if (!hasAccess) {
-          return const DeviceBindingResult(
-            isAllowed: false,
-            message: 'ይህ ፓኬጅ አልተከፈለም። እባክዎ በቴሌግራም አድሚኑን ያነጋግሩ (@smart_x_help)።',
-          );
-        }
-      }
-
-      await setUnlockedPackages(pkgs);
-      return const DeviceBindingResult(
-        isAllowed: true,
-        message: 'ፓኬጁ በተሳካ ሁኔታ ተረጋግጧል!',
-      );
-    } catch (e) {
-      debugPrint('[SubscriptionService] syncWithSupabaseAndVerifyDevice error: $e');
-      return DeviceBindingResult(
-        isAllowed: false,
-        message: 'የኔትወርክ ችግር አጋጥሟል። እባክዎ እንደገና ይሞክሩ: $e',
-      );
-    }
+    return await DeviceService.verifyAndBindSubscription(
+      phoneNumber: cleanPhone,
+      packageId: packageId ?? 'all_grades',
+    );
   }
 
-  // --- Rate limiting shield against brute force ---
-  static int _failedAttemptsCount = 0;
-  static DateTime? _lastFailedAttemptTime;
-
-  /// Sanitizes Ethiopian phone number to uniform 10-digit format (09... or 07...)
-  static String sanitizeEthiopianPhone(String raw) {
-    String clean = raw.replaceAll(RegExp(r'[^0-9+]'), '').trim();
-    if (clean.startsWith('+251')) {
-      clean = '0${clean.substring(4)}';
-    } else if (clean.startsWith('251')) {
-      clean = '0${clean.substring(3)}';
-    }
-    return clean;
-  }
-
-  /// Verifies student upgrade request by Phone Number and Name after Telegram payment.
-  /// Enforces Single-Device hardware binding, rate limiting, and tamper protection.
+  /// Verifies student subscription directly in `students` table
   static Future<StudentUpgradeResult> verifyAndUpgradeStudent({
-    required String phone,
-    required String name,
+    String? fullName,
+    String? phoneNumber,
+    String? name,
+    String? phone,
   }) async {
-    // 1. Rate Limiting Protection (Anti-Brute Force)
-    final now = DateTime.now();
-    if (_lastFailedAttemptTime != null &&
-        now.difference(_lastFailedAttemptTime!).inMinutes < 3 &&
-        _failedAttemptsCount >= 5) {
-      final remainingSecs = 60 - now.difference(_lastFailedAttemptTime!).inSeconds;
-      return StudentUpgradeResult(
+    final cleanName = (fullName ?? name ?? '').trim();
+    final cleanPhone = sanitizeEthiopianPhone(phoneNumber ?? phone ?? '');
+
+    if (cleanName.isEmpty) {
+      return const StudentUpgradeResult(
         isSuccess: false,
-        message: 'ተደጋጋሚ ሙከራ ተስተውሏል። ለደህንነት ሲባል እባክዎ ከ $remainingSecs ሰከንዶች በኋላ እንደገና ይሞክሩ።',
+        message: 'እባክዎ ሙሉ ስምዎን ያስገቡ። / Please enter your full name.',
       );
     }
 
-    // 2. Input Sanitization & Validation
-    final cleanPhone = sanitizeEthiopianPhone(phone);
-    final cleanName = name.trim();
-
-    if (cleanName.length < 2) {
+    if (cleanPhone.isEmpty || cleanPhone.length < 9) {
       return const StudentUpgradeResult(
         isSuccess: false,
-        message: 'እባክዎ ትክክለኛ ሙሉ ስምዎን ያስገቡ (ቢያንስ 2 ፊደላት)።',
+        message: 'እባክዎ ትክክለኛ ስልክ ቁጥር ያስገቡ። / Please enter a valid Ethiopian phone number.',
       );
     }
 
-    final phoneRegex = RegExp(r'^0[79]\d{8}$');
-    if (!phoneRegex.hasMatch(cleanPhone)) {
-      return const StudentUpgradeResult(
-        isSuccess: false,
-        message: 'እባክዎ ትክክለኛ የኢትዮጵያ ስልክ ቁጥር ያስገቡ (ለምሳሌ 0911234567 ወይም 0711234567)።',
-      );
+    // Rate Limiting Protection
+    if (_lastFailedAttemptTime != null) {
+      final diff = DateTime.now().difference(_lastFailedAttemptTime!);
+      if (_failedAttemptsCount >= 5 && diff.inMinutes < 2) {
+        final remainingSec = 120 - diff.inSeconds;
+        return StudentUpgradeResult(
+          isSuccess: false,
+          message: 'የተደጋጋሚ ሙከራ ገደብ አልፏል። እባክዎ ከ $remainingSec ሰከንድ በኋላ በድጋሚ ይሞክሩ።',
+        );
+      } else if (diff.inMinutes >= 2) {
+        _failedAttemptsCount = 0;
+      }
     }
 
     try {
-      final supabase = Supabase.instance.client;
       final currentDeviceId = await DeviceService.getDeviceId();
-      final String nowIso = DateTime.now().toUtc().toIso8601String();
+      final supabase = Supabase.instance.client;
+      final nowIso = DateTime.now().toUtc().toIso8601String();
 
-      // 3. Primary: Try Atomic RPC Function `verify_and_upgrade_student`
-      try {
-        final rpcResult = await supabase.rpc('verify_and_upgrade_student', params: {
-          'p_phone': cleanPhone,
-          'p_name': cleanName,
-          'p_device_id': currentDeviceId,
-        });
-
-        if (rpcResult is Map) {
-          final bool success = rpcResult['success'] == true;
-          final String? status = rpcResult['status'] as String?;
-          final String msg = rpcResult['message']?.toString() ?? '';
-
-          if (success) {
-            _failedAttemptsCount = 0; // Reset rate limit counter on success
-            final rawPkgs = rpcResult['unlocked_packages'] as List<dynamic>?;
-            final pkgs = rawPkgs != null ? rawPkgs.map((e) => e.toString()).toList() : <String>[];
-            final int studentGrade = (rpcResult['grade'] as num?)?.toInt() ?? 12;
-
-            // Apply unlocks locally
-            await setUnlockedPackages(pkgs);
-
-            // Persist verified student profile
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('user_fullName', cleanName);
-            await prefs.setString('user_name', cleanName);
-            await prefs.setString('user_phoneNumber', cleanPhone);
-            await prefs.setString('phone_number', cleanPhone);
-            await prefs.setInt('user_grade', studentGrade);
-            await prefs.setBool('is_authenticated', true);
-            await prefs.setString('device_id', currentDeviceId);
-
-            return StudentUpgradeResult(
-              isSuccess: true,
-              message: msg.isNotEmpty ? msg : 'እንኳን ደስ አለዎት! ፓኬጅዎ በዚህ ስልክ ላይ በተሳካ ሁኔታ ተረጋግጦ ተከፍቷል!',
-              studentName: cleanName,
-              phoneNumber: cleanPhone,
-              grade: studentGrade,
-              unlockedPackages: pkgs,
-            );
-          } else if (status == 'device_mismatch') {
-            _failedAttemptsCount++;
-            _lastFailedAttemptTime = DateTime.now();
-            return StudentUpgradeResult(
-              isSuccess: false,
-              isDeviceMismatch: true,
-              message: msg.isNotEmpty
-                  ? msg
-                  : 'ይህ ስልክ ቁጥር ቀደም ሲል በሌላ ሞባይል ስልክ ላይ ተመዝግቧል! የደህንነት ስርዓቱ አንድን አካውንት ለአንድ ስልክ ብቻ ይፈቅዳል (Single-Device Protection)።',
-            );
-          } else {
-            _failedAttemptsCount++;
-            _lastFailedAttemptTime = DateTime.now();
-            return StudentUpgradeResult(
-              isSuccess: false,
-              message: msg.isNotEmpty ? msg : 'ማረጋገጥ አልተቻለም። እባክዎ መረጃዎን ይፈትሹ።',
-            );
-          }
-        }
-      } catch (rpcErr) {
-        debugPrint('[SubscriptionService] verify_and_upgrade_student RPC notice: $rpcErr');
-      }
-
-      // 4. Fallback Direct Supabase Query Flow
+      // Query `students` table directly
       final res = await supabase
           .from('students')
           .select('full_name, phone_number, grade, device_id, unlocked_packages, subscription_status, subscription_expires_at, is_active')
@@ -592,7 +485,7 @@ class SubscriptionService {
       if (!isActive) {
         return const StudentUpgradeResult(
           isSuccess: false,
-          message: 'ይህ መለያ በአስተዳዳሪው ታግዷል። እባክዎ የድጋፍ አገልግሎትን ያነጋግሩ።',
+          message: 'ይህ መለያ በአስተዳዳሪው ታግዷል። እባክዎ የድጋፍ አገልግሎትን ያነጋግሩ (@smart_x_help)።',
         );
       }
 
@@ -602,7 +495,7 @@ class SubscriptionService {
         if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt.toUtc())) {
           return const StudentUpgradeResult(
             isSuccess: false,
-            message: 'የደንበኝነት ምዝገባዎ ጊዜ አልቋል። እባክዎ ፈቃድዎን ያድሱ።',
+            message: 'የደንበኝነት ምዝገባዎ ጊዜ አልቋል። እባክዎ ፈቃድዎን ያድሱ። / Subscription has expired.',
           );
         }
       }
@@ -658,7 +551,7 @@ class SubscriptionService {
         );
       }
 
-      _failedAttemptsCount = 0; // Success, reset rate limiter
+      _failedAttemptsCount = 0;
       final int studentGrade = (res['grade'] as num?)?.toInt() ?? 12;
 
       // Apply unlocks locally
@@ -673,6 +566,10 @@ class SubscriptionService {
       await prefs.setInt('user_grade', studentGrade);
       await prefs.setBool('is_authenticated', true);
       await prefs.setString('device_id', currentDeviceId);
+
+      if (res['subscription_expires_at'] != null) {
+        await prefs.setString(_expiresAtKey, res['subscription_expires_at'].toString());
+      }
 
       return StudentUpgradeResult(
         isSuccess: true,
@@ -694,123 +591,38 @@ class SubscriptionService {
     }
   }
 
-  /// Checks whether the current device's hardware ID is officially stored in the Supabase `students` table.
-  /// Returns a map with { 'isBound': bool, 'currentDeviceId': String, 'registeredDeviceId': String?, 'isLinked': bool, 'studentName': String?, 'phone': String?, 'error': String? }
-  static Future<Map<String, dynamic>> checkDatabaseDeviceBindingStatus() async {
-    try {
-      final currentDeviceId = await DeviceService.getDeviceId();
-      final prefs = await SharedPreferences.getInstance();
-      final phone = prefs.getString('user_phoneNumber') ?? prefs.getString('phone_number') ?? '';
-      final name = prefs.getString('user_fullName') ?? prefs.getString('user_name') ?? '';
-
-      if (phone.isEmpty) {
-        return {
-          'isBound': false,
-          'currentDeviceId': currentDeviceId,
-          'registeredDeviceId': null,
-          'isLinked': false,
-          'studentName': name,
-          'phone': '',
-          'error': 'ስልክ ቁጥር አልተገኘም (No linked phone)',
-        };
-      }
-
-      final cleanPhone = sanitizeEthiopianPhone(phone);
-      final supabase = Supabase.instance.client;
-
-      final res = await supabase
-          .from('students')
-          .select('device_id, full_name, phone_number')
-          .eq('phone_number', cleanPhone)
-          .maybeSingle();
-
-      if (res == null) {
-        return {
-          'isBound': false,
-          'currentDeviceId': currentDeviceId,
-          'registeredDeviceId': null,
-          'isLinked': false,
-          'studentName': name,
-          'phone': cleanPhone,
-          'error': 'በዚህ ስልክ የተመዘገበ ተማሪ በዳታቤዝ ውስጥ አልተገኘም',
-        };
-      }
-
-      final String? boundDev = (res['device_id'] as String?)?.trim();
-      final bool matches = boundDev != null && boundDev.isNotEmpty && boundDev == currentDeviceId;
-
-      // If registered device is missing in DB, update it automatically if authenticated
-      if (boundDev == null || boundDev.isEmpty) {
-        try {
-          await supabase.from('students').update({
-            'device_id': currentDeviceId,
-            'updated_at': DateTime.now().toUtc().toIso8601String(),
-          }).eq('phone_number', cleanPhone);
-          return {
-            'isBound': true,
-            'currentDeviceId': currentDeviceId,
-            'registeredDeviceId': currentDeviceId,
-            'isLinked': true,
-            'studentName': res['full_name'] ?? name,
-            'phone': cleanPhone,
-            'autoBound': true,
-            'error': null,
-          };
-        } catch (e) {
-          return {
-            'isBound': false,
-            'currentDeviceId': currentDeviceId,
-            'registeredDeviceId': boundDev,
-            'isLinked': true,
-            'studentName': res['full_name'] ?? name,
-            'phone': cleanPhone,
-            'error': 'Update failed: $e',
-          };
-        }
-      }
-
-      return {
-        'isBound': matches,
-        'currentDeviceId': currentDeviceId,
-        'registeredDeviceId': boundDev,
-        'isLinked': true,
-        'studentName': res['full_name'] ?? name,
-        'phone': cleanPhone,
-        'error': matches ? null : 'የስልክ መለያ አይመሳከርም (Device Mismatch)',
-      };
-    } catch (e) {
-      debugPrint('[SubscriptionService] checkDatabaseDeviceBindingStatus error: $e');
-      return {
-        'isBound': false,
-        'currentDeviceId': await DeviceService.getDeviceId(),
-        'registeredDeviceId': null,
-        'isLinked': false,
-        'error': e.toString(),
-      };
+  /// Sanitizes phone numbers to standard format (09..., 07..., 251...)
+  static String sanitizeEthiopianPhone(String raw) {
+    String p = raw.replaceAll(RegExp(r'[^0-9+]'), '').trim();
+    if (p.startsWith('+251')) {
+      p = '0${p.substring(4)}';
+    } else if (p.startsWith('251')) {
+      p = '0${p.substring(3)}';
     }
+    return p;
   }
 }
 
 class StudentUpgradeResult {
   final bool isSuccess;
+  final bool isDeviceMismatch;
   final String message;
   final String? studentName;
   final String? phoneNumber;
   final int? grade;
-  final List<String> unlockedPackages;
-  final bool isDeviceMismatch;
+  final List<String>? unlockedPackages;
   final bool deviceBindingConfirmed;
   final String? boundDeviceId;
   final String? rawError;
 
   const StudentUpgradeResult({
     required this.isSuccess,
+    this.isDeviceMismatch = false,
     required this.message,
     this.studentName,
     this.phoneNumber,
     this.grade,
-    this.unlockedPackages = const [],
-    this.isDeviceMismatch = false,
+    this.unlockedPackages,
     this.deviceBindingConfirmed = false,
     this.boundDeviceId,
     this.rawError,
