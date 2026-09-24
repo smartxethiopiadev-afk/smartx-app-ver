@@ -20,7 +20,6 @@ import '../widgets/image_slider_carousel.dart';
 import '../widgets/how_to_start_banner.dart';
 import '../widgets/subject_vector_widgets.dart';
 import '../widgets/interactive_subject_card.dart';
-import '../widgets/locked_unit_dialog.dart';
 import '../services/subscription_service.dart';
 import '../services/device_service.dart';
 import '../services/credential_auth_service.dart';
@@ -551,68 +550,76 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: isLight ? Colors.white.withValues(alpha: 0.8) : const Color(0xFF0F172A).withValues(alpha: 0.8),
+          color: isLight 
+              ? Colors.white.withValues(alpha: 0.92) 
+              : const Color(0xFF0F172A).withValues(alpha: 0.92),
           border: Border(
             top: BorderSide(
-              color: isLight ? const Color(0xFFE2E8F0).withValues(alpha: 0.5) : const Color(0xFF334155).withValues(alpha: 0.5),
+              color: isLight 
+                  ? const Color(0xFFE2E8F0).withValues(alpha: 0.8) 
+                  : const Color(0xFF334155).withValues(alpha: 0.8),
               width: 1.0,
             ),
           ),
           boxShadow: [
             BoxShadow(
               color: isLight 
-                  ? const Color(0xFF0F1B2B).withValues(alpha: 0.04) 
-                  : Colors.black.withValues(alpha: 0.25),
-              blurRadius: 16.0,
-              offset: const Offset(0, -4),
+                  ? const Color(0xFF0F1B2B).withValues(alpha: 0.06) 
+                  : Colors.black.withValues(alpha: 0.40),
+              blurRadius: 20.0,
+              offset: const Offset(0, -5),
             ),
           ],
         ),
         child: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
+            filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
             child: SafeArea(
+              top: false,
               child: SizedBox(
-                height: 64.0,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildBottomNavItem(
-                      index: 0,
-                      iconActive: Icons.home_rounded,
-                      iconInactive: Icons.home_outlined,
-                      label: _local('nav_home'),
-                      isLight: isLight,
-                    ),
-                    _buildBottomNavItem(
-                      index: 1,
-                      iconActive: Icons.play_circle_filled_rounded,
-                      iconInactive: Icons.play_circle_outline_rounded,
-                      label: _local('nav_videos'),
-                      isLight: isLight,
-                    ),
-                    _buildBottomNavItem(
-                      index: 2,
-                      iconActive: Icons.offline_pin_rounded,
-                      iconInactive: Icons.offline_pin_outlined,
-                      label: _local('nav_offline'),
-                      isLight: isLight,
-                    ),
-                    _buildBottomNavItem(
-                      index: 3,
-                      iconActive: Icons.local_library_rounded,
-                      iconInactive: Icons.local_library_outlined,
-                      label: _local('nav_library'),
-                      isLight: isLight,
-                    ),
-                    _buildBottomNavItem(
-                      index: 4,
-                      iconActive: Icons.person_rounded,
-                      iconInactive: Icons.person_outline_rounded,
-                      label: _local('nav_account'),
-                      isLight: isLight,
-                    ),
-                  ],
+                height: 68.0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildBottomNavItem(
+                        index: 0,
+                        iconActive: Icons.home_rounded,
+                        iconInactive: Icons.home_outlined,
+                        label: _local('nav_home'),
+                        isLight: isLight,
+                      ),
+                      _buildBottomNavItem(
+                        index: 1,
+                        iconActive: Icons.play_circle_filled_rounded,
+                        iconInactive: Icons.play_circle_outline_rounded,
+                        label: _local('nav_videos'),
+                        isLight: isLight,
+                      ),
+                      _buildBottomNavItem(
+                        index: 2,
+                        iconActive: Icons.offline_bolt_rounded,
+                        iconInactive: Icons.offline_bolt_outlined,
+                        label: _local('nav_offline'),
+                        isLight: isLight,
+                      ),
+                      _buildBottomNavItem(
+                        index: 3,
+                        iconActive: Icons.menu_book_rounded,
+                        iconInactive: Icons.menu_book_outlined,
+                        label: _local('nav_library'),
+                        isLight: isLight,
+                      ),
+                      _buildBottomNavItem(
+                        index: 4,
+                        iconActive: Icons.person_rounded,
+                        iconInactive: Icons.person_outline_rounded,
+                        label: _local('nav_account'),
+                        isLight: isLight,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -3499,8 +3506,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     required bool isLight,
   }) {
     final bool isSelected = _currentIndex == index;
-    final Color activeColor = isLight ? const Color(0xFF0E7896) : const Color(0xFF00BFFF);
-    final Color inactiveColor = isLight ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF); // Gray color
+    final Color activeColor = isLight ? const Color(0xFF0284C7) : const Color(0xFF38BDF8);
+    final Color inactiveColor = isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
     
     return Expanded(
       child: GestureDetector(
@@ -3527,46 +3534,44 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               break;
           }
         },
-        child: Container(
-          color: Colors.transparent,
-          height: 64.0,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(vertical: 4.0),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? (isLight
+                    ? const Color(0xFF0284C7).withValues(alpha: 0.10)
+                    : const Color(0xFF38BDF8).withValues(alpha: 0.14))
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(16.0),
+          ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                height: 3.0,
-                width: 44.0,
-                decoration: BoxDecoration(
-                  color: isSelected ? activeColor : Colors.transparent,
-                  borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(3),
-                  ),
+              AnimatedScale(
+                scale: isSelected ? 1.15 : 1.0,
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutBack,
+                child: Icon(
+                  isSelected ? iconActive : iconInactive,
+                  color: isSelected ? activeColor : inactiveColor,
+                  size: 24,
                 ),
               ),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isSelected ? iconActive : iconInactive,
-                      color: isSelected ? activeColor : inactiveColor,
-                      size: 26,
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? activeColor : inactiveColor,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 3.5),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                  color: isSelected ? activeColor : inactiveColor,
+                  letterSpacing: isSelected ? -0.1 : 0.0,
                 ),
               ),
-              const SizedBox(height: 4), // small bottom padding
             ],
           ),
         ),

@@ -209,7 +209,7 @@ class ActivationService {
             isSuccess: false,
             message: isAmharic
                 ? 'ይህ የማግበሪያ ኮድ በሌላ ስልክ ላይ አገልግሎት ላይ ውሏል። የደህንነት ስርዓቱ አንድን ኮድ ለአንድ ስልክ ብቻ ይፈቅዳል!'
-                : 'This activation code has already been redeemed on another device. In accordance with Smart X anti-piracy policy, codes are strictly single-device bound.',
+                : 'This activation code has already been redeemed on another device. In accordance with Smart Learn Ethiopian anti-piracy policy, codes are strictly single-device bound.',
           );
         }
       }

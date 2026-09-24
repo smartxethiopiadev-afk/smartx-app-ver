@@ -102,7 +102,7 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
 
     if (mounted) {
       setState(() {
-        _studentName = name.isNotEmpty ? name : 'Smart X Student';
+        _studentName = name.isNotEmpty ? name : 'Smart Learn Student';
         _studentPhone = phone;
         _isLoading = false;
       });

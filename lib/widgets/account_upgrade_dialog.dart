@@ -48,7 +48,9 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
 
   bool _isLoading = false;
   String? _errorMessage;
+  // ignore: unused_field
   String? _rawErrorDetails;
+  // ignore: unused_field
   bool _isDeviceMismatch = false;
 
   @override
