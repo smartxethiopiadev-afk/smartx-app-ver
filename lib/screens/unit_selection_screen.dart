@@ -6,7 +6,6 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'pdf_viewer_screen.dart';
 import 'downloads_screen.dart';
 import '../services/short_note_service.dart';
@@ -206,193 +205,16 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
 
     if (!mounted) return;
 
-    if (pdfUrl != null && pdfUrl.trim().isNotEmpty) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => PdfViewerScreen(
-            pdfUrl: pdfUrl!.trim(),
-            title: 'Unit $unitNumber Short Note',
-            subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
-            grade: widget.grade,
-            unitNumber: unitNumber,
-          ),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PdfViewerScreen(
+          pdfUrl: pdfUrl?.trim() ?? '',
+          title: 'Unit $unitNumber Short Note',
+          subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
+          grade: widget.grade,
+          unitNumber: unitNumber,
         ),
-      );
-    } else {
-      _showShortNoteComingSoonModal(unitNumber);
-    }
-  }
-
-  void _showShortNoteComingSoonModal(int unitNumber) {
-    final isDark = AppStateProvider.of(context).isDarkMode;
-    final isAm = widget.languageCode == 'am';
-    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
-    final subColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final String subjName = isAm ? widget.amTitle : widget.enTitle;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.15),
-                blurRadius: 24,
-                offset: const Offset(0, -6),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Handle Bar
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black12,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Animated Glowing Icon
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0284C7).withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFF0284C7).withValues(alpha: 0.25),
-                    width: 2,
-                  ),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.menu_book_rounded,
-                    size: 36,
-                    color: Color(0xFF0284C7),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Grade & Unit Tag
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                decoration: BoxDecoration(
-                  color: widget.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '${widget.grade}ኛ ክፍል • $subjName • Unit $unitNumber',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: widget.color,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Title
-              Text(
-                isAm ? 'ማስታወሻ በቅርቡ ይጫናል (Coming Soon)' : 'Short Note Coming Soon',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Description
-              Text(
-                isAm
-                    ? 'ለዚህ ምዕራፍ የተዘጋጀው ኦፊሴላዊ የኢትዮጵያ ካሪኩለም ማጠቃለያ ፒዲኤፍ በቅርቡ በዳታቤዝ ውስጥ ይጫናል።'
-                    : 'The concise curriculum study PDF for this unit is currently being processed and will be available in the database soon.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 13,
-                  color: subColor,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Beautiful Styled Action Buttons
-              Row(
-                children: [
-                  // 1. Back / Cancel Button
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                      label: Text(
-                        isAm ? 'ተመለስ' : 'Go Back',
-                        style: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        side: BorderSide(
-                          color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-
-                  // 2. Request via Telegram Button
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        Navigator.of(ctx).pop();
-                        final msg = Uri.encodeComponent(
-                            'ሰላም ስማርት ለርን አድሚን (@smart_x_help)፣ የ Grade ${widget.grade} $subjName Unit $unitNumber አጭር ማስታወሻ ፒዲኤፍ እንዲጫንልኝ እፈልጋለሁ።');
-                        final uri = Uri.parse('https://t.me/smart_x_help?text=$msg');
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      icon: const Icon(Icons.telegram_rounded, size: 20),
-                      label: Text(
-                        isAm ? 'በቴሌግራም ጠይቅ' : 'Request on TG',
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0284C7),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+      ),
     );
   }
 

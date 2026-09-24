@@ -39,6 +39,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
   bool _isLoading = true;
   String _searchQuery = '';
   int? _selectedGradeFilter;
+  String _selectedQuestionMode = 'all'; // 'all', 'practice', 'exam'
 
   int _totalPdfBytes = 0;
   int _totalQuestionBytes = 0;
@@ -51,6 +52,9 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
       vsync: this,
       initialIndex: widget.initialTabIndex.clamp(0, 1),
     );
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _selectedGradeFilter = widget.initialGrade;
     _loadAllDownloads();
     OfflineManager.addListener(_onOfflineChanged);
@@ -109,6 +113,11 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
     List<OfflineQuestionPackage> pkgResults = List.from(_allQuestionPkgs);
     if (_selectedGradeFilter != null) {
       pkgResults = pkgResults.where((item) => item.grade == _selectedGradeFilter).toList();
+    }
+    if (_selectedQuestionMode == 'practice') {
+      pkgResults = pkgResults.where((item) => (item.mcqCount + item.trueFalseCount + item.blankCount) > 0 || item.totalQuestions > 0).toList();
+    } else if (_selectedQuestionMode == 'exam') {
+      pkgResults = pkgResults.where((item) => item.examCount > 0 || item.totalQuestions > 0).toList();
     }
     if (query.isNotEmpty) {
       pkgResults = pkgResults.where((item) {
@@ -387,25 +396,6 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
             onPressed: _loadAllDownloads,
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: const Color(0xFF2563EB),
-          unselectedLabelColor: subColor,
-          indicatorColor: const Color(0xFF2563EB),
-          indicatorWeight: 3,
-          labelStyle: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w800, fontSize: 13),
-          unselectedLabelStyle: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w600, fontSize: 13),
-          tabs: [
-            Tab(
-              icon: const Icon(Icons.menu_book_rounded, size: 20),
-              text: isAm ? 'አጭር ማስታወሻ (${_allPdfs.length})' : 'Short Notes (${_allPdfs.length})',
-            ),
-            Tab(
-              icon: const Icon(Icons.quiz_rounded, size: 20),
-              text: isAm ? 'ጥያቄዎች (${_allQuestionPkgs.length})' : 'Questions (${_allQuestionPkgs.length})',
-            ),
-          ],
-        ),
       ),
       body: Column(
         children: [
@@ -475,68 +465,8 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
             },
           ),
 
-          // Total Storage Summary Card
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF2563EB).withValues(alpha: 0.25),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.offline_pin_rounded,
-                    color: Colors.white,
-                    size: 30,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Offline Study Storage',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${_allPdfs.length} PDFs (${_formatBytes(_totalPdfBytes)}) • ${_allQuestionPkgs.length} Question Sets (${_formatBytes(_totalQuestionBytes)})',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11.5,
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Top Dual Switcher: Short Note & Question (Replacing old blue box)
+          _buildTopDualSwitcher(isDark, isAm, cardBg, textColor, subColor),
 
           // Search Bar
           Padding(
@@ -548,7 +478,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
               },
               style: GoogleFonts.plusJakartaSans(color: textColor, fontSize: 13.5),
               decoration: InputDecoration(
-                hintText: 'Search saved notes, subjects, or units...',
+                hintText: isAm ? 'ማስታወሻዎችን ወይም የጥያቄ ጥቅሎችን ፈልግ...' : 'Search saved notes, subjects, or units...',
                 hintStyle: GoogleFonts.plusJakartaSans(color: subColor, fontSize: 13),
                 prefixIcon: Icon(Icons.search_rounded, color: subColor, size: 20),
                 filled: true,
@@ -577,7 +507,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                _buildFilterChip('All Grades', null, cardBg, textColor, subColor),
+                _buildFilterChip(isAm ? 'ሁሉም ክፍሎች' : 'All Grades', null, cardBg, textColor, subColor),
                 const SizedBox(width: 8),
                 _buildFilterChip('Grade 9', 9, cardBg, textColor, subColor),
                 const SizedBox(width: 8),
@@ -589,6 +519,24 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
               ],
             ),
           ),
+
+          // Question Mode Sub-Filter (Visible on Question Tab)
+          if (_tabController.index == 1) ...[
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  _buildQuestionModeChip('all', isAm ? 'ሁሉንም ጥያቄዎች' : 'All Questions', Icons.layers_rounded, const Color(0xFF2563EB), cardBg, textColor),
+                  const SizedBox(width: 8),
+                  _buildQuestionModeChip('practice', isAm ? '🎯 የልምምድ ጥያቄዎች (Practice)' : '🎯 Practice Mode', Icons.track_changes_rounded, const Color(0xFF059669), cardBg, textColor),
+                  const SizedBox(width: 8),
+                  _buildQuestionModeChip('exam', isAm ? '⏱️ የፈተና ጥያቄዎች (Exam)' : '⏱️ Exam Mode', Icons.timer_rounded, const Color(0xFFD97706), cardBg, textColor),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
 
           // Tab Views
@@ -647,6 +595,225 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTopDualSwitcher(bool isDark, bool isAm, Color cardBg, Color textColor, Color subColor) {
+    final activeIndex = _tabController.index;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      child: Row(
+        children: [
+          // 1. Short Note Card
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                _tabController.animateTo(0);
+                setState(() {});
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: activeIndex == 0
+                      ? (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.5) : const Color(0xFFEFF6FF))
+                      : cardBg,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: activeIndex == 0 ? const Color(0xFF2563EB) : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                    width: activeIndex == 0 ? 2 : 1,
+                  ),
+                  boxShadow: activeIndex == 0
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.16),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          )
+                        ]
+                      : [],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: activeIndex == 0
+                            ? const Color(0xFF2563EB)
+                            : (isDark ? Colors.white12 : const Color(0xFFF1F5F9)),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.menu_book_rounded,
+                        color: activeIndex == 0 ? Colors.white : subColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            isAm ? 'አጭር ማስታወሻ' : 'Short Note',
+                            style: GoogleFonts.notoSansEthiopic(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: activeIndex == 0 ? const Color(0xFF2563EB) : textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_allPdfs.length} ${isAm ? "ማስታወሻዎች" : "Notes"}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: subColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // 2. Question Card
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                _tabController.animateTo(1);
+                setState(() {});
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: activeIndex == 1
+                      ? (isDark ? const Color(0xFF4C1D95).withValues(alpha: 0.4) : const Color(0xFFFAF5FF))
+                      : cardBg,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: activeIndex == 1 ? const Color(0xFF9333EA) : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                    width: activeIndex == 1 ? 2 : 1,
+                  ),
+                  boxShadow: activeIndex == 1
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF9333EA).withValues(alpha: 0.16),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          )
+                        ]
+                      : [],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: activeIndex == 1
+                            ? const Color(0xFF9333EA)
+                            : (isDark ? Colors.white12 : const Color(0xFFF1F5F9)),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.quiz_rounded,
+                        color: activeIndex == 1 ? Colors.white : subColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            isAm ? 'ጥያቄዎች' : 'Question',
+                            style: GoogleFonts.notoSansEthiopic(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: activeIndex == 1 ? const Color(0xFF9333EA) : textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_allQuestionPkgs.length} ${isAm ? "ጥቅሎች" : "Sets"}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: subColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuestionModeChip(
+    String modeKey,
+    String label,
+    IconData icon,
+    Color activeColor,
+    Color cardBg,
+    Color textColor,
+  ) {
+    final isSelected = _selectedQuestionMode == modeKey;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedQuestionMode = modeKey;
+          _applyFilters();
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor : cardBg,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected ? activeColor : const Color(0xFFCBD5E1),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? Colors.white : activeColor,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.notoSansEthiopic(
+                fontSize: 11.5,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? Colors.white : textColor,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -890,6 +1057,25 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
     );
   }
 
+  Widget _buildModeTypeBadge(String label, String count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        '$label: $count',
+        style: GoogleFonts.notoSansEthiopic(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+
   Widget _buildQuestionPackageCard(
     OfflineQuestionPackage pkg,
     Color cardBg,
@@ -897,30 +1083,38 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
     Color subColor,
     Color borderColor,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isAm = AppStateProvider.of(context).languageCode == 'am';
     final themeColor = _getSubjectColor(pkg.subject);
     final subjectIcon = _getSubjectIcon(pkg.subject);
+
+    final int practiceTotal = (pkg.mcqCount + pkg.trueFalseCount + pkg.blankCount) > 0
+        ? (pkg.mcqCount + pkg.trueFalseCount + pkg.blankCount)
+        : pkg.totalQuestions;
+    final int examTotal = pkg.examCount > 0 ? pkg.examCount : pkg.totalQuestions;
 
     return Container(
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Top Row: Subject icon, Grade badge, Title, Size & Delete
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Subject Icon
                 Container(
                   width: 44,
                   height: 44,
@@ -937,8 +1131,6 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                   ),
                 ),
                 const SizedBox(width: 12),
-
-                // Header Info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -946,7 +1138,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                             decoration: BoxDecoration(
                               color: themeColor.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
@@ -954,8 +1146,8 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                             child: Text(
                               'Grade ${pkg.grade} • Unit ${pkg.unit}',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
                                 color: themeColor,
                               ),
                             ),
@@ -964,28 +1156,37 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                           Text(
                             pkg.subject,
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
                               color: subColor,
                             ),
                           ),
                           const Spacer(),
+                          Text(
+                            pkg.formattedSize,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              color: subColor,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
                           IconButton(
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
-                            tooltip: 'Delete',
-                            icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                            tooltip: isAm ? 'ጥቅሉን ሰርዝ' : 'Delete Package',
+                            icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 19),
                             onPressed: () => _confirmDeleteQuestionPackage(pkg),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 5),
                       Text(
                         pkg.title,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13.5,
+                          fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: textColor,
                         ),
@@ -995,35 +1196,90 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
 
-            // Question Breakdown Badges
+            // 1. Practice Mode Questions Box (Distinct Green / Emerald Styling)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: themeColor.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFF059669).withValues(alpha: isDark ? 0.15 : 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFF059669).withValues(alpha: isDark ? 0.35 : 0.25),
+                ),
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.inventory_2_outlined, size: 14, color: Color(0xFF2563EB)),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      '${pkg.totalQuestions} Questions: ${pkg.breakdownText}',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: themeColor,
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669).withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.track_changes_rounded, size: 14, color: Color(0xFF059669)),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isAm ? 'የልምምድ ጥያቄዎች (Practice Mode)' : 'Practice Mode Questions',
+                        style: GoogleFonts.notoSansEthiopic(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF059669),
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$practiceTotal ${isAm ? "ጥያቄዎች" : "Qns"}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    pkg.formattedSize,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w500,
-                      color: subColor,
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      if (pkg.mcqCount > 0)
+                        _buildModeTypeBadge('ምርጫ (MCQ)', '${pkg.mcqCount}', const Color(0xFF059669)),
+                      if (pkg.trueFalseCount > 0)
+                        _buildModeTypeBadge('እውነት/ሐሰት', '${pkg.trueFalseCount}', const Color(0xFF059669)),
+                      if (pkg.blankCount > 0)
+                        _buildModeTypeBadge('ባዶ ቦታ', '${pkg.blankCount}', const Color(0xFF059669)),
+                      if (pkg.mcqCount == 0 && pkg.trueFalseCount == 0 && pkg.blankCount == 0)
+                        _buildModeTypeBadge('ጥያቄዎች', '$practiceTotal', const Color(0xFF059669)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _startOfflineQuiz(pkg, mode: QuizMode.practice),
+                      icon: const Icon(Icons.play_circle_fill_rounded, size: 16),
+                      label: Text(
+                        isAm ? 'ልምምድ ጀምር (Start Practice)' : 'Start Practice Mode',
+                        style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF059669),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                     ),
                   ),
                 ],
@@ -1031,47 +1287,87 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
             ),
             const SizedBox(height: 12),
 
-            // Action Buttons (Practice Mode & Exam Mode)
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _startOfflineQuiz(pkg, mode: QuizMode.practice),
-                    icon: const Icon(Icons.play_circle_outline_rounded, size: 16),
-                    label: Text(
-                      'Practice Mode',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: themeColor,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 9),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            // 2. Exam Mode Questions Box (Distinct Amber / Orange Styling)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.15 : 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.35 : 0.25),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD97706).withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.timer_rounded, size: 14, color: Color(0xFFD97706)),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isAm ? 'የፈተና ጥያቄዎች (Exam Mode)' : 'Exam Mode Questions',
+                        style: GoogleFonts.notoSansEthiopic(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFFD97706),
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD97706),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$examTotal ${isAm ? "ጥያቄዎች" : "Qns"}',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    isAm
+                        ? '⏱️ የጊዜ ገደብ ያለው የብሔራዊ ፈተና ማስመሰያ ፈተና'
+                        : '⏱️ Timed simulation mimicking national standard exams',
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontSize: 11,
+                      color: isDark ? Colors.white70 : const Color(0xFF78350F),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _startOfflineQuiz(pkg, mode: QuizMode.exam),
-                    icon: const Icon(Icons.timer_rounded, size: 16, color: Color(0xFFEF4444)),
-                    label: Text(
-                      'Exam Mode',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFFEF4444),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _startOfflineQuiz(pkg, mode: QuizMode.exam),
+                      icon: const Icon(Icons.flash_on_rounded, size: 16),
+                      label: Text(
+                        isAm ? 'ፈተና ጀምር (Start Exam)' : 'Start Exam Mode',
+                        style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD97706),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFFEF4444), width: 1.2),
-                      padding: const EdgeInsets.symmetric(vertical: 9),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
