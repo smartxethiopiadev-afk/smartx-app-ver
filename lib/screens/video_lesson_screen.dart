@@ -405,32 +405,52 @@ class _VideoLessonScreenState extends State<VideoLessonScreen> {
                                 ),
                                 const SizedBox(height: 14),
 
-                                // Action Buttons
+                                // Action Buttons with Attention Arrow
                                 Row(
                                   children: [
                                     Expanded(
-                                      child: ElevatedButton.icon(
+                                      child: ElevatedButton(
                                         onPressed: () => !isUnlocked ? _handleUpgradeRedirection() : _playVideo(video),
-                                        icon: Icon(
-                                          !isUnlocked ? Icons.vpn_key_rounded : Icons.play_arrow_rounded,
-                                          size: 18,
-                                        ),
-                                        label: Text(
-                                          !isUnlocked
-                                              ? (isAm ? 'ዩኒቱን ለማስከፈት ያሻሽሉ' : 'Upgrade to Unlock')
-                                              : (isAm ? 'ቪዲዮውን አጫውት' : 'Watch Lesson'),
-                                          style: GoogleFonts.notoSansEthiopic(
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: !isUnlocked ? const Color(0xFF0284C7) : primaryColor,
+                                          backgroundColor: !isUnlocked ? const Color(0xFFD97706) : const Color(0xFFEF4444),
                                           foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(vertical: 10),
+                                          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 12),
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(12),
                                           ),
+                                          elevation: 2,
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              !isUnlocked ? Icons.vpn_key_rounded : Icons.play_circle_fill_rounded,
+                                              size: 18,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              !isUnlocked
+                                                  ? (isAm ? 'ዩኒቱን ይክፈቱ' : 'Unlock Unit')
+                                                  : (isAm ? 'ቪዲዮውን ይመልከቱ' : 'Watch Lesson'),
+                                              style: GoogleFonts.notoSansEthiopic(
+                                                fontSize: 12.5,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.all(2.5),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(alpha: 0.25),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.arrow_forward_rounded,
+                                                size: 13,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),

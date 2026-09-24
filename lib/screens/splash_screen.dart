@@ -310,15 +310,113 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               ),
             ),
 
-            // Main Message Animation Content (PURE TYPOGRAPHY & MESSAGE TRANSITION - NO LOGO IMAGE)
+            // Main Message Animation Content with Prominent +25% Enlarged App Icon
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Spacer(flex: 7),
+                    const Spacer(flex: 3),
+
+                    // Prominent Circular Smart Learn Ethiopian Mobile Application Icon (+25% Enlarged)
+                    AnimatedBuilder(
+                      animation: _pulseController,
+                      builder: (context, child) {
+                        return Container(
+                          width: 175,
+                          height: 175,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            border: Border.all(
+                              color: const Color(0xFF0284C7).withValues(alpha: 0.8),
+                              width: 3.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0284C7).withValues(alpha: 0.45 + (_pulseController.value * 0.2)),
+                                blurRadius: 36 + (_pulseController.value * 12),
+                                spreadRadius: 4 + (_pulseController.value * 4),
+                                offset: const Offset(0, 8),
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.35),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Graduation Cap & Learning Symbol
+                                  Container(
+                                    width: 62,
+                                    height: 62,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.school_rounded,
+                                      size: 38,
+                                      color: Color(0xFF0284C7),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  // Smart Learn Title
+                                  Text(
+                                    'Smart Learn',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                      color: const Color(0xFF0F2B5C),
+                                      letterSpacing: -0.5,
+                                      height: 1.1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  // Ethiopian Flag Tri-color Accent + Ethiopia Label
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(width: 8, height: 2.5, color: const Color(0xFF078930)), // Green
+                                      const SizedBox(width: 2),
+                                      Container(width: 8, height: 2.5, color: const Color(0xFFFCDD09)), // Yellow
+                                      const SizedBox(width: 2),
+                                      Container(width: 8, height: 2.5, color: const Color(0xFFDA121A)), // Red
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Ethiopia',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFF0284C7),
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Container(width: 8, height: 2.5, color: const Color(0xFF078930)),
+                                      const SizedBox(width: 2),
+                                      Container(width: 8, height: 2.5, color: const Color(0xFFFCDD09)),
+                                      const SizedBox(width: 2),
+                                      Container(width: 8, height: 2.5, color: const Color(0xFFDA121A)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const Spacer(flex: 2),
 
                     // Animated App Name Tag
                     AnimatedContainer(

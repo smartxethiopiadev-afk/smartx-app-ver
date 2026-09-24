@@ -389,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   Text(
                     _isLoggedIn
                         ? (_userName.trim().isEmpty ? "Unknown Student" : _userName)
-                        : "Ethio Concept Center",
+                        : "Smart Learn Ethiopia",
                     style: const TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 16,
@@ -429,22 +429,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                     onTap: () {
                       AppStateProvider.of(context).onToggleTheme();
-                    },
-                  ),
-                  _buildDrawerTile(
-                    icon: Icons.help_outline_rounded,
-                    title: widget.languageCode == 'en' ? 'How to Start' : 'እንዴት ልጀምር?',
-                    isSelected: false,
-                    isLight: isLight,
-                    onTap: () {
-                      Navigator.pop(context);
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => HowToStartBanner(
-                          isDarkMode: widget.isDarkMode,
-                          languageCode: widget.languageCode,
-                        ),
-                      );
                     },
                   ),
                   _buildDrawerTile(
@@ -1660,14 +1644,45 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Text(
-                            !isUnlocked
-                                ? (isAmharic ? 'የተቆለፈ • ለመክፈት ይጫኑ' : 'Locked • Tap to unlock')
-                                : (isAmharic ? 'በመተግበሪያው ያጫውቱ' : 'Watch In-App'),
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              color: !isUnlocked ? const Color(0xFFD97706) : const Color(0xFF10B981),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: !isUnlocked
+                                  ? const Color(0xFFD97706).withValues(alpha: isLight ? 0.12 : 0.25)
+                                  : const Color(0xFFEF4444).withValues(alpha: isLight ? 0.12 : 0.25),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: !isUnlocked
+                                    ? const Color(0xFFD97706).withValues(alpha: 0.3)
+                                    : const Color(0xFFEF4444).withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  !isUnlocked ? Icons.lock_outline_rounded : Icons.play_arrow_rounded,
+                                  size: 13,
+                                  color: !isUnlocked ? const Color(0xFFD97706) : const Color(0xFFEF4444),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  !isUnlocked
+                                      ? (isAmharic ? 'የተቆለፈ • ክፈት' : 'Locked • Unlock')
+                                      : (isAmharic ? 'ቪዲዮውን ይመልከቱ' : 'Watch Video'),
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: !isUnlocked ? const Color(0xFFD97706) : const Color(0xFFEF4444),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 12,
+                                  color: !isUnlocked ? const Color(0xFFD97706) : const Color(0xFFEF4444),
+                                ),
+                              ],
                             ),
                           ),
                           const Spacer(),
