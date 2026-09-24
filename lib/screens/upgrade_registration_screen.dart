@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../widgets/account_upgrade_dialog.dart';
 
 class UpgradeRegistrationScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -523,38 +522,36 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
 
             const SizedBox(height: 10),
 
-            // Secondary Action: Verify & Activate Account
+            // Secondary Action: Contact Telegram Support
             OutlinedButton.icon(
               onPressed: () async {
-                await AccountUpgradeDialog.show(
-                  context,
-                  isDarkMode: widget.isDarkMode,
-                  languageCode: widget.languageCode,
-                  initialGrade: _selectedGrade,
-                );
+                final Uri telegramUri = Uri.parse('https://t.me/smart_x_help');
+                if (await canLaunchUrl(telegramUri)) {
+                  await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
+                }
               },
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 13),
-                side: BorderSide(
-                  color: isLight ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                side: const BorderSide(
+                  color: Color(0xFF0088CC),
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              icon: Icon(
-                Icons.vpn_key_rounded,
+              icon: const Icon(
+                Icons.send_rounded,
                 size: 18,
-                color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                color: Color(0xFF0088CC),
               ),
               label: Text(
                 isAm
-                    ? 'አካውንት ያረጋግጡና ያንቁ (Verify & Unlock)'
-                    : 'Verify & Activate Account',
-                style: TextStyle(
+                    ? 'በቴሌግራም አግኙን (Contact @smart_x_help)'
+                    : 'Contact Telegram Support (@smart_x_help)',
+                style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                  color: Color(0xFF0088CC),
                 ),
               ),
             ),

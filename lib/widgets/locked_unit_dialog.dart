@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'account_upgrade_dialog.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'upgrade_telegram_modal.dart';
 
 class LockedUnitDialog extends StatelessWidget {
   final int grade;
@@ -143,8 +144,8 @@ class LockedUnitDialog extends StatelessWidget {
               // Informative description
               Text(
                 isAm
-                    ? 'ክፍል $grade ምዕራፍ $unitNumber እና ቀጣዮቹን ትምህርቶች ለመክፈት አካውንትዎን ያሻሽሉ ወይም የማግበሪያ ኮድ (Activation Code) ያስገቡ።'
-                    : 'To unlock Grade $grade Unit $unitNumber and complete curriculum materials, please upgrade your account or enter your activation code.',
+                    ? 'ይህ ምዕራፍ ተቆልፏል 🔒። ክፍል $grade ምዕራፍ $unitNumber እና ሙሉውን የትምህርት ይዘት ለማስከፈት በቴሌግራም አድሚኑን ያነጋግሩ (@smart_x_help)።'
+                    : 'This unit is locked 🔒. To unlock Grade $grade Unit $unitNumber and full learning materials, please contact our Telegram admin (@smart_x_help).',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.notoSansEthiopic(
                   fontSize: 13,
@@ -156,34 +157,46 @@ class LockedUnitDialog extends StatelessWidget {
 
               const SizedBox(height: 22),
 
-              // 1. Primary Action: Account Upgrade / Activation (አካውንት ያሻሽሉ / Upgrade Account)
+              // 1. Primary Action: Contact Telegram (@smart_x_help)
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton.icon(
                   onPressed: () async {
                     Navigator.of(context).pop();
-                    final upgraded = await AccountUpgradeDialog.show(
-                      context,
-                      isDarkMode: isDarkMode,
-                      languageCode: languageCode,
-                      initialGrade: grade,
-                    );
-                    if (upgraded == true) {
-                      onUnlocked?.call();
+                    final Uri telegramUri = Uri.parse('https://t.me/smart_x_help');
+                    try {
+                      if (await canLaunchUrl(telegramUri)) {
+                        await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
+                      } else {
+                        throw Exception('Cannot launch Telegram');
+                      }
+                    } catch (_) {
+                      if (context.mounted) {
+                        UpgradeTelegramModal.show(
+                          context,
+                          grade: grade,
+                          subject: subject,
+                          unitNumber: unitNumber,
+                          unitTitle: unitTitle,
+                          languageCode: languageCode,
+                          isDarkMode: isDarkMode,
+                          onPackageUnlocked: onUnlocked,
+                        );
+                      }
                     }
                   },
-                  icon: const Icon(Icons.vpn_key_rounded, size: 20, color: Colors.white),
+                  icon: const Icon(Icons.send_rounded, size: 19, color: Colors.white),
                   label: Text(
-                    isAm ? 'ማግበሪያ ኮድ አስገባ / አሻሽል' : 'Enter Activation Code / Upgrade',
+                    isAm ? 'በቴሌግራም አግኙን (Contact Telegram)' : 'Contact Telegram (@smart_x_help)',
                     style: GoogleFonts.notoSansEthiopic(
                       fontWeight: FontWeight.w900,
-                      fontSize: 13.5,
+                      fontSize: 13,
                       color: Colors.white,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0284C7),
+                    backgroundColor: const Color(0xFF0088CC),
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(

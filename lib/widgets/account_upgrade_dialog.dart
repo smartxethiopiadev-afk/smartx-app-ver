@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/subscription_service.dart';
 import 'friendly_error_card.dart';
-import 'activation_code_dialog.dart';
 
 class AccountUpgradeDialog extends StatefulWidget {
   final bool isDarkMode;
@@ -409,31 +408,28 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
 
                 const SizedBox(height: 12),
 
-                // Secondary Action: Enter Activation Code Instead
+                // Secondary Action: Contact Telegram (@smart_x_help)
                 SizedBox(
                   height: 42,
                   child: OutlinedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
                       Navigator.of(context).pop();
-                      ActivationCodeDialog.show(
-                        context,
-                        isDarkMode: widget.isDarkMode,
-                        languageCode: widget.languageCode,
-                        preferredGrade: widget.initialGrade,
-                        onActivated: widget.onSuccess,
-                      );
+                      final Uri telegramUri = Uri.parse('https://t.me/smart_x_help');
+                      if (await canLaunchUrl(telegramUri)) {
+                        await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
+                      }
                     },
-                    icon: const Icon(Icons.vpn_key_rounded, size: 16, color: Color(0xFF0284C7)),
+                    icon: const Icon(Icons.send_rounded, size: 16, color: Color(0xFF0088CC)),
                     label: Text(
-                      isAm ? 'የማግበሪያ ኮድ አለዎት? (Activation Code)' : 'Have an Activation Code?',
+                      isAm ? 'በቴሌግራም አግኙን (Contact Telegram)' : 'Contact Telegram (@smart_x_help)',
                       style: GoogleFonts.notoSansEthiopic(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0284C7),
+                        color: const Color(0xFF0088CC),
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
+                      side: BorderSide(color: const Color(0xFF0088CC).withValues(alpha: 0.35)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),

@@ -527,6 +527,14 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
 
     if (!mounted) return;
 
+    // Download progress trackers for each independent item
+    double? pdfProgress;
+    double? examProgress;
+    double? mcqProgress;
+    double? tfProgress;
+    double? blankProgress;
+    double? matchingProgress;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -585,7 +593,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                 ),
                               ),
                               Text(
-                                'Unit $activeUnitNum: $unitTitle',
+                                'Unit $activeUnitNum: $unitTitle • ለየብቻ አውርድ (Independent)',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.plusJakartaSans(
@@ -605,22 +613,33 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                   ),
                   const Divider(height: 1),
 
-                  // Options List
+                  // Options List - Each item downloads independently
                   Expanded(
                     child: ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                       children: [
-                        // 1. Short Note PDF
+                        // 1. Short Note PDF (Independent)
                         _buildDownloadOptionTile(
                           title: 'አጭር ማስታወሻ ፒዲኤፍ (Short Note PDF)',
                           subtitle: 'ኦፊሴላዊ የኢትዮጵያ ስርዓተ-ትምህርት ፒዲኤፍ',
                           icon: Icons.picture_as_pdf_rounded,
                           iconColor: const Color(0xFFEF4444),
                           isDownloaded: hasPdf,
+                          isDownloading: pdfProgress != null,
+                          progress: pdfProgress,
                           onDownload: () async {
-                            await _downloadUnitPdf(cleanUnitId: cleanUnitId, activeUnitNum: activeUnitNum, unitTitle: unitTitle);
+                            setModalState(() => pdfProgress = 0.1);
+                            await _downloadUnitPdf(
+                              cleanUnitId: cleanUnitId,
+                              activeUnitNum: activeUnitNum,
+                              unitTitle: unitTitle,
+                              onProgress: (p) => setModalState(() => pdfProgress = p),
+                            );
                             final updated = await OfflineManager.hasOfflinePdf(cleanUnitId);
-                            setModalState(() => hasPdf = updated);
+                            setModalState(() {
+                              pdfProgress = null;
+                              hasPdf = updated;
+                            });
                             _loadOfflineDownloads();
                           },
                           cardBg: cardBg,
@@ -629,29 +648,36 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                         ),
                         const SizedBox(height: 12),
 
-                        // 2. Exam Mode Questions
+                        // 2. Exam Mode Questions (Independent)
                         _buildDownloadOptionTile(
                           title: 'የፈተና ጥያቄዎች (Exam Mode Questions)',
                           subtitle: 'የተቆጠረ የብሔራዊ ፈተና ጥያቄዎች (Timed Exam)',
                           icon: Icons.timer_outlined,
                           iconColor: const Color(0xFFF59E0B),
                           isDownloaded: hasExam,
+                          isDownloading: examProgress != null,
+                          progress: examProgress,
                           onDownload: () async {
+                            setModalState(() => examProgress = 0.1);
                             await _downloadUnitQuestionsSeparately(
                               cleanUnitId: cleanUnitId,
                               activeUnitNum: activeUnitNum,
                               mode: 'exam',
                               type: null,
+                              onProgress: (p) => setModalState(() => examProgress = p),
                             );
                             final updated = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'exam');
-                            setModalState(() => hasExam = updated);
+                            setModalState(() {
+                              examProgress = null;
+                              hasExam = updated;
+                            });
                             _loadOfflineDownloads();
                           },
                           cardBg: cardBg,
                           textColor: textColor,
                           subColor: subColor,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
 
                         // Section Header: Practice Mode by Type
                         Padding(
@@ -666,22 +692,29 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                           ),
                         ),
 
-                        // 3a. Multiple Choice
+                        // 3a. Multiple Choice (Independent)
                         _buildDownloadOptionTile(
                           title: 'ምርጫ ጥያቄዎች (Multiple Choice - MCQ)',
                           subtitle: 'የተሟሉ 4 አማራጭ ያላቸው ጥያቄዎች',
                           icon: Icons.checklist_rounded,
                           iconColor: const Color(0xFF3B82F6),
                           isDownloaded: hasPracticeMcq,
+                          isDownloading: mcqProgress != null,
+                          progress: mcqProgress,
                           onDownload: () async {
+                            setModalState(() => mcqProgress = 0.1);
                             await _downloadUnitQuestionsSeparately(
                               cleanUnitId: cleanUnitId,
                               activeUnitNum: activeUnitNum,
                               mode: 'practice',
                               type: 'multiple_choice',
+                              onProgress: (p) => setModalState(() => mcqProgress = p),
                             );
                             final updated = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'multiple_choice');
-                            setModalState(() => hasPracticeMcq = updated);
+                            setModalState(() {
+                              mcqProgress = null;
+                              hasPracticeMcq = updated;
+                            });
                             _loadOfflineDownloads();
                           },
                           cardBg: cardBg,
@@ -690,22 +723,29 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                         ),
                         const SizedBox(height: 10),
 
-                        // 3b. True / False
+                        // 3b. True / False (Independent)
                         _buildDownloadOptionTile(
                           title: 'እውነት / ሐሰት (True or False)',
                           subtitle: 'ጽንሰ-ሀሳብን የሚፈትሹ ጥያቄዎች',
                           icon: Icons.rule_rounded,
                           iconColor: const Color(0xFF10B981),
                           isDownloaded: hasPracticeTf,
+                          isDownloading: tfProgress != null,
+                          progress: tfProgress,
                           onDownload: () async {
+                            setModalState(() => tfProgress = 0.1);
                             await _downloadUnitQuestionsSeparately(
                               cleanUnitId: cleanUnitId,
                               activeUnitNum: activeUnitNum,
                               mode: 'practice',
                               type: 'true_false',
+                              onProgress: (p) => setModalState(() => tfProgress = p),
                             );
                             final updated = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'true_false');
-                            setModalState(() => hasPracticeTf = updated);
+                            setModalState(() {
+                              tfProgress = null;
+                              hasPracticeTf = updated;
+                            });
                             _loadOfflineDownloads();
                           },
                           cardBg: cardBg,
@@ -714,22 +754,29 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                         ),
                         const SizedBox(height: 10),
 
-                        // 3c. Fill in the blank (Blank Space)
+                        // 3c. Fill in the blank (Independent)
                         _buildDownloadOptionTile(
                           title: 'ክፍት ቦታ ሙላ (Blank Space)',
                           subtitle: 'ቀመሮችንና ቁልፍ ቃላትን የሚጠይቁ',
                           icon: Icons.edit_note_rounded,
                           iconColor: const Color(0xFF8B5CF6),
                           isDownloaded: hasPracticeBlank,
+                          isDownloading: blankProgress != null,
+                          progress: blankProgress,
                           onDownload: () async {
+                            setModalState(() => blankProgress = 0.1);
                             await _downloadUnitQuestionsSeparately(
                               cleanUnitId: cleanUnitId,
                               activeUnitNum: activeUnitNum,
                               mode: 'practice',
                               type: 'blank_space',
+                              onProgress: (p) => setModalState(() => blankProgress = p),
                             );
                             final updated = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'blank_space');
-                            setModalState(() => hasPracticeBlank = updated);
+                            setModalState(() {
+                              blankProgress = null;
+                              hasPracticeBlank = updated;
+                            });
                             _loadOfflineDownloads();
                           },
                           cardBg: cardBg,
@@ -738,52 +785,36 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                         ),
                         const SizedBox(height: 10),
 
-                        // 3d. Matching
+                        // 3d. Matching (Independent)
                         _buildDownloadOptionTile(
                           title: 'አዛምድ (Matching Questions)',
                           subtitle: 'ጽንሰ-ሀሳብን ከትርጉም ማዛመድ',
                           icon: Icons.sync_alt_rounded,
                           iconColor: const Color(0xFFF59E0B),
                           isDownloaded: hasPracticeMatching,
+                          isDownloading: matchingProgress != null,
+                          progress: matchingProgress,
                           onDownload: () async {
+                            setModalState(() => matchingProgress = 0.1);
                             await _downloadUnitQuestionsSeparately(
                               cleanUnitId: cleanUnitId,
                               activeUnitNum: activeUnitNum,
                               mode: 'practice',
                               type: 'matching',
+                              onProgress: (p) => setModalState(() => matchingProgress = p),
                             );
                             final updated = await OfflineManager.hasOfflineQuestionsByMode(unitId: cleanUnitId, mode: 'practice', questionType: 'matching');
-                            setModalState(() => hasPracticeMatching = updated);
+                            setModalState(() {
+                              matchingProgress = null;
+                              hasPracticeMatching = updated;
+                            });
                             _loadOfflineDownloads();
                           },
                           cardBg: cardBg,
                           textColor: textColor,
                           subColor: subColor,
                         ),
-                        const SizedBox(height: 16),
-
-                        // 4. Download All Bundle Button
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            Navigator.of(ctx).pop();
-                            _downloadUnit(unitId);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2563EB),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                          icon: const Icon(Icons.cloud_download_rounded),
-                          label: Text(
-                            'ሁሉንም በአንድ ላይ አውርድ (Download Full Package)',
-                            style: GoogleFonts.notoSansEthiopic(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
@@ -800,11 +831,16 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
     required String cleanUnitId,
     required int activeUnitNum,
     required String unitTitle,
+    Function(double)? onProgress,
   }) async {
+    final String cardKey = 'g${widget.grade}_${cleanUnitId.replaceAll("g${widget.grade}_", "")}_notes';
     try {
       final normalizedSubject = widget.subjectId.toLowerCase();
       String pdfUrl = '';
       String summary = '';
+
+      setState(() => _downloadProgress[cardKey] = 0.15);
+      onProgress?.call(0.15);
 
       try {
         final res = await Supabase.instance.client
@@ -823,6 +859,9 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
         debugPrint('[Download PDF] query note: $e');
       }
 
+      onProgress?.call(0.55);
+      if (mounted) setState(() => _downloadProgress[cardKey] = 0.55);
+
       if (pdfUrl.isEmpty) {
         pdfUrl = 'https://smartlearn.et/curriculum/grade_${widget.grade}/${normalizedSubject}_u$activeUnitNum.pdf';
       }
@@ -836,12 +875,32 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
         unit: activeUnitNum,
       );
 
+      onProgress?.call(1.0);
+      if (mounted) setState(() => _downloadProgress[cardKey] = 1.0);
+      await Future.delayed(const Duration(milliseconds: 300));
+
       if (mounted) {
+        setState(() {
+          _downloadProgress.remove(cardKey);
+          _downloadedUnits.add(cardKey);
+          _downloadedUnits.add(cleanUnitId);
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'የ Unit $activeUnitNum ፒዲኤፍ ማስታወሻ ወርዷል!',
-              style: GoogleFonts.notoSansEthiopic(),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.languageCode == 'am'
+                        ? 'የ Unit $activeUnitNum ፒዲኤፍ ማስታወሻ በተሟላ ሁኔታ ወርዷል (Completed)!'
+                        : 'Unit $activeUnitNum Short Note downloaded completely (Completed)!',
+                    style: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             ),
             backgroundColor: const Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
@@ -850,6 +909,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _downloadProgress.remove(cardKey));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('ማውረድ አልተሳካም፡ $e', style: GoogleFonts.notoSansEthiopic()),
@@ -865,8 +925,13 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
     required int activeUnitNum,
     required String mode,
     String? type,
+    Function(double)? onProgress,
   }) async {
+    final String cardKey = 'g${widget.grade}_${cleanUnitId.replaceAll("g${widget.grade}_", "")}_quiz';
     try {
+      setState(() => _downloadProgress[cardKey] = 0.15);
+      onProgress?.call(0.15);
+
       final quizMode = mode == 'exam' ? QuizMode.exam : QuizMode.practice;
       final questions = await QuizService.fetchQuestions(
         grade: widget.grade,
@@ -880,6 +945,9 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
         throw Exception("ጥያቄዎች አልተገኙም");
       }
 
+      onProgress?.call(0.6);
+      if (mounted) setState(() => _downloadProgress[cardKey] = 0.6);
+
       await OfflineManager.saveOfflineQuestionsByMode(
         unitId: cleanUnitId,
         mode: mode,
@@ -889,16 +957,36 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
         unit: activeUnitNum,
       );
 
+      onProgress?.call(1.0);
+      if (mounted) setState(() => _downloadProgress[cardKey] = 1.0);
+      await Future.delayed(const Duration(milliseconds: 300));
+
       if (mounted) {
+        setState(() {
+          _downloadProgress.remove(cardKey);
+          _downloadedUnits.add(cardKey);
+          _downloadedUnits.add(cleanUnitId);
+        });
+
         final label = mode == 'exam'
-            ? 'የፈተና ጥያቄዎች (Exam Mode)'
-            : 'የልምምድ ጥያቄዎች (${(type ?? "all").toUpperCase()})';
+            ? (widget.languageCode == 'am' ? 'የፈተና ጥያቄዎች (Exam Mode)' : 'Exam Mode Questions')
+            : (widget.languageCode == 'am' ? 'የልምምድ ጥያቄዎች (${(type ?? "all").toUpperCase()})' : 'Practice Questions (${(type ?? "all").toUpperCase()})');
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              '$label ለ Unit $activeUnitNum ወርዷል!',
-              style: GoogleFonts.notoSansEthiopic(),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.languageCode == 'am'
+                        ? '$label ለ Unit $activeUnitNum በተሟላ ሁኔታ ወርዷል (Completed)!'
+                        : '$label for Unit $activeUnitNum downloaded completely (Completed)!',
+                    style: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
             ),
             backgroundColor: const Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
@@ -907,6 +995,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _downloadProgress.remove(cardKey));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('ማውረድ አልተሳካም፡ $e', style: GoogleFonts.notoSansEthiopic()),
@@ -927,7 +1016,10 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
     required Color cardBg,
     required Color textColor,
     required Color subColor,
+    bool isDownloading = false,
+    double? progress,
   }) {
+    final bool isAm = widget.languageCode == 'am';
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -939,65 +1031,114 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
               : (cardBg == Colors.white ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: iconColor, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.notoSansEthiopic(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        color: subColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: isDownloading ? null : onDownload,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDownloaded
+                      ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                      : (isDownloading ? const Color(0xFF3B82F6) : const Color(0xFF2563EB)),
+                  foregroundColor: isDownloaded ? const Color(0xFF10B981) : Colors.white,
+                  elevation: 0,
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: isDownloading
+                    ? const SizedBox(
+                        width: 13,
+                        height: 13,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : Icon(
+                        isDownloaded ? Icons.check_circle_rounded : Icons.download_rounded,
+                        size: 15,
+                      ),
+                label: Text(
+                  isDownloading
+                      ? '${((progress ?? 0) * 100).toInt()}%'
+                      : (isDownloaded
+                          ? (isAm ? 'ወርዷል (Completed)' : 'Completed')
+                          : (isAm ? 'አውርድ' : 'Download')),
                   style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 13,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: textColor,
                   ),
                 ),
-                const SizedBox(height: 2),
+              ),
+            ],
+          ),
+          if (isDownloading && progress != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
                 Text(
-                  subtitle,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    color: subColor,
+                  isAm ? 'በማውረድ ላይ...' : 'Downloading process...',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: iconColor,
+                  ),
+                ),
+                Text(
+                  '${(progress * 100).toInt()}%',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: iconColor,
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: onDownload,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isDownloaded
-                  ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                  : const Color(0xFF2563EB),
-              foregroundColor: isDownloaded ? const Color(0xFF10B981) : Colors.white,
-              elevation: 0,
-              visualDensity: VisualDensity.compact,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            icon: Icon(
-              isDownloaded ? Icons.check_circle_rounded : Icons.download_rounded,
-              size: 15,
-            ),
-            label: Text(
-              isDownloaded ? 'ወርዷል' : 'አውርድ',
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
+            const SizedBox(height: 4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 4,
+                backgroundColor: iconColor.withValues(alpha: 0.15),
+                valueColor: AlwaysStoppedAnimation<Color>(iconColor),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -1175,11 +1316,11 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                     child: Text(
                       widget.isShortNotesMode
                           ? (languageCode == 'en'
-                              ? 'Saved! Short notes are available offline.'
-                              : 'ተቀምጧል! አጫጭር ማስታወሻዎች ከመስመር ውጭ ዝግጁ ናቸው።')
+                              ? 'Downloaded completely (Completed)! Short note is available offline.'
+                              : 'በተሟላ ሁኔታ ወርዷል (Completed)! አጭር ማስታወሻ ከመስመር ውጭ ዝግጁ ነው።')
                           : (languageCode == 'en'
-                              ? 'Saved! ${fetchedQuestionsCount} questions are available offline.'
-                              : 'ተቀምጧል! ${fetchedQuestionsCount} ጥያቄዎች ከመስመር ውጭ ዝግጁ ናቸው።'),
+                              ? 'Downloaded completely (Completed)! ${fetchedQuestionsCount} questions available offline.'
+                              : 'በተሟላ ሁኔታ ወርዷል (Completed)! ${fetchedQuestionsCount} ጥያቄዎች ከመስመር ውጭ ዝግጁ ናቸው።'),
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ),
@@ -1653,7 +1794,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                     final int activeUnitNum = originalIndex >= 0 ? originalIndex + 1 : index + 1;
 
                     final indexFactor = index * 100;
-                    final bool isLocked = !widget.isShortNotesMode && activeUnitNum > 1 && !_isPackageUnlocked;
+                    final bool isLocked = activeUnitNum > 1 && !_isPackageUnlocked;
                     return TweenAnimationBuilder<double>(
                       tween: Tween<double>(begin: 0.0, end: 1.0),
                       duration: Duration(milliseconds: 300 + indexFactor),
@@ -1716,7 +1857,7 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
                                         child: Row(
                                           children: [
-                                            // Left: circular container with a coral calendar icon
+                                            // Left: circular container with lock or icon
                                             Container(
                                               width: 44,
                                               height: 44,
@@ -1770,19 +1911,28 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                                   if (isLocked) ...[
                                                     const SizedBox(height: 4),
                                                     Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                                                       decoration: BoxDecoration(
-                                                        color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                                        color: const Color(0xFFEF4444).withValues(alpha: 0.12),
                                                         borderRadius: BorderRadius.circular(6),
-                                                        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                                                        border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
                                                       ),
-                                                      child: Text(
-                                                        languageCode == 'am' ? '🔒 ተቆልፏል • ለመክፈት ይንኩ' : '🔒 Locked • Tap to unlock',
-                                                        style: const TextStyle(
-                                                          fontSize: 10,
-                                                          fontWeight: FontWeight.w800,
-                                                          color: Color(0xFF10B981),
-                                                        ),
+                                                      child: Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          const Icon(Icons.lock_rounded, size: 11, color: Color(0xFFEF4444)),
+                                                          const SizedBox(width: 4),
+                                                          Text(
+                                                            widget.isShortNotesMode
+                                                                ? (languageCode == 'am' ? 'Subscribe • ተቆልፏል' : 'Subscribe to Unlock')
+                                                                : (languageCode == 'am' ? 'ተቆልፏል • ለመክፈት ይንኩ' : 'Locked • Tap to unlock'),
+                                                            style: const TextStyle(
+                                                              fontSize: 10,
+                                                              fontWeight: FontWeight.w800,
+                                                              color: Color(0xFFEF4444),
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
                                                     ),
                                                   ],
@@ -1796,7 +1946,9 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                           children: [
                                                             Text(
-                                                              languageCode == 'en' ? 'Downloading questions...' : 'ጥያቄዎችን በማውረድ ላይ...',
+                                                              widget.isShortNotesMode
+                                                                  ? (languageCode == 'en' ? 'Downloading short note...' : 'ማስታወሻ በማውረድ ላይ...')
+                                                                  : (languageCode == 'en' ? 'Downloading questions...' : 'ጥያቄዎችን በማውረድ ላይ...'),
                                                               style: TextStyle(
                                                                 fontSize: 10.5,
                                                                 fontWeight: FontWeight.bold,
@@ -1910,13 +2062,13 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                               ),
                               child: Tooltip(
                                 message: isLocked 
-                                     ? 'Locked' 
+                                     ? (widget.isShortNotesMode ? (languageCode == 'am' ? 'Subscribe • ተቆልፏል' : 'Subscribe to Unlock') : 'Locked') 
                                      : (languageCode == 'en'
                                          ? (isDownloaded
-                                             ? (isExpired ? 'Re-download' : 'Downloaded')
+                                             ? (isExpired ? 'Re-download' : 'Completed')
                                              : 'Download')
                                          : (isDownloaded
-                                             ? (isExpired ? 'እንደገና አውርድ' : 'ወርዷል')
+                                             ? (isExpired ? 'እንደገና አውርድ' : 'ወርዷል (Completed)')
                                              : 'አውርድ')),
                                 child: progress != null
                                     ? Center(
@@ -1960,9 +2112,30 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                             return;
                                           }
                                           if (widget.isShortNotesMode) {
-                                            _checkRegistrationAndProceed(index, activeUnitNum, onSuccess: () {
-                                              _openShortNotePdf(activeUnitNum);
-                                            });
+                                            if (isDownloaded) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Row(
+                                                    children: [
+                                                      const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                                                      const SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: Text(
+                                                          languageCode == 'am'
+                                                              ? 'የ Unit $activeUnitNum ማስታወሻ አስቀድሞ በተሟላ ሁኔታ ወርዷል (Completed)!'
+                                                              : 'Unit $activeUnitNum Short Note is already downloaded completely (Completed)!',
+                                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  backgroundColor: const Color(0xFF10B981),
+                                                  behavior: SnackBarBehavior.floating,
+                                                ),
+                                              );
+                                            } else {
+                                              _downloadUnit(unitId);
+                                            }
                                             return;
                                           }
                                           _checkRegistrationAndProceed(index, activeUnitNum, onSuccess: () {
