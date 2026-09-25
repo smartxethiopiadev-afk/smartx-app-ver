@@ -13,6 +13,7 @@ class DownloadsHubScreen extends StatefulWidget {
   final String? initialSubject;
   final int initialTabIndex; // 0 for PDFs, 1 for Questions
   final bool isEmbedded;
+  final VoidCallback? onBrowseCurriculum;
 
   const DownloadsHubScreen({
     super.key,
@@ -20,6 +21,7 @@ class DownloadsHubScreen extends StatefulWidget {
     this.initialSubject,
     this.initialTabIndex = 0,
     this.isEmbedded = false,
+    this.onBrowseCurriculum,
   });
 
   @override
@@ -921,6 +923,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
     required Color textColor,
     required Color subColor,
   }) {
+    final isAm = AppStateProvider.of(context).languageCode == 'am';
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -942,6 +945,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
             const SizedBox(height: 18),
             Text(
               title,
+              textAlign: TextAlign.center,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 16.5,
                 fontWeight: FontWeight.w800,
@@ -960,16 +964,27 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.arrow_back_rounded, size: 16),
+              onPressed: () {
+                if (widget.onBrowseCurriculum != null) {
+                  widget.onBrowseCurriculum!();
+                } else if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                }
+              },
+              icon: const Icon(Icons.menu_book_rounded, size: 16),
               label: Text(
-                'Browse Curriculum Units',
+                isAm ? 'የትምህርት ምዕራፎችን ይመልከቱ' : 'Browse Curriculum Units',
                 style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                overlayColor: Colors.white.withValues(alpha: 0.15),
+                shadowColor: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                elevation: 2,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),

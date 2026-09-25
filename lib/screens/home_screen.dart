@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:ui';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'subject_selection_screen.dart';
@@ -2799,7 +2800,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
 
   Widget _buildOfflineScreen(bool isLight) {
-    return const DownloadsHubScreen(isEmbedded: true);
+    return DownloadsHubScreen(
+      isEmbedded: true,
+      onBrowseCurriculum: () {
+        setState(() {
+          _currentIndex = 0;
+        });
+      },
+    );
   }
 
   Widget _buildOldOfflineScreen(bool isLight) {

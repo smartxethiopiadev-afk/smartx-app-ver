@@ -2102,7 +2102,7 @@ class _QuizScreenState extends State<QuizScreen> {
     if (q.questionType == QuestionType.multipleChoice) {
       final correctOpt = q.options.firstWhere(
         (o) => o.isCorrect,
-        orElse: () => q.options.isNotEmpty ? q.options.first : OptionModel(key: 'A', text: '', isCorrect: true),
+        orElse: () => q.options.isNotEmpty ? q.options.first : QuestionOption(key: 'A', text: '', isCorrect: true),
       );
       final optLetter = correctOpt.key ?? 'A';
       return isAm
@@ -2114,7 +2114,7 @@ class _QuizScreenState extends State<QuizScreen> {
           ? "ትክክለኛው መልስ ${isTrue ? 'እውነት (True)' : 'ሐሰት (False)'} ነው።"
           : "The correct answer is ${isTrue ? 'True' : 'False'}.";
     } else if (q.questionType == QuestionType.blankSpace) {
-      final ans = q.acceptableAnswers.isNotEmpty ? q.acceptableAnswers.join(" / ") : (q.correctAnswer ?? "");
+      final ans = q.acceptedAnswers.isNotEmpty ? q.acceptedAnswers.join(" / ") : (q.blankAnswer ?? "");
       return isAm ? "ትክክለኛው ክፍት ቦታ መልስ፡ $ans" : "The correct answer is: $ans";
     }
     return isAm ? "ትክክለኛውን ምርጫ ከላይ ይመልከቱ።" : "Refer to the correct highlighted choice above.";

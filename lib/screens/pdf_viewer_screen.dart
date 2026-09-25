@@ -569,22 +569,21 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
 
   Widget _buildFloatingTopBar() {
     final topPadding = MediaQuery.of(context).padding.top;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       padding: EdgeInsets.fromLTRB(12, topPadding + 6, 12, 12),
       decoration: BoxDecoration(
-        color: (isDark ? const Color(0xFF0F172A) : Colors.white).withValues(alpha: 0.94),
-        border: Border(
+        color: const Color(0xFF0F172A).withValues(alpha: 0.96),
+        border: const Border(
           bottom: BorderSide(
-            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            color: Color(0xFF334155),
             width: 1,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 14,
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
@@ -593,7 +592,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
         children: [
           // Back Button
           IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
+            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
             onPressed: () => Navigator.of(context).pop(),
             tooltip: 'Go Back',
           ),
@@ -612,6 +611,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w800,
+                    color: Colors.white,
                   ),
                 ),
                 if (widget.subject != null && widget.subject!.isNotEmpty)
@@ -622,7 +622,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0284C7),
+                      color: const Color(0xFF38BDF8),
                     ),
                   ),
               ],
@@ -634,7 +634,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
             tooltip: _fitBoth ? 'Fill Screen Width (High DPI)' : 'Fit Entire Page',
             icon: Icon(
               _fitBoth ? Icons.fit_screen_rounded : Icons.aspect_ratio_rounded,
-              color: const Color(0xFF0284C7),
+              color: const Color(0xFF38BDF8),
               size: 21,
             ),
             onPressed: () {
@@ -644,12 +644,12 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
             },
           ),
 
-          // Dark Mode / Invert Colors Toggle
+          // Dark Mode / Night Mode Toggle
           IconButton(
-            tooltip: _isNightMode ? 'Light Mode (White Page)' : 'Dark Mode (Eye Comfort)',
+            tooltip: _isNightMode ? 'Light Page View' : 'Dark Mode (Eye Comfort)',
             icon: Icon(
               _isNightMode ? Icons.nightlight_round : Icons.wb_sunny_rounded,
-              color: _isNightMode ? const Color(0xFFFBBF24) : const Color(0xFF64748B),
+              color: _isNightMode ? const Color(0xFFFBBF24) : const Color(0xFF94A3B8),
               size: 21,
             ),
             onPressed: () {
@@ -668,11 +668,11 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF38BDF8))),
                     )
                   : Icon(
                       _isDownloaded ? Icons.cloud_done_rounded : Icons.download_rounded,
-                      color: _isDownloaded ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                      color: _isDownloaded ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
                       size: 21,
                     ),
               onPressed: _isDownloaded ? null : _saveToDownloads,
@@ -684,24 +684,23 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
 
   Widget _buildFloatingBottomToolbar() {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (!_isReady || _totalPages <= 0) return const SizedBox.shrink();
 
     return Container(
       padding: EdgeInsets.fromLTRB(16, 10, 16, bottomPadding + 10),
       decoration: BoxDecoration(
-        color: (isDark ? const Color(0xFF0F172A) : Colors.white).withValues(alpha: 0.94),
-        border: Border(
+        color: const Color(0xFF0F172A).withValues(alpha: 0.96),
+        border: const Border(
           top: BorderSide(
-            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            color: Color(0xFF334155),
             width: 1,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 14,
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 16,
             offset: const Offset(0, -4),
           ),
         ],

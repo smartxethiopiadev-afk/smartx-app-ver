@@ -119,25 +119,13 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       return;
     }
 
-    // If package is already unlocked for this grade, proceed
-    if (_isPackageUnlocked) {
+    // Fast synchronous local check: proceed immediately if already unlocked
+    if (_isPackageUnlocked || SubscriptionService.isUnitAccessibleSync(widget.grade, activeUnitNum, subject: widget.enTitle)) {
       onSuccess();
       return;
     }
 
-    // Query active subscription from Supabase students table with device binding and expiry verification
-    final bool isAllowed = await SubscriptionService.checkSubscriptionAccess(
-      grade: widget.grade,
-      subject: widget.enTitle,
-      unitNumber: activeUnitNum,
-    );
-    if (isAllowed) {
-      _checkRegistrationStatus();
-      onSuccess();
-      return;
-    }
-
-    // Unit 2+ locked: Show the Telegram pop-up
+    // Unit 2+ locked: Show the Locked Unit Pop-Up IMMEDIATELY without any network delay!
     LockedUnitDialog.show(
       context,
       grade: widget.grade,
@@ -151,18 +139,31 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
         onSuccess();
       },
     );
+
+    // Silently verify with Supabase database in background
+    SubscriptionService.checkSubscriptionAccess(
+      grade: widget.grade,
+      subject: widget.enTitle,
+      unitNumber: activeUnitNum,
+    ).then((isAllowed) {
+      if (isAllowed && mounted) {
+        _checkRegistrationStatus();
+      }
+    });
   }
 
   Future<void> _openShortNotePdf(int unitNumber) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     scaffoldMessenger.hideCurrentSnackBar();
 
-    // Enforce subscription check: Unit 1 is free trial; Unit 2+ requires active subscription
-    final bool isAccessible = await SubscriptionService.isUnitAccessible(
-      widget.grade,
-      unitNumber,
-      subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
-    );
+    // Fast synchronous local check: Unit 1 is free trial; Unit 2+ requires active subscription
+    final bool isAccessible = unitNumber <= 1 ||
+        _isPackageUnlocked ||
+        SubscriptionService.isUnitAccessibleSync(
+          widget.grade,
+          unitNumber,
+          subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
+        );
 
     if (!isAccessible) {
       if (!mounted) return;
@@ -179,6 +180,16 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
           _openShortNotePdf(unitNumber);
         },
       );
+
+      // Verify in background
+      SubscriptionService.isUnitAccessible(
+        widget.grade,
+        unitNumber,
+        subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
+      ).then((_) {
+        if (mounted) _checkRegistrationStatus();
+      });
+
       return;
     }
 

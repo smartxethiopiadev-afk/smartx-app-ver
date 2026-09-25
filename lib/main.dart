@@ -377,7 +377,10 @@ class _SmartLearnEthiopianAppState extends State<SmartLearnEthiopianApp> {
               splashFactory: NoSplash.splashFactory,
               overlayColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.pressed)) {
-                  return const Color(0xFF00BFFF).withValues(alpha: 0.10);
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.12);
+                }
+                if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.06);
                 }
                 return Colors.transparent;
               }),
@@ -388,7 +391,10 @@ class _SmartLearnEthiopianAppState extends State<SmartLearnEthiopianApp> {
               splashFactory: NoSplash.splashFactory,
               overlayColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.pressed)) {
-                  return const Color(0xFF00BFFF).withValues(alpha: 0.10);
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.12);
+                }
+                if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.06);
                 }
                 return Colors.transparent;
               }),
@@ -399,7 +405,10 @@ class _SmartLearnEthiopianAppState extends State<SmartLearnEthiopianApp> {
               splashFactory: NoSplash.splashFactory,
               overlayColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.pressed)) {
-                  return Colors.white.withValues(alpha: 0.14);
+                  return Colors.white.withValues(alpha: 0.18);
+                }
+                if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+                  return Colors.white.withValues(alpha: 0.10);
                 }
                 return Colors.transparent;
               }),
@@ -410,7 +419,10 @@ class _SmartLearnEthiopianAppState extends State<SmartLearnEthiopianApp> {
               splashFactory: NoSplash.splashFactory,
               overlayColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.pressed)) {
-                  return const Color(0xFF00BFFF).withValues(alpha: 0.10);
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.12);
+                }
+                if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.06);
                 }
                 return Colors.transparent;
               }),
@@ -454,7 +466,10 @@ class _SmartLearnEthiopianAppState extends State<SmartLearnEthiopianApp> {
               splashFactory: NoSplash.splashFactory,
               overlayColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.pressed)) {
-                  return const Color(0xFF00BFFF).withValues(alpha: 0.12);
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.15);
+                }
+                if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.08);
                 }
                 return Colors.transparent;
               }),
@@ -465,7 +480,10 @@ class _SmartLearnEthiopianAppState extends State<SmartLearnEthiopianApp> {
               splashFactory: NoSplash.splashFactory,
               overlayColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.pressed)) {
-                  return const Color(0xFF00BFFF).withValues(alpha: 0.12);
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.15);
+                }
+                if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.08);
                 }
                 return Colors.transparent;
               }),
@@ -476,7 +494,10 @@ class _SmartLearnEthiopianAppState extends State<SmartLearnEthiopianApp> {
               splashFactory: NoSplash.splashFactory,
               overlayColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.pressed)) {
-                  return Colors.white.withValues(alpha: 0.14);
+                  return Colors.white.withValues(alpha: 0.20);
+                }
+                if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+                  return Colors.white.withValues(alpha: 0.10);
                 }
                 return Colors.transparent;
               }),
@@ -487,7 +508,10 @@ class _SmartLearnEthiopianAppState extends State<SmartLearnEthiopianApp> {
               splashFactory: NoSplash.splashFactory,
               overlayColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.pressed)) {
-                  return const Color(0xFF00BFFF).withValues(alpha: 0.12);
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.15);
+                }
+                if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.08);
                 }
                 return Colors.transparent;
               }),
