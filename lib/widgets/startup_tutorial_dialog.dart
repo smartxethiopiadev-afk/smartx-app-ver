@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/video_model.dart';
+import '../screens/fullscreen_video_player_screen.dart';
 import '../services/video_service.dart';
 import 'youtube_video_player_dialog.dart';
 
@@ -57,13 +57,19 @@ class _StartupTutorialDialogState extends State<StartupTutorialDialog> {
   }
 
   void _watchVideo(VideoModel video) {
-    if (video.hasDirectStream) {
-      final uri = Uri.parse(video.videoUrl ?? '');
-      canLaunchUrl(uri).then((can) {
-        if (can) {
-          launchUrl(uri, mode: LaunchMode.externalApplication);
-        }
-      });
+    final streamUrl = video.streamUrl.isNotEmpty
+        ? video.streamUrl
+        : (video.videoUrl ?? '');
+
+    if (streamUrl.isNotEmpty) {
+      FullscreenVideoPlayerScreen.open(
+        context,
+        videoUrl: streamUrl,
+        title: video.title.isNotEmpty ? video.title : 'Smart Learn Ethiopian - Tutorial',
+        subtitle: widget.languageCode == 'am' ? 'የመተግበሪያ አጠቃቀም መመሪያ' : 'App Overview & User Guide',
+        isDarkMode: widget.isDarkMode,
+        languageCode: widget.languageCode,
+      );
     } else if (video.youtubeVideoId.isNotEmpty) {
       YouTubeVideoPlayerDialog.show(
         context,
@@ -177,6 +183,8 @@ class _StartupTutorialDialogState extends State<StartupTutorialDialog> {
                             borderRadius: BorderRadius.circular(16),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(16),
+                              splashColor: const Color(0xFF00BFFF).withValues(alpha: 0.10),
+                              highlightColor: Colors.transparent,
                               onTap: () => _watchVideo(video),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,

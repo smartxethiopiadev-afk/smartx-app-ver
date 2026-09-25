@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/video_model.dart';
+import '../screens/fullscreen_video_player_screen.dart';
 import '../services/video_service.dart';
 import 'account_upgrade_dialog.dart';
 
@@ -18,6 +19,43 @@ class HowToStartBanner extends StatelessWidget {
     required this.languageCode,
     this.onGradeSelected,
   });
+
+  /// Plays the Supabase onboarding / tutorial video smoothly in-app using video_player and chewie
+  static Future<void> playTutorialVideo(
+    BuildContext context, {
+    required bool isDarkMode,
+    required String languageCode,
+  }) async {
+    try {
+      final video = await VideoService.fetchAppTutorialVideo();
+      final streamUrl = video.streamUrl.isNotEmpty
+          ? video.streamUrl
+          : VideoService.getAppOverviewVideo().streamUrl;
+
+      if (context.mounted && streamUrl.isNotEmpty) {
+        await FullscreenVideoPlayerScreen.open(
+          context,
+          videoUrl: streamUrl,
+          title: video.title.isNotEmpty ? video.title : 'Smart Learn Ethiopian - Tutorial',
+          subtitle: languageCode == 'am' ? 'የመተግበሪያ አጠቃቀም መመሪያ' : 'App Overview & User Guide',
+          isDarkMode: isDarkMode,
+          languageCode: languageCode,
+        );
+      }
+    } catch (_) {
+      final fallbackVideo = VideoService.getAppOverviewVideo();
+      if (context.mounted) {
+        await FullscreenVideoPlayerScreen.open(
+          context,
+          videoUrl: fallbackVideo.streamUrl,
+          title: fallbackVideo.title,
+          subtitle: languageCode == 'am' ? 'የመተግበሪያ አጠቃቀም መመሪያ' : 'App Overview & User Guide',
+          isDarkMode: isDarkMode,
+          languageCode: languageCode,
+        );
+      }
+    }
+  }
 
   static void showUsageGuide(
     BuildContext context, {
@@ -116,15 +154,24 @@ class HowToStartBanner extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(16),
+                        splashColor: const Color(0xFF00BFFF).withValues(alpha: 0.1),
+                        highlightColor: Colors.transparent,
                         onTap: () {
-                          final streamUrl = video.streamUrl;
+                          final streamUrl = video.streamUrl.isNotEmpty
+                              ? video.streamUrl
+                              : VideoService.getAppOverviewVideo().streamUrl;
+
                           if (streamUrl.isNotEmpty) {
-                            final uri = Uri.parse(streamUrl);
-                            canLaunchUrl(uri).then((can) {
-                              if (can) {
-                                launchUrl(uri, mode: LaunchMode.externalApplication);
-                              }
-                            });
+                            FullscreenVideoPlayerScreen.open(
+                              context,
+                              videoUrl: streamUrl,
+                              title: video.title.isNotEmpty
+                                  ? video.title
+                                  : (isAm ? 'የመተግበሪያው አጠቃቀም ሙሉ ገለፃ ቪዲዮ' : 'Smart Learn Master Tutorial Video'),
+                              subtitle: isAm ? 'የመተግበሪያ አጠቃቀም መመሪያ' : 'App Overview & User Guide',
+                              isDarkMode: isDarkMode,
+                              languageCode: languageCode,
+                            );
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -354,59 +401,73 @@ class HowToStartBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
-          onTap: () => _showHowToStartPopUp(context),
+          splashColor: const Color(0xFF00BFFF).withValues(alpha: 0.10),
+          highlightColor: Colors.transparent,
+          onTap: () => playTutorialVideo(context, isDarkMode: isDarkMode, languageCode: languageCode),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0284C7).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.smart_display_rounded,
-                    color: Color(0xFF0284C7),
-                    size: 22,
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _showHowToStartPopUp(context),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.smart_display_rounded,
+                      color: Color(0xFF0284C7),
+                      size: 22,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    isAm ? 'እንዴት ልጀምር? (የቪዲዮ አጠቃቀም መመሪያ)' : 'How to Start? (Video Tutorial)',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: textPrimary,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _showHowToStartPopUp(context),
+                    child: Text(
+                      isAm ? 'እንዴት ልጀምር? (የቪዲዮ አጠቃቀም መመሪያ)' : 'How to Start? (Video Tutorial)',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: textPrimary,
+                      ),
                     ),
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0284C7).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        isAm ? 'እይ (Watch)' : 'Watch',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF0284C7),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => playTutorialVideo(context, isDarkMode: isDarkMode, languageCode: languageCode),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isAm ? 'እይ (Watch)' : 'Watch',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF0284C7),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 14,
-                        color: Color(0xFF0284C7),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 14,
+                          color: Color(0xFF0284C7),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

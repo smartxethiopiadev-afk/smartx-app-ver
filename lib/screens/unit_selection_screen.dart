@@ -227,30 +227,22 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       unitTitle: unitTitle,
       onModeChosen: (mode) {
         if (mode == QuizMode.practice) {
-          // Trigger second pop-up modal: Choose Question Type (MCQs, True/False, Blank Space, Matching)
-          QuizSelectionDialogs.showQuestionTypeModal(
-            context: context,
-            grade: widget.grade,
-            subject: widget.languageCode == 'am' ? widget.amTitle : widget.enTitle,
-            unitNumber: unitNumber,
-            onTypeSelected: (selectedQuestionType) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => QuizScreen(
-                    grade: widget.grade,
-                    subject: widget.subjectId,
-                    unit: unitNumber,
-                    mode: QuizMode.practice,
-                    initialQuestionType: selectedQuestionType,
-                    isOffline: isDownloaded,
-                    offlineUnitId: isDownloaded ? 'g${widget.grade}_${unitId}_quiz' : null,
-                  ),
-                ),
-              ).then((_) {
-                _loadBestScores();
-              });
-            },
-          );
+          // Launch Practice Mode directly with native interactive question types
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => QuizScreen(
+                grade: widget.grade,
+                subject: widget.subjectId,
+                unit: unitNumber,
+                mode: QuizMode.practice,
+                initialQuestionType: 'all',
+                isOffline: isDownloaded,
+                offlineUnitId: isDownloaded ? 'g${widget.grade}_${unitId}_quiz' : null,
+              ),
+            ),
+          ).then((_) {
+            _loadBestScores();
+          });
         } else {
           // Exam Mode: Show confirmation modal with exam rules & start trigger
           QuizSelectionDialogs.showExamConfirmationModal(

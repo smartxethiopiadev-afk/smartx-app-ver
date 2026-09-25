@@ -351,15 +351,78 @@ class _SmartLearnEthiopianAppState extends State<SmartLearnEthiopianApp> {
         title: 'Smart Learn Ethiopian',
         debugShowCheckedModeBanner: false,
         
-        // Modern palette for light & dark modes
+        // Modern palette for light & dark modes with transparent splash/highlight to eliminate ugly dark touch overlays
         theme: ThemeData(
           useMaterial3: true,
           brightness: Brightness.light,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          focusColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          splashFactory: NoSplash.splashFactory,
+          buttonTheme: const ButtonThemeData(
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            focusColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+          ),
           colorScheme: const ColorScheme.light(
             primary: Color(0xFF00BFFF),
             surface: Color(0xFFF1F5F9),
             onPrimary: Colors.white,
             onSurface: Color(0xFF1E2843),
+          ),
+          iconButtonTheme: IconButtonThemeData(
+            style: ButtonStyle(
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.10);
+                }
+                return Colors.transparent;
+              }),
+            ),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: ButtonStyle(
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.10);
+                }
+                return Colors.transparent;
+              }),
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ButtonStyle(
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return Colors.white.withValues(alpha: 0.14);
+                }
+                return Colors.transparent;
+              }),
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: ButtonStyle(
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.10);
+                }
+                return Colors.transparent;
+              }),
+            ),
+          ),
+          tabBarTheme: const TabBarThemeData(
+            splashFactory: NoSplash.splashFactory,
+            overlayColor: WidgetStatePropertyAll(Colors.transparent),
+          ),
+          cardTheme: const CardThemeData(
+            surfaceTintColor: Colors.transparent,
+            shadowColor: Colors.transparent,
           ),
           textTheme: const TextTheme(
             titleLarge: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00BFFF)),
@@ -369,11 +432,74 @@ class _SmartLearnEthiopianAppState extends State<SmartLearnEthiopianApp> {
         darkTheme: ThemeData(
           useMaterial3: true,
           brightness: Brightness.dark,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          focusColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          splashFactory: NoSplash.splashFactory,
+          buttonTheme: const ButtonThemeData(
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
+            focusColor: Colors.transparent,
+            hoverColor: Colors.transparent,
+          ),
           colorScheme: const ColorScheme.dark(
             primary: Color(0xFF00BFFF),
             surface: Color(0xFF0F172A),
             onPrimary: Color(0xFF0F172A),
             onSurface: Color(0xFFFAFAFA),
+          ),
+          iconButtonTheme: IconButtonThemeData(
+            style: ButtonStyle(
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.12);
+                }
+                return Colors.transparent;
+              }),
+            ),
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: ButtonStyle(
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.12);
+                }
+                return Colors.transparent;
+              }),
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ButtonStyle(
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return Colors.white.withValues(alpha: 0.14);
+                }
+                return Colors.transparent;
+              }),
+            ),
+          ),
+          outlinedButtonTheme: OutlinedButtonThemeData(
+            style: ButtonStyle(
+              splashFactory: NoSplash.splashFactory,
+              overlayColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return const Color(0xFF00BFFF).withValues(alpha: 0.12);
+                }
+                return Colors.transparent;
+              }),
+            ),
+          ),
+          tabBarTheme: const TabBarThemeData(
+            splashFactory: NoSplash.splashFactory,
+            overlayColor: WidgetStatePropertyAll(Colors.transparent),
+          ),
+          cardTheme: const CardThemeData(
+            surfaceTintColor: Colors.transparent,
+            shadowColor: Colors.transparent,
           ),
           textTheme: const TextTheme(
             titleLarge: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),

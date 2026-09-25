@@ -415,7 +415,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isAm ? 'ከመስመር ውጭ ማዕከል' : 'Downloads & Offline',
+                            isAm ? 'ከመስመር ውጭ የወረዱ (Offline Hub)' : 'Downloads & Offline Hub',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
@@ -425,7 +425,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            isAm ? 'ያለ በይነመረብ የሚሰሩ ማስታወሻዎች እና ፈተናዎች' : 'Saved syllabus notes & practice quizzes',
+                            isAm ? 'ያለ በይነመረብ (100% Offline) የሚሰሩ የወረዱ ፈተናዎች እና ፒዲኤፎች' : 'Access saved quizzes & PDF notes 100% offline',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -664,6 +664,8 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
           // 1. Short Note Card
           Expanded(
             child: InkWell(
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
               onTap: () {
                 _tabController.animateTo(0);
                 setState(() {});
@@ -703,7 +705,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Icons.menu_book_rounded,
+                        Icons.picture_as_pdf_rounded,
                         color: activeIndex == 0 ? Colors.white : subColor,
                         size: 20,
                       ),
@@ -715,7 +717,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            isAm ? 'አጭር ማስታወሻ' : 'Short Note',
+                            isAm ? 'የወረዱ ፒዲኤፎች' : 'Saved PDFs',
                             style: GoogleFonts.notoSansEthiopic(
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
@@ -724,7 +726,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${_allPdfs.length} ${isAm ? "ማስታወሻዎች" : "Notes"}',
+                            '${_allPdfs.length} ${isAm ? "ፒዲኤፎች" : "PDFs"}',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -744,6 +746,8 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
           // 2. Question Card
           Expanded(
             child: InkWell(
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
               onTap: () {
                 _tabController.animateTo(1);
                 setState(() {});
@@ -783,7 +787,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Icons.quiz_rounded,
+                        Icons.offline_bolt_rounded,
                         color: activeIndex == 1 ? Colors.white : subColor,
                         size: 20,
                       ),
@@ -795,7 +799,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            isAm ? 'ጥያቄዎች' : 'Question',
+                            isAm ? 'የወረዱ ፈተናዎች' : 'Offline Quizzes',
                             style: GoogleFonts.notoSansEthiopic(
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
@@ -804,7 +808,7 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${_allQuestionPkgs.length} ${isAm ? "ጥቅሎች" : "Sets"}',
+                            '${_allQuestionPkgs.length} ${isAm ? "ፈተናዎች" : "Quizzes"}',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -999,6 +1003,8 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
+          splashColor: const Color(0xFF00BFFF).withValues(alpha: 0.08),
+          highlightColor: Colors.transparent,
           onTap: () => _openPdf(item),
           child: Padding(
             padding: const EdgeInsets.all(14.0),

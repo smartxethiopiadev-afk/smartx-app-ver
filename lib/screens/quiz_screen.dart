@@ -391,12 +391,27 @@ class _QuizScreenState extends State<QuizScreen> {
   void _scrollToActiveQuestion() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      if (_currentIndex == 0 && _scrollController.hasClients) {
+        _scrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOutCubic,
+        );
+        return;
+      }
       if (_currentIndex < _questionKeys.length && _questionKeys[_currentIndex].currentContext != null) {
         Scrollable.ensureVisible(
           _questionKeys[_currentIndex].currentContext!,
-          duration: const Duration(milliseconds: 500),
+          duration: const Duration(milliseconds: 400),
           curve: Curves.easeInOutCubic,
           alignment: 0.08,
+        );
+      } else if (_scrollController.hasClients && _questions.isNotEmpty) {
+        final targetOffset = (_currentIndex / _questions.length) * _scrollController.position.maxScrollExtent;
+        _scrollController.animateTo(
+          targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
         );
       }
     });
@@ -900,15 +915,21 @@ class _QuizScreenState extends State<QuizScreen> {
       languageCode: langCode,
       isDark: isDark,
       onReview: () {
-        Navigator.of(context).pop();
         setState(() {
           _showAnswersAndExplanations = true;
           _currentIndex = 0;
         });
-        _scrollToActiveQuestion();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0.0,
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutCubic,
+            );
+          }
+        });
       },
       onDone: () {
-        Navigator.of(context).pop();
         Navigator.of(context).pop();
       },
     );
@@ -1154,6 +1175,40 @@ class _QuizScreenState extends State<QuizScreen> {
     return Column(
       children: [
         _buildQuestionTypeFilterBar(),
+        if (_showAnswersAndExplanations)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            color: const Color(0xFF10B981).withValues(alpha: 0.12),
+            child: Row(
+              children: [
+                const Icon(Icons.fact_check_rounded, color: Color(0xFF10B981), size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    AppStateProvider.of(context).languageCode == 'am'
+                        ? "የፈተና መልሶችና ማብራሪያዎች ግምገማ (Review Mode)"
+                        : "Exam Review: All Explanations & Answers",
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF10B981),
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    minimumSize: Size.zero,
+                  ),
+                  child: Text(
+                    AppStateProvider.of(context).languageCode == 'am' ? "ውጣ (Exit)" : "Exit",
+                    style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF10B981)),
+                  ),
+                ),
+              ],
+            ),
+          ),
         _buildQuestionNumberStrip(),
         Expanded(
           child: ListView.builder(
@@ -1361,13 +1416,14 @@ class _QuizScreenState extends State<QuizScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Question text
+                // Question text with slender, modern, elegant typography
                 _buildMathText(
                   q.questionText,
-                  GoogleFonts.inter(
-                    fontSize: 15.0,
-                    fontWeight: FontWeight.w700,
-                    height: 1.45,
+                  GoogleFonts.plusJakartaSans(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w400,
+                    height: 1.55,
+                    letterSpacing: 0.12,
                     color: isLight ? const Color(0xFF0F172A) : Colors.white,
                   ),
                 ),
@@ -1416,9 +1472,9 @@ class _QuizScreenState extends State<QuizScreen> {
             ),
           ],
 
-          // Explanations Box
-          if (showFeedback && q.explanation != null && q.explanation!.trim().isNotEmpty && isActive) ...[
-            const SizedBox(height: 20),
+          // Explanations Box (Active question or in Exam Review mode)
+          if (showFeedback && (isActive || isExamReview)) ...[
+            const SizedBox(height: 18),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -1451,10 +1507,12 @@ class _QuizScreenState extends State<QuizScreen> {
                   ),
                   const SizedBox(height: 8),
                   _buildMathText(
-                    q.explanation!.trim(),
+                    (q.explanation != null && q.explanation!.trim().isNotEmpty)
+                        ? q.explanation!.trim()
+                        : _buildAutomaticExplanation(q, isAm),
                     TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                       height: 1.45,
                       color: isLight ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
                     ),
@@ -1466,7 +1524,7 @@ class _QuizScreenState extends State<QuizScreen> {
           ],
 
           // Navigation Back / Next Buttons
-          if (!isExamReview && isActive) ...[
+          if (isActive) ...[
             const SizedBox(height: 20),
             Row(
               children: [
@@ -1493,14 +1551,20 @@ class _QuizScreenState extends State<QuizScreen> {
                 ],
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _advanceToNext,
+                    onPressed: index == _questions.length - 1 && isExamReview
+                        ? () => Navigator.of(context).pop()
+                        : _advanceToNext,
                     icon: Icon(
-                      index == _questions.length - 1 ? Icons.check_rounded : Icons.arrow_forward_rounded,
+                      index == _questions.length - 1
+                          ? (isExamReview ? Icons.check_circle_rounded : Icons.check_rounded)
+                          : Icons.arrow_forward_rounded,
                       size: 16,
                     ),
                     label: Text(
                       index == _questions.length - 1 
-                          ? (isAm ? "ፈተናውን ጨርስ" : "Finish") 
+                          ? (isExamReview
+                              ? (isAm ? "ግምገማ ጨርስ (Done)" : "Finish Review")
+                              : (isAm ? "ፈተናውን ጨርስ" : "Finish"))
                           : (isAm ? "ቀጣይ ጥያቄ" : "Next"),
                       style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
                     ),
@@ -1995,6 +2059,7 @@ class _QuizScreenState extends State<QuizScreen> {
   Widget _buildFinishedSection() {
     if (_questions.isEmpty) return const SizedBox.shrink();
     final bool isAm = AppStateProvider.of(context).languageCode == 'am';
+    final bool isExamReview = _showAnswersAndExplanations && widget.mode == QuizMode.exam;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 40.0),
@@ -2003,13 +2068,15 @@ class _QuizScreenState extends State<QuizScreen> {
           const Icon(Icons.check_circle_outline_rounded, size: 64, color: Color(0xFF10B981)),
           const SizedBox(height: 16),
           Text(
-            isAm ? "ሁሉንም ጥያቄዎች አጠናቀዋል!" : "You've completed all questions!",
+            isExamReview
+                ? (isAm ? "የፈተናውን ማብራሪያዎች ሙሉ በሙሉ ገምግመዋል!" : "You've reviewed all exam explanations!")
+                : (isAm ? "ሁሉንም ጥያቄዎች አጠናቀዋል!" : "You've completed all questions!"),
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: _showResults,
+            onPressed: isExamReview ? () => Navigator.of(context).pop() : _showResults,
             style: ElevatedButton.styleFrom(
               backgroundColor: _getSubjectThemeColor(),
               foregroundColor: Colors.white,
@@ -2017,15 +2084,40 @@ class _QuizScreenState extends State<QuizScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
             child: Text(
-              widget.mode == QuizMode.exam 
-                  ? (isAm ? "ፈተናውን አስገባ (Submit Exam)" : "Submit Exam") 
-                  : (isAm ? "ውጤት ተመልከት (View Results)" : "View Results"),
+              isExamReview
+                  ? (isAm ? "ግምገማ ጨርስ / ተመለስ (Exit Review)" : "Finish Review")
+                  : (widget.mode == QuizMode.exam 
+                      ? (isAm ? "ፈተናውን አስገባ (Submit Exam)" : "Submit Exam") 
+                      : (isAm ? "ውጤት ተመልከት (View Results)" : "View Results")),
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Builds a clear Ethiopian curriculum explanation when database explanation field is empty
+  String _buildAutomaticExplanation(QuestionModel q, bool isAm) {
+    if (q.questionType == QuestionType.multipleChoice) {
+      final correctOpt = q.options.firstWhere(
+        (o) => o.isCorrect,
+        orElse: () => q.options.isNotEmpty ? q.options.first : OptionModel(key: 'A', text: '', isCorrect: true),
+      );
+      final optLetter = correctOpt.key ?? 'A';
+      return isAm
+          ? "ትክክለኛው መልስ [ $optLetter ] ${correctOpt.text} ነው።"
+          : "The correct answer is [ $optLetter ] ${correctOpt.text}.";
+    } else if (q.questionType == QuestionType.trueFalse) {
+      final isTrue = q.correctBoolean == true || (q.options.isNotEmpty && q.options[0].isCorrect);
+      return isAm
+          ? "ትክክለኛው መልስ ${isTrue ? 'እውነት (True)' : 'ሐሰት (False)'} ነው።"
+          : "The correct answer is ${isTrue ? 'True' : 'False'}.";
+    } else if (q.questionType == QuestionType.blankSpace) {
+      final ans = q.acceptableAnswers.isNotEmpty ? q.acceptableAnswers.join(" / ") : (q.correctAnswer ?? "");
+      return isAm ? "ትክክለኛው ክፍት ቦታ መልስ፡ $ans" : "The correct answer is: $ans";
+    }
+    return isAm ? "ትክክለኛውን ምርጫ ከላይ ይመልከቱ።" : "Refer to the correct highlighted choice above.";
   }
 
   Widget _buildMathText(String text, TextStyle baseStyle, {TextAlign align = TextAlign.left}) {
@@ -2036,66 +2128,9 @@ class _QuizScreenState extends State<QuizScreen> {
     );
   }
 
+  /// Removes redundant top filter chips in practice mode as requested
   Widget _buildQuestionTypeFilterBar() {
-    if (widget.mode != QuizMode.practice) return const SizedBox.shrink();
-
-    final bool isLight = Theme.of(context).brightness == Brightness.light;
-    final isAm = AppStateProvider.of(context).languageCode == 'am';
-
-    final filters = [
-      {'key': 'all', 'label': isAm ? 'ሁሉም (All)' : 'All Types'},
-      {'key': 'multiple_choice', 'label': isAm ? 'ምርጫ' : 'Multiple Choice'},
-      {'key': 'true_false', 'label': isAm ? 'እውነት/ሐሰት' : 'True/False'},
-      {'key': 'blank_space', 'label': isAm ? 'ባዶ ቦታ' : 'Fill Blank'},
-      {'key': 'matching', 'label': isAm ? 'አዛምድ' : 'Matching'},
-    ];
-
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: filters.length,
-        separatorBuilder: (ctx, i) => const SizedBox(width: 8),
-        itemBuilder: (ctx, idx) {
-          final f = filters[idx];
-          final key = f['key']!;
-          final label = f['label']!;
-          final isSelected = _selectedTypeFilter == key;
-
-          return ChoiceChip(
-            label: Text(label),
-            selected: isSelected,
-            onSelected: (selected) {
-              if (selected && _selectedTypeFilter != key) {
-                setState(() {
-                  _selectedTypeFilter = key;
-                });
-                _loadQuestions();
-              }
-            },
-            selectedColor: _getSubjectThemeColor(),
-            labelStyle: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: isSelected
-                  ? Colors.white
-                  : (isLight ? const Color(0xFF334155) : const Color(0xFF94A3B8)),
-            ),
-            backgroundColor: isLight ? Colors.white : const Color(0xFF1E293B),
-            elevation: 0,
-            pressElevation: 0,
-            side: BorderSide(
-              color: isSelected
-                  ? _getSubjectThemeColor()
-                  : (isLight ? const Color(0xFFCBD5E1) : const Color(0xFF334155)),
-            ),
-          );
-        },
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   Widget _buildMatchingContent(

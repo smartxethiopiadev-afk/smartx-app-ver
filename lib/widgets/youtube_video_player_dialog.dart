@@ -7,6 +7,7 @@ import '../services/offline_manager.dart';
 import '../services/subscription_service.dart';
 import 'account_upgrade_dialog.dart';
 import 'embedded_video_player.dart';
+import '../screens/fullscreen_video_player_screen.dart';
 
 class YouTubeVideoPlayerDialog extends StatefulWidget {
   final VideoModel video;
@@ -126,12 +127,27 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
       return;
     }
 
+    final String streamUrl = widget.video.streamUrl.isNotEmpty
+        ? widget.video.streamUrl
+        : (widget.video.videoUrl ?? '');
+
+    if (streamUrl.isNotEmpty) {
+      await FullscreenVideoPlayerScreen.open(
+        context,
+        videoUrl: streamUrl,
+        title: widget.video.title,
+        subtitle: 'Grade ${widget.video.grade} • ${widget.video.subject} • Unit ${widget.video.unitNumber}',
+        isDarkMode: widget.isDarkMode,
+        languageCode: widget.languageCode,
+      );
+      return;
+    }
+
     setState(() {
       _isLoadingVideo = true;
     });
 
-    // Simulate connecting securely to live in-app feed
-    await Future.delayed(const Duration(milliseconds: 700));
+    await Future.delayed(const Duration(milliseconds: 400));
 
     if (mounted) {
       setState(() {

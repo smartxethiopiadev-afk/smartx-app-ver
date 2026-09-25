@@ -266,8 +266,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     bool isLight = !widget.isDarkMode;
     final bool isVideosActive = _currentIndex == 1;
-    final bool isOfflineActive = _currentIndex == 2;
-    final bool isLibraryActive = _currentIndex == 3;
+    final bool isLibraryActive = _currentIndex == 2;
+    final bool isOfflineActive = _currentIndex == 3;
     final bool isAccountActive = _currentIndex == 4;
 
     return Scaffold(
@@ -291,10 +291,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         title: Text(
           isVideosActive
               ? (widget.languageCode == 'en' ? 'Video Lessons' : 'የቪዲዮ ትምህርቶች')
-              : (isOfflineActive
-                  ? (widget.languageCode == 'en' ? 'Offline Lessons' : 'ከመስመር ውጭ')
-                  : (isLibraryActive
-                      ? (widget.languageCode == 'en' ? 'Library (Notes & Quizzes)' : 'ቤተ-መጽሐፍት')
+              : (isLibraryActive
+                  ? (widget.languageCode == 'en' ? 'Academic Library' : 'የትምህርት ላይብረሪ')
+                  : (isOfflineActive
+                      ? (widget.languageCode == 'en' ? 'Offline Downloads' : 'ከመስመር ውጭ (Downloads)')
                       : (isAccountActive
                           ? (widget.languageCode == 'en' ? 'Student Account' : 'የተማሪ መለያ')
                           : _local('title')))),
@@ -535,33 +535,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isLight 
-              ? Colors.white.withValues(alpha: 0.92) 
-              : const Color(0xFF0F172A).withValues(alpha: 0.92),
+              ? Colors.white.withValues(alpha: 0.95) 
+              : const Color(0xFF0B132B).withValues(alpha: 0.95),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
           border: Border(
             top: BorderSide(
               color: isLight 
-                  ? const Color(0xFFE2E8F0).withValues(alpha: 0.8) 
-                  : const Color(0xFF334155).withValues(alpha: 0.8),
+                  ? const Color(0xFFE2E8F0) 
+                  : const Color(0xFF1E293B),
               width: 1.0,
             ),
           ),
           boxShadow: [
             BoxShadow(
               color: isLight 
-                  ? const Color(0xFF0F1B2B).withValues(alpha: 0.06) 
-                  : Colors.black.withValues(alpha: 0.40),
-              blurRadius: 20.0,
-              offset: const Offset(0, -5),
+                  ? const Color(0xFF0F1B2B).withValues(alpha: 0.07) 
+                  : Colors.black.withValues(alpha: 0.45),
+              blurRadius: 24.0,
+              offset: const Offset(0, -6),
             ),
           ],
         ),
-        child: ClipRect(
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
+            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
             child: SafeArea(
               top: false,
               child: SizedBox(
-                height: 68.0,
+                height: 66.0,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
                   child: Row(
@@ -842,6 +844,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         borderRadius: BorderRadius.circular(18),
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
+          splashColor: const Color(0xFF00BFFF).withValues(alpha: 0.08),
+          highlightColor: Colors.transparent,
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -1474,6 +1478,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
+          splashColor: const Color(0xFF00BFFF).withValues(alpha: 0.08),
+          highlightColor: Colors.transparent,
           onTap: () {
             if (!isUnlocked) {
               AccountUpgradeDialog.show(
@@ -1929,6 +1935,62 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Academic Library Header
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0, bottom: 12.0),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0284C7).withValues(alpha: 0.28),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.menu_book_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isAmharic ? 'የትምህርት ላይብረሪ' : 'Academic Library',
+                          style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
+                            color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isAmharic
+                              ? 'አጫጭር የማጠቃለያ ማስታወሻዎች እና የክፍል ፈተናዎች'
+                              : 'Curriculum short notes & practice quizzes',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: subColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             // Grade Selector
             _buildUnifiedSegmentedGradeSelectorForLibrary(isLight),
             const SizedBox(height: 16.0),
@@ -3543,56 +3605,101 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               logScreen('VideosScreen');
               break;
             case 2:
-              logScreen('OfflineScreen');
+              logScreen('LibraryScreen');
               break;
             case 3:
-              logScreen('LibraryScreen');
+              logScreen('OfflineScreen');
               break;
             case 4:
               logScreen('AccountScreen');
               break;
           }
         },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 260),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(vertical: 4.0),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? (isLight
-                    ? const Color(0xFF0284C7).withValues(alpha: 0.10)
-                    : const Color(0xFF38BDF8).withValues(alpha: 0.14))
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(16.0),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedScale(
-                scale: isSelected ? 1.15 : 1.0,
-                duration: const Duration(milliseconds: 260),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Elegant glowing capsule indicator behind active icon
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutCubic,
+              padding: EdgeInsets.symmetric(
+                horizontal: isSelected ? 16.0 : 8.0,
+                vertical: 4.5,
+              ),
+              decoration: BoxDecoration(
+                gradient: isSelected
+                    ? LinearGradient(
+                        colors: isLight
+                            ? [
+                                const Color(0xFF0284C7).withValues(alpha: 0.16),
+                                const Color(0xFF38BDF8).withValues(alpha: 0.10),
+                              ]
+                            : [
+                                const Color(0xFF38BDF8).withValues(alpha: 0.24),
+                                const Color(0xFF0284C7).withValues(alpha: 0.14),
+                              ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: isSelected ? null : Colors.transparent,
+                borderRadius: BorderRadius.circular(22.0),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: (isLight ? const Color(0xFF0284C7) : const Color(0xFF38BDF8)).withValues(alpha: 0.20),
+                          blurRadius: 8.0,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: AnimatedScale(
+                scale: isSelected ? 1.10 : 1.0,
+                duration: const Duration(milliseconds: 200),
                 curve: Curves.easeOutBack,
                 child: Icon(
                   isSelected ? iconActive : iconInactive,
                   color: isSelected ? activeColor : inactiveColor,
-                  size: 24,
+                  size: 22.0,
                 ),
               ),
-              const SizedBox(height: 3.5),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                  color: isSelected ? activeColor : inactiveColor,
-                  letterSpacing: isSelected ? -0.1 : 0.0,
-                ),
+            ),
+            const SizedBox(height: 2.5),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: isSelected ? 11.0 : 10.0,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? activeColor : inactiveColor,
+                letterSpacing: -0.15,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 2.0),
+            // Luminous tiny dot indicator for active tab
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              width: isSelected ? 4.5 : 0.0,
+              height: isSelected ? 4.5 : 0.0,
+              decoration: BoxDecoration(
+                color: activeColor,
+                shape: BoxShape.circle,
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: activeColor.withValues(alpha: 0.6),
+                          blurRadius: 4.0,
+                          spreadRadius: 0.5,
+                        ),
+                      ]
+                    : null,
+              ),
+            ),
+          ],
         ),
       ),
     );
