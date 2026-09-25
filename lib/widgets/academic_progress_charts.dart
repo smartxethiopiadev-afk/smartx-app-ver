@@ -410,7 +410,6 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
     final double maxHour = _weeklyStudyHours.isNotEmpty
         ? _weeklyStudyHours.reduce((a, b) => a > b ? a : b)
         : 0.0;
-    final double safeMax = maxHour > 0.0 ? maxHour : 1.0;
     final bool hasData = _weeklyStudyHours.any((h) => h > 0.0);
 
     return Column(
@@ -418,60 +417,51 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
       children: [
         SizedBox(
           height: 125,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(_weeklyStudyHours.length, (index) {
-              final val = _weeklyStudyHours[index];
-              final double heightRatio = val / safeMax;
-              final dayName = isAm ? _weekDaysAm[index] : _weekDaysEn[index];
-              final bool isHighest = val == maxHour && val > 0;
+          child: Stack(
+            children: [
+              CustomPaint(
+                size: const Size(double.infinity, 125),
+                painter: ChartJsBarChartPainter(
+                  dataPoints: _weeklyStudyHours,
+                  isDarkMode: !isLight,
+                  primaryColor: const Color(0xFF0284C7),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: List.generate(_weeklyStudyHours.length, (index) {
+                  final val = _weeklyStudyHours[index];
+                  final dayName = isAm ? _weekDaysAm[index] : _weekDaysEn[index];
+                  final bool isHighest = val == maxHour && val > 0;
 
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    val > 0 ? '${val.toStringAsFixed(1)}h' : '-',
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w600,
-                      color: isHighest ? const Color(0xFF0284C7) : subColor,
+                  return Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          val > 0 ? '${val.toStringAsFixed(1)}h' : '-',
+                          style: TextStyle(
+                            fontSize: 9.0,
+                            fontWeight: FontWeight.bold,
+                            color: isHighest ? const Color(0xFF0284C7) : subColor,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          dayName,
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: isHighest ? FontWeight.w800 : FontWeight.w500,
+                            color: isHighest ? textColor : subColor,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 400),
-                    width: 22,
-                    height: val > 0 ? (heightRatio * 75).clamp(10, 75).toDouble() : 6,
-                    decoration: BoxDecoration(
-                      gradient: val > 0
-                          ? LinearGradient(
-                              colors: isHighest
-                                  ? [const Color(0xFF0284C7), const Color(0xFF38BDF8)]
-                                  : [
-                                      const Color(0xFF0284C7).withValues(alpha: isLight ? 0.35 : 0.4),
-                                      const Color(0xFF0284C7).withValues(alpha: isLight ? 0.6 : 0.7),
-                                    ],
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                            )
-                          : null,
-                      color: val == 0 ? (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)) : null,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    dayName,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: isHighest ? FontWeight.w800 : FontWeight.w500,
-                      color: isHighest ? textColor : subColor,
-                    ),
-                  ),
-                ],
-              );
-            }),
+                  );
+                }),
+              ),
+            ],
           ),
         ),
         if (!hasData)
@@ -589,41 +579,41 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
         border: Border.all(color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
       ),
       child: SizedBox(
-        height: 100,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: List.generate(_recentQuizScores.length, (idx) {
-            final sc = _recentQuizScores[idx];
-            final double barH = (sc / 100.0 * 65).clamp(12, 65).toDouble();
-            final Color barColor = sc >= 85
-                ? const Color(0xFF10B981)
-                : (sc >= 60 ? const Color(0xFF0284C7) : const Color(0xFFF59E0B));
-
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  '$sc%',
-                  style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: barColor),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  width: 18,
-                  height: barH,
-                  decoration: BoxDecoration(
-                    color: barColor,
-                    borderRadius: BorderRadius.circular(4),
+        height: 125,
+        child: Stack(
+          children: [
+            CustomPaint(
+              size: const Size(double.infinity, 125),
+              painter: ChartJsLineChartPainter(
+                dataPoints: _recentQuizScores.map((e) => e.toDouble()).toList(),
+                isDarkMode: !isLight,
+                primaryColor: const Color(0xFF10B981),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(_recentQuizScores.length, (idx) {
+                final sc = _recentQuizScores[idx];
+                return Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '$sc%',
+                        style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '#${idx + 1}',
+                        style: TextStyle(fontSize: 9, color: subColor, fontWeight: FontWeight.w600),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  '#${idx + 1}',
-                  style: TextStyle(fontSize: 9, color: subColor, fontWeight: FontWeight.w600),
-                ),
-              ],
-            );
-          }),
+                );
+              }),
+            ),
+          ],
         ),
       ),
     );
@@ -663,4 +653,269 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
       ),
     );
   }
+}
+
+// ============================================================================
+// Chart.js Style Custom Painters for Premium Offline Analytics
+// ============================================================================
+
+class ChartJsLineChartPainter extends CustomPainter {
+  final List<double> dataPoints;
+  final bool isDarkMode;
+  final Color primaryColor;
+
+  ChartJsLineChartPainter({
+    required this.dataPoints,
+    required this.isDarkMode,
+    required this.primaryColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double paddingX = 14.0;
+    final double paddingTop = 15.0;
+    final double paddingBottom = 15.0;
+
+    final double width = size.width - 2 * paddingX;
+    final double height = size.height - paddingTop - paddingBottom;
+
+    // 1. Draw Background Grid Lines
+    final gridPaint = Paint()
+      ..color = isDarkMode
+          ? const Color(0xFF334155).withValues(alpha: 0.4)
+          : const Color(0xFFE2E8F0).withValues(alpha: 0.7)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    final double stepY = height / 4;
+    for (int i = 0; i <= 4; i++) {
+      final y = paddingTop + i * stepY;
+      canvas.drawLine(Offset(paddingX, y), Offset(size.width - paddingX, y), gridPaint);
+    }
+
+    if (dataPoints.isEmpty) return;
+
+    // 2. Map values to coordinates
+    double getY(double val) {
+      final percentage = (val / 100.0).clamp(0.0, 1.0);
+      return paddingTop + height - (percentage * height);
+    }
+
+    final double stepX = width / (dataPoints.length > 1 ? dataPoints.length - 1 : 1);
+    final path = Path();
+    final fillPath = Path();
+
+    final firstX = paddingX;
+    final firstY = getY(dataPoints[0]);
+
+    path.moveTo(firstX, firstY);
+    fillPath.moveTo(firstX, paddingTop + height);
+    fillPath.lineTo(firstX, firstY);
+
+    for (int i = 0; i < dataPoints.length - 1; i++) {
+      final double x0 = paddingX + i * stepX;
+      final double y0 = getY(dataPoints[i]);
+      final double x1 = paddingX + (i + 1) * stepX;
+      final double y1 = getY(dataPoints[i + 1]);
+
+      // Cubic Bezier spline control points for Chart.js smooth effect
+      final controlX1 = x0 + (x1 - x0) / 2;
+      final controlY1 = y0;
+      final controlX2 = x0 + (x1 - x0) / 2;
+      final controlY2 = y1;
+
+      path.cubicTo(controlX1, controlY1, controlX2, controlY2, x1, y1);
+      fillPath.cubicTo(controlX1, controlY1, controlX2, controlY2, x1, y1);
+    }
+
+    final lastX = paddingX + (dataPoints.length - 1) * stepX;
+    fillPath.lineTo(lastX, paddingTop + height);
+    fillPath.close();
+
+    // 3. Draw area gradient fill
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          primaryColor.withValues(alpha: 0.32),
+          primaryColor.withValues(alpha: 0.0),
+        ],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(paddingX, paddingTop, width, height))
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(fillPath, fillPaint);
+
+    // 4. Draw stroke path
+    final strokePaint = Paint()
+      ..color = primaryColor
+      ..strokeWidth = 3.2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(path, strokePaint);
+
+    // 5. Draw Circular dots at data points
+    final dotOuterPaint = Paint()
+      ..color = primaryColor
+      ..style = PaintingStyle.fill;
+
+    final dotInnerPaint = Paint()
+      ..color = isDarkMode ? const Color(0xFF1E293B) : Colors.white;
+
+    for (int i = 0; i < dataPoints.length; i++) {
+      final double x = paddingX + i * stepX;
+      final double y = getY(dataPoints[i]);
+
+      // Soft circular glow / shadow under point
+      canvas.drawCircle(
+        Offset(x, y),
+        5.5,
+        Paint()
+          ..color = Colors.black.withValues(alpha: 0.12)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+      );
+
+      // Draw double-ring circle
+      canvas.drawCircle(Offset(x, y), 5.0, dotOuterPaint);
+      canvas.drawCircle(Offset(x, y), 2.2, dotInnerPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant ChartJsLineChartPainter oldDelegate) => true;
+}
+
+class ChartJsBarChartPainter extends CustomPainter {
+  final List<double> dataPoints;
+  final bool isDarkMode;
+  final Color primaryColor;
+
+  ChartJsBarChartPainter({
+    required this.dataPoints,
+    required this.isDarkMode,
+    required this.primaryColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double paddingX = 14.0;
+    final double paddingTop = 15.0;
+    final double paddingBottom = 15.0;
+
+    final double width = size.width - 2 * paddingX;
+    final double height = size.height - paddingTop - paddingBottom;
+
+    // 1. Draw Grid Lines
+    final gridPaint = Paint()
+      ..color = isDarkMode
+          ? const Color(0xFF334155).withValues(alpha: 0.4)
+          : const Color(0xFFE2E8F0).withValues(alpha: 0.7)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    final double stepY = height / 4;
+    for (int i = 0; i <= 4; i++) {
+      final y = paddingTop + i * stepY;
+      canvas.drawLine(Offset(paddingX, y), Offset(size.width - paddingX, y), gridPaint);
+    }
+
+    if (dataPoints.isEmpty) return;
+
+    final double maxHour = dataPoints.reduce((a, b) => a > b ? a : b);
+    final double safeMax = maxHour > 0.0 ? maxHour : 1.0;
+
+    final int count = dataPoints.length;
+    final double barWidth = (width / count) * 0.42;
+    final double spacing = (width / count) * 0.58;
+
+    final double startX = paddingX + spacing / 2;
+
+    for (int i = 0; i < count; i++) {
+      final val = dataPoints[i];
+      if (val == 0) continue;
+
+      final double heightRatio = val / safeMax;
+      final double barHeight = heightRatio * height;
+
+      final double x = startX + i * (barWidth + spacing);
+      final double y = paddingTop + height - barHeight;
+
+      final rect = RRect.fromRectAndCorners(
+        Rect.fromLTWH(x, y, barWidth, barHeight),
+        topLeft: const Radius.circular(5),
+        topRight: const Radius.circular(5),
+      );
+
+      final barPaint = Paint()
+        ..shader = LinearGradient(
+          colors: [
+            primaryColor,
+            primaryColor.withValues(alpha: 0.55),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(Rect.fromLTWH(x, y, barWidth, barHeight))
+        ..style = PaintingStyle.fill;
+
+      // Soft shadow
+      canvas.drawRRect(
+        rect.shift(const Offset(0, 1.5)),
+        Paint()
+          ..color = Colors.black.withValues(alpha: 0.1)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+      );
+
+      canvas.drawRRect(rect, barPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant ChartJsBarChartPainter oldDelegate) => true;
+}
+
+class ChartJsDoughnutChartPainter extends CustomPainter {
+  final double scorePercentage;
+  final Color primaryColor;
+  final bool isDarkMode;
+
+  ChartJsDoughnutChartPainter({
+    required this.scorePercentage,
+    required this.primaryColor,
+    required this.isDarkMode,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width < size.height ? size.width : size.height) / 2 - 8;
+    final strokeWidth = 10.0;
+
+    // Background Track
+    final trackPaint = Paint()
+      ..color = isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9)
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawCircle(center, radius, trackPaint);
+
+    if (scorePercentage <= 0) return;
+
+    // Active progress arc
+    final progressPaint = Paint()
+      ..color = primaryColor
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+    progressPaint.style = PaintingStyle.stroke;
+
+    final double sweepAngle = 2 * 3.1415926535 * scorePercentage.clamp(0.0, 1.0);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -3.1415926535 / 2, // 12 o'clock start
+      sweepAngle,
+      false,
+      progressPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant ChartJsDoughnutChartPainter oldDelegate) => true;
 }

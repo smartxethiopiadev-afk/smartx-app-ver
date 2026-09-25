@@ -9,6 +9,7 @@ class SubscriptionService {
   static const String _statusKey = 'smartx_subscription_status';
   static Set<String> _unlockedPackages = {};
   static bool _isLoaded = false;
+  static DateTime? _cachedExpiresAt;
   static final List<VoidCallback> _listeners = [];
 
   // Security & Brute-force rate limiting
@@ -77,6 +78,7 @@ class SubscriptionService {
       final String? expStr = prefs.getString(_expiresAtKey);
       if (expStr != null && expStr.isNotEmpty) {
         final expiresAt = DateTime.tryParse(expStr);
+        _cachedExpiresAt = expiresAt;
         if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt.toUtc())) {
           _unlockedPackages.clear();
           await prefs.setStringList(_unlockedKey, []);
@@ -90,6 +92,16 @@ class SubscriptionService {
     }
   }
 
+  /// Synchronously checks if cached subscription has expired
+  static bool isSubscriptionExpiredSync() {
+    if (_cachedExpiresAt != null) {
+      if (DateTime.now().toUtc().isAfter(_cachedExpiresAt!.toUtc())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /// Checks if the current subscription or package access has expired
   static Future<bool> isSubscriptionExpired() async {
     await init();
@@ -98,6 +110,7 @@ class SubscriptionService {
       final String? expStr = prefs.getString(_expiresAtKey);
       if (expStr != null && expStr.isNotEmpty) {
         final expiresAt = DateTime.tryParse(expStr);
+        _cachedExpiresAt = expiresAt;
         if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt.toUtc())) {
           return true;
         }
@@ -258,6 +271,10 @@ class SubscriptionService {
 
   /// Synchronous check if a grade is unlocked
   static bool isGradeUnlockedSync(int grade, {String? subject}) {
+    if (isSubscriptionExpiredSync()) {
+      return false;
+    }
+
     if (_unlockedPackages.contains('pkg_all_grades') ||
         _unlockedPackages.contains('all_grades') ||
         _unlockedPackages.contains('all_inclusive') ||
@@ -317,6 +334,7 @@ class SubscriptionService {
         final expStr = response['subscription_expires_at'].toString();
         await prefs.setString(_expiresAtKey, expStr);
         final expiresAt = DateTime.tryParse(expStr);
+        _cachedExpiresAt = expiresAt;
         if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt.toUtc())) {
           debugPrint('[SubscriptionService] Subscription expired for $cleanPhone at $expStr');
           _unlockedPackages.clear();
@@ -327,6 +345,7 @@ class SubscriptionService {
         }
       } else {
         await prefs.remove(_expiresAtKey);
+        _cachedExpiresAt = null;
       }
 
       // 3. Single device hardware binding enforcement
@@ -568,7 +587,12 @@ class SubscriptionService {
       await prefs.setString('device_id', currentDeviceId);
 
       if (res['subscription_expires_at'] != null) {
-        await prefs.setString(_expiresAtKey, res['subscription_expires_at'].toString());
+        final expStr = res['subscription_expires_at'].toString();
+        await prefs.setString(_expiresAtKey, expStr);
+        _cachedExpiresAt = DateTime.tryParse(expStr);
+      } else {
+        await prefs.remove(_expiresAtKey);
+        _cachedExpiresAt = null;
       }
 
       return StudentUpgradeResult(
