@@ -678,17 +678,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
                     ),
               onPressed: _isDownloaded ? null : _saveToDownloads,
             ),
-
-          // Share Link
-          IconButton(
-            tooltip: 'Share',
-            icon: const Icon(Icons.share_rounded, size: 20),
-            onPressed: () {
-              if (_effectivePdfUrl.isNotEmpty) {
-                Share.share('📚 ${widget.title} - ${widget.subject ?? ""}\n$_effectivePdfUrl');
-              }
-            },
-          ),
         ],
       ),
     );

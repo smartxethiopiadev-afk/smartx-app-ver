@@ -36,7 +36,7 @@ class VideoService {
       title: 'Smart Learn Ethiopian - የመተግበሪያ አጠቃቀም መመሪያ (Supabase)',
       videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
       storagePath: 'tutorials/how_to_start.mp4',
-      customThumbnailUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80',
+      customThumbnailUrl: '',
       durationText: '5 mins',
       orderIndex: 0,
     );
