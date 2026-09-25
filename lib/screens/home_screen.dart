@@ -583,16 +583,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ),
                       _buildBottomNavItem(
                         index: 2,
-                        iconActive: Icons.offline_bolt_rounded,
-                        iconInactive: Icons.offline_bolt_outlined,
-                        label: _local('nav_offline'),
+                        iconActive: Icons.menu_book_rounded,
+                        iconInactive: Icons.menu_book_outlined,
+                        label: _local('nav_library'),
                         isLight: isLight,
                       ),
                       _buildBottomNavItem(
                         index: 3,
-                        iconActive: Icons.menu_book_rounded,
-                        iconInactive: Icons.menu_book_outlined,
-                        label: _local('nav_library'),
+                        iconActive: Icons.offline_bolt_rounded,
+                        iconInactive: Icons.offline_bolt_outlined,
+                        label: _local('nav_offline'),
                         isLight: isLight,
                       ),
                       _buildBottomNavItem(
@@ -620,9 +620,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       case 1:
         return _buildVideosScreenTab(isLight); // Videos
       case 2:
-        return _buildOfflineScreen(isLight); // Offline
-      case 3:
         return _buildLibraryScreenTab(isLight); // Library (Short notes & Quizzes in Quiz style)
+      case 3:
+        return _buildOfflineScreen(isLight); // Offline (Downloads & Offline Hub)
       case 4:
         return _buildAccountScreenTab(isLight); // Account
       default:
@@ -2737,6 +2737,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
 
   Widget _buildOfflineScreen(bool isLight) {
+    return const DownloadsHubScreen(isEmbedded: true);
+  }
+
+  Widget _buildOldOfflineScreen(bool isLight) {
     return FutureBuilder<Set<String>>(
       future: OfflineManager.getDownloadedUnitIds(),
       builder: (context, snapshot) {

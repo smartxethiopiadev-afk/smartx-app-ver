@@ -572,15 +572,15 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'የማውረጃ ማዕከል (Download Hub)',
-                                style: GoogleFonts.notoSansEthiopic(
+                                'Download Hub',
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w800,
                                   color: textColor,
                                 ),
                               ),
                               Text(
-                                'Unit $activeUnitNum: $unitTitle • ለየብቻ አውርድ (Independent)',
+                                'Unit $activeUnitNum: $unitTitle • Independent Download',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.plusJakartaSans(
@@ -607,8 +607,8 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                       children: [
                         // 1. Short Note PDF (Independent)
                         _buildDownloadOptionTile(
-                          title: 'አጭር ማስታወሻ ፒዲኤፍ (Short Note PDF)',
-                          subtitle: 'ኦፊሴላዊ የኢትዮጵያ ስርዓተ-ትምህርት ፒዲኤፍ',
+                          title: 'Short Note PDF',
+                          subtitle: 'Official Ethiopian curriculum syllabus notes in PDF',
                           icon: Icons.picture_as_pdf_rounded,
                           iconColor: const Color(0xFFEF4444),
                           isDownloaded: hasPdf,
@@ -637,8 +637,8 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
 
                         // 2. Exam Mode Questions (Independent)
                         _buildDownloadOptionTile(
-                          title: 'የፈተና ጥያቄዎች (Exam Mode Questions)',
-                          subtitle: 'የተቆጠረ የብሔራዊ ፈተና ጥያቄዎች (Timed Exam)',
+                          title: 'Exam Mode Questions',
+                          subtitle: 'Timed simulator mimicking national standard exams',
                           icon: Icons.timer_outlined,
                           iconColor: const Color(0xFFF59E0B),
                           isDownloaded: hasExam,
@@ -670,8 +670,8 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                         Padding(
                           padding: const EdgeInsets.only(top: 8, bottom: 8),
                           child: Text(
-                            'የልምምድ ጥያቄዎች በየዓይነቱ (Practice Questions by Type)',
-                            style: GoogleFonts.notoSansEthiopic(
+                            'Practice Questions by Type',
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFF2563EB),
@@ -681,8 +681,8 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
 
                         // 3a. Multiple Choice (Independent)
                         _buildDownloadOptionTile(
-                          title: 'ምርጫ ጥያቄዎች (Multiple Choice - MCQ)',
-                          subtitle: 'የተሟሉ 4 አማራጭ ያላቸው ጥያቄዎች',
+                          title: 'Multiple Choice - MCQ',
+                          subtitle: 'Complete practice sets with 4 interactive choices',
                           icon: Icons.checklist_rounded,
                           iconColor: const Color(0xFF3B82F6),
                           isDownloaded: hasPracticeMcq,
@@ -712,8 +712,8 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
 
                         // 3b. True / False (Independent)
                         _buildDownloadOptionTile(
-                          title: 'እውነት / ሐሰት (True or False)',
-                          subtitle: 'ጽንሰ-ሀሳብን የሚፈትሹ ጥያቄዎች',
+                          title: 'True or False',
+                          subtitle: 'Concept-testing statement verification questions',
                           icon: Icons.rule_rounded,
                           iconColor: const Color(0xFF10B981),
                           isDownloaded: hasPracticeTf,
@@ -743,8 +743,8 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
 
                         // 3c. Fill in the blank (Independent)
                         _buildDownloadOptionTile(
-                          title: 'ክፍት ቦታ ሙላ (Blank Space)',
-                          subtitle: 'ቀመሮችንና ቁልፍ ቃላትን የሚጠይቁ',
+                          title: 'Blank Space (Fill in the Blank)',
+                          subtitle: 'Formula and keyword memorization verification questions',
                           icon: Icons.edit_note_rounded,
                           iconColor: const Color(0xFF8B5CF6),
                           isDownloaded: hasPracticeBlank,
@@ -819,7 +819,9 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       if (mounted) setState(() => _downloadProgress[cardKey] = 0.55);
 
       if (pdfUrl.isEmpty) {
-        pdfUrl = 'https://smartlearn.et/curriculum/grade_${widget.grade}/${normalizedSubject}_u$activeUnitNum.pdf';
+        throw Exception(widget.languageCode == 'am'
+            ? 'ይህ ፒዲኤፍ ማስታወሻ ገና በዳታቤዙ ውስጥ አልተጫነም / This PDF note is not yet uploaded to the database.'
+            : 'This PDF note is not yet available in the database.');
       }
 
       await OfflineManager.saveOfflinePdf(
@@ -898,7 +900,9 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       );
 
       if (questions.isEmpty) {
-        throw Exception("ጥያቄዎች አልተገኙም");
+        throw Exception(widget.languageCode == 'am'
+            ? 'እነዚህ ጥያቄዎች ገና በዳታቤዙ ውስጥ አልተጫኑም / These questions are not yet available in the database.'
+            : 'These questions are not yet available in the database.');
       }
 
       onProgress?.call(0.6);

@@ -12,12 +12,14 @@ class DownloadsHubScreen extends StatefulWidget {
   final int? initialGrade;
   final String? initialSubject;
   final int initialTabIndex; // 0 for PDFs, 1 for Questions
+  final bool isEmbedded;
 
   const DownloadsHubScreen({
     super.key,
     this.initialGrade,
     this.initialSubject,
     this.initialTabIndex = 0,
+    this.isEmbedded = false,
   });
 
   @override
@@ -371,38 +373,90 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
 
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: cardBg,
-        iconTheme: IconThemeData(color: textColor),
-        title: Text(
-          isAm ? 'ከመስመር ውጭ ማዕከል (Offline Hub)' : 'Downloads & Offline Hub',
-          style: GoogleFonts.notoSansEthiopic(
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-            color: textColor,
-          ),
-        ),
-        actions: [
-          if (_allPdfs.isNotEmpty || _allQuestionPkgs.isNotEmpty)
-            IconButton(
-              tooltip: isAm ? 'ሁሉንም አጥፋ' : 'Clear All Downloads',
-              icon: const Icon(Icons.delete_sweep_rounded, color: Color(0xFFEF4444)),
-              onPressed: _confirmClearAllDownloads,
+      appBar: widget.isEmbedded
+          ? null
+          : AppBar(
+              elevation: 0,
+              backgroundColor: cardBg,
+              iconTheme: IconThemeData(color: textColor),
+              title: Text(
+                isAm ? 'ከመስመር ውጭ ማዕከል (Offline Hub)' : 'Downloads & Offline Hub',
+                style: GoogleFonts.notoSansEthiopic(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: textColor,
+                ),
+              ),
+              actions: [
+                if (_allPdfs.isNotEmpty || _allQuestionPkgs.isNotEmpty)
+                  IconButton(
+                    tooltip: isAm ? 'ሁሉንም አጥፋ' : 'Clear All Downloads',
+                    icon: const Icon(Icons.delete_sweep_rounded, color: Color(0xFFEF4444)),
+                    onPressed: _confirmClearAllDownloads,
+                  ),
+                IconButton(
+                  tooltip: isAm ? 'አድስ' : 'Refresh',
+                  icon: Icon(Icons.refresh_rounded, color: textColor),
+                  onPressed: _loadAllDownloads,
+                ),
+              ],
             ),
-          IconButton(
-            tooltip: isAm ? 'አድስ' : 'Refresh',
-            icon: Icon(Icons.refresh_rounded, color: textColor),
-            onPressed: _loadAllDownloads,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Active Background Downloads Indicator
-          ValueListenableBuilder<Map<String, DownloadTaskState>>(
-            valueListenable: DownloadService.tasksNotifier,
-            builder: (context, tasks, _) {
+      body: SafeArea(
+        child: Column(
+          children: [
+            if (widget.isEmbedded)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isAm ? 'ከመስመር ውጭ ማዕከል' : 'Downloads & Offline',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              color: textColor,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            isAm ? 'ያለ በይነመረብ የሚሰሩ ማስታወሻዎች እና ፈተናዎች' : 'Saved syllabus notes & practice quizzes',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: subColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        if (_allPdfs.isNotEmpty || _allQuestionPkgs.isNotEmpty)
+                          IconButton(
+                            tooltip: isAm ? 'ሁሉንም አጥፋ' : 'Clear All Downloads',
+                            icon: const Icon(Icons.delete_sweep_rounded, color: Color(0xFFEF4444)),
+                            onPressed: _confirmClearAllDownloads,
+                          ),
+                        IconButton(
+                          tooltip: isAm ? 'አድስ' : 'Refresh',
+                          icon: Icon(Icons.refresh_rounded, color: textColor),
+                          onPressed: _loadAllDownloads,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            // Active Background Downloads Indicator
+            ValueListenableBuilder<Map<String, DownloadTaskState>>(
+              valueListenable: DownloadService.tasksNotifier,
+              builder: (context, tasks, _) {
               if (tasks.isEmpty) return const SizedBox.shrink();
               return Column(
                 children: tasks.values.map((task) {
@@ -596,8 +650,9 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTopDualSwitcher(bool isDark, bool isAm, Color cardBg, Color textColor, Color subColor) {
     final activeIndex = _tabController.index;
