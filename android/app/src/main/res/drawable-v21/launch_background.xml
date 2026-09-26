@@ -8,11 +8,11 @@
         </shape>
     </item>
     
-    <!-- Centered application icon with proper scale to avoid being tiny -->
+    <!-- Centered application circular icon with proper scale -->
     <item
-        android:drawable="@mipmap/ic_launcher"
+        android:drawable="@mipmap/ic_launcher_round"
         android:gravity="center"
-        android:width="180dp"
-        android:height="180dp" />
+        android:width="170dp"
+        android:height="170dp" />
 </layer-list>
 

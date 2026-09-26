@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/credential_auth_service.dart';
 import '../services/subscription_service.dart';
 import '../widgets/friendly_error_card.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../widgets/activation_code_dialog.dart';
 import 'registration_screen.dart';
 
 class LoginActivationScreen extends StatefulWidget {
@@ -368,55 +368,53 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
 
               const SizedBox(height: 24),
 
-              // Contact Telegram
+              // Have an Activation Code?
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: cardBg,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF0088CC).withValues(alpha: 0.35)),
+                  border: Border.all(color: borderColor),
                 ),
                 child: Column(
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.send_rounded, size: 18, color: Color(0xFF0088CC)),
-                        const SizedBox(width: 8),
-                        Text(
-                          isAm ? 'በቴሌግራም አግኙን (Contact Telegram)' : 'Contact Telegram Support',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w800,
-                            color: textPrimary,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      isAm ? 'የማግበሪያ ኮድ አለዎት?' : 'Have an Activation Code?',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: textPrimary,
+                      ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
                       isAm
-                          ? 'የአካውንት ማግበር ወይም እርዳታ ለማግኘት በቴሌግራም @smart_x_help ያነጋግሩን።'
-                          : 'For account activation or instant assistance, reach us on Telegram @smart_x_help.',
+                          ? 'የማግበሪያ ኮድ ካለዎት እዚህ በማስገባት በቀጥታ ይክፈቱ።'
+                          : 'Enter your curriculum code to unlock instant access.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 11.5, color: textSecondary, height: 1.4),
+                      style: TextStyle(fontSize: 11.5, color: textSecondary),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
-                      onPressed: () async {
-                        final Uri telegramUri = Uri.parse('https://t.me/smart_x_help');
-                        if (await canLaunchUrl(telegramUri)) {
-                          await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
-                        }
+                      onPressed: () {
+                        ActivationCodeDialog.show(
+                          context,
+                          isDarkMode: widget.isDarkMode,
+                          languageCode: widget.languageCode,
+                          preferredGrade: widget.preferredGrade,
+                          onActivated: () {
+                            Navigator.of(context).pop(true);
+                          },
+                        );
                       },
-                      icon: const Icon(Icons.send_rounded, size: 16),
+                      icon: const Icon(Icons.vpn_key_rounded, size: 18),
                       label: Text(
-                        isAm ? 'ቴሌግራም ክፈት (@smart_x_help)' : 'Open Telegram (@smart_x_help)',
+                        isAm ? 'ማግበሪያ ኮድ አስገባ' : 'Enter Activation Code',
                         style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF0088CC),
-                        side: const BorderSide(color: Color(0xFF0088CC)),
+                        foregroundColor: const Color(0xFF0084FF),
+                        side: const BorderSide(color: Color(0xFF0084FF)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),

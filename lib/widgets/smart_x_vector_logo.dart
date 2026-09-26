@@ -45,7 +45,7 @@ class SmartXVectorLogo extends StatelessWidget {
             ),
           ClipOval(
             child: Image.asset(
-              'assets/images/app_logo.png',
+              'assets/images/smart_x_logo.png',
               width: size,
               height: size,
               fit: BoxFit.cover,

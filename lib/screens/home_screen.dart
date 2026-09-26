@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:ui';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'subject_selection_screen.dart';
@@ -21,6 +20,7 @@ import '../widgets/image_slider_carousel.dart';
 import '../widgets/how_to_start_banner.dart';
 import '../widgets/subject_vector_widgets.dart';
 import '../widgets/interactive_subject_card.dart';
+import '../widgets/locked_unit_dialog.dart';
 import '../services/subscription_service.dart';
 import '../services/device_service.dart';
 import '../services/credential_auth_service.dart';
@@ -267,8 +267,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     bool isLight = !widget.isDarkMode;
     final bool isVideosActive = _currentIndex == 1;
-    final bool isLibraryActive = _currentIndex == 2;
-    final bool isOfflineActive = _currentIndex == 3;
+    final bool isOfflineActive = _currentIndex == 2;
+    final bool isLibraryActive = _currentIndex == 3;
     final bool isAccountActive = _currentIndex == 4;
 
     return Scaffold(
@@ -292,10 +292,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         title: Text(
           isVideosActive
               ? (widget.languageCode == 'en' ? 'Video Lessons' : 'የቪዲዮ ትምህርቶች')
-              : (isLibraryActive
-                  ? (widget.languageCode == 'en' ? 'Academic Library' : 'የትምህርት ላይብረሪ')
-                  : (isOfflineActive
-                      ? (widget.languageCode == 'en' ? 'Offline Downloads' : 'ከመስመር ውጭ (Downloads)')
+              : (isOfflineActive
+                  ? (widget.languageCode == 'en' ? 'Offline Lessons' : 'ከመስመር ውጭ')
+                  : (isLibraryActive
+                      ? (widget.languageCode == 'en' ? 'Library (Notes & Quizzes)' : 'ቤተ-መጽሐፍት')
                       : (isAccountActive
                           ? (widget.languageCode == 'en' ? 'Student Account' : 'የተማሪ መለያ')
                           : _local('title')))),
@@ -390,7 +390,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   Text(
                     _isLoggedIn
                         ? (_userName.trim().isEmpty ? "Unknown Student" : _userName)
-                        : "Smart Learn Ethiopia",
+                        : "Ethio Concept Center",
                     style: const TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 16,
@@ -430,6 +430,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ),
                     onTap: () {
                       AppStateProvider.of(context).onToggleTheme();
+                    },
+                  ),
+                  _buildDrawerTile(
+                    icon: Icons.help_outline_rounded,
+                    title: widget.languageCode == 'en' ? 'How to Start' : 'እንዴት ልጀምር?',
+                    isSelected: false,
+                    isLight: isLight,
+                    onTap: () {
+                      Navigator.pop(context);
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => HowToStartBanner(
+                          isDarkMode: widget.isDarkMode,
+                          languageCode: widget.languageCode,
+                        ),
+                      );
                     },
                   ),
                   _buildDrawerTile(
@@ -535,78 +551,68 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: isLight 
-              ? Colors.white.withValues(alpha: 0.95) 
-              : const Color(0xFF0B132B).withValues(alpha: 0.95),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          color: isLight ? Colors.white.withValues(alpha: 0.8) : const Color(0xFF0F172A).withValues(alpha: 0.8),
           border: Border(
             top: BorderSide(
-              color: isLight 
-                  ? const Color(0xFFE2E8F0) 
-                  : const Color(0xFF1E293B),
+              color: isLight ? const Color(0xFFE2E8F0).withValues(alpha: 0.5) : const Color(0xFF334155).withValues(alpha: 0.5),
               width: 1.0,
             ),
           ),
           boxShadow: [
             BoxShadow(
               color: isLight 
-                  ? const Color(0xFF0F1B2B).withValues(alpha: 0.07) 
-                  : Colors.black.withValues(alpha: 0.45),
-              blurRadius: 24.0,
-              offset: const Offset(0, -6),
+                  ? const Color(0xFF0F1B2B).withValues(alpha: 0.04) 
+                  : Colors.black.withValues(alpha: 0.25),
+              blurRadius: 16.0,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        child: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
             child: SafeArea(
-              top: false,
               child: SizedBox(
-                height: 66.0,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildBottomNavItem(
-                        index: 0,
-                        iconActive: Icons.home_rounded,
-                        iconInactive: Icons.home_outlined,
-                        label: _local('nav_home'),
-                        isLight: isLight,
-                      ),
-                      _buildBottomNavItem(
-                        index: 1,
-                        iconActive: Icons.play_circle_filled_rounded,
-                        iconInactive: Icons.play_circle_outline_rounded,
-                        label: _local('nav_videos'),
-                        isLight: isLight,
-                      ),
-                      _buildBottomNavItem(
-                        index: 2,
-                        iconActive: Icons.menu_book_rounded,
-                        iconInactive: Icons.menu_book_outlined,
-                        label: _local('nav_library'),
-                        isLight: isLight,
-                      ),
-                      _buildBottomNavItem(
-                        index: 3,
-                        iconActive: Icons.offline_bolt_rounded,
-                        iconInactive: Icons.offline_bolt_outlined,
-                        label: _local('nav_offline'),
-                        isLight: isLight,
-                      ),
-                      _buildBottomNavItem(
-                        index: 4,
-                        iconActive: Icons.person_rounded,
-                        iconInactive: Icons.person_outline_rounded,
-                        label: _local('nav_account'),
-                        isLight: isLight,
-                      ),
-                    ],
-                  ),
+                height: 64.0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildBottomNavItem(
+                      index: 0,
+                      iconActive: Icons.home_rounded,
+                      iconInactive: Icons.home_outlined,
+                      label: _local('nav_home'),
+                      isLight: isLight,
+                    ),
+                    _buildBottomNavItem(
+                      index: 1,
+                      iconActive: Icons.play_circle_filled_rounded,
+                      iconInactive: Icons.play_circle_outline_rounded,
+                      label: _local('nav_videos'),
+                      isLight: isLight,
+                    ),
+                    _buildBottomNavItem(
+                      index: 2,
+                      iconActive: Icons.offline_pin_rounded,
+                      iconInactive: Icons.offline_pin_outlined,
+                      label: _local('nav_offline'),
+                      isLight: isLight,
+                    ),
+                    _buildBottomNavItem(
+                      index: 3,
+                      iconActive: Icons.local_library_rounded,
+                      iconInactive: Icons.local_library_outlined,
+                      label: _local('nav_library'),
+                      isLight: isLight,
+                    ),
+                    _buildBottomNavItem(
+                      index: 4,
+                      iconActive: Icons.person_rounded,
+                      iconInactive: Icons.person_outline_rounded,
+                      label: _local('nav_account'),
+                      isLight: isLight,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -623,9 +629,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       case 1:
         return _buildVideosScreenTab(isLight); // Videos
       case 2:
-        return _buildLibraryScreenTab(isLight); // Library (Short notes & Quizzes in Quiz style)
+        return _buildOfflineScreen(isLight); // Offline
       case 3:
-        return _buildOfflineScreen(isLight); // Offline (Downloads & Offline Hub)
+        return _buildLibraryScreenTab(isLight); // Library (Short notes & Quizzes in Quiz style)
       case 4:
         return _buildAccountScreenTab(isLight); // Account
       default:
@@ -845,8 +851,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         borderRadius: BorderRadius.circular(18),
         child: InkWell(
           borderRadius: BorderRadius.circular(18),
-          splashColor: const Color(0xFF00BFFF).withValues(alpha: 0.08),
-          highlightColor: Colors.transparent,
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -1479,8 +1483,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
-          splashColor: const Color(0xFF00BFFF).withValues(alpha: 0.08),
-          highlightColor: Colors.transparent,
           onTap: () {
             if (!isUnlocked) {
               AccountUpgradeDialog.show(
@@ -1651,45 +1653,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: !isUnlocked
-                                  ? const Color(0xFFD97706).withValues(alpha: isLight ? 0.12 : 0.25)
-                                  : const Color(0xFFEF4444).withValues(alpha: isLight ? 0.12 : 0.25),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: !isUnlocked
-                                    ? const Color(0xFFD97706).withValues(alpha: 0.3)
-                                    : const Color(0xFFEF4444).withValues(alpha: 0.35),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  !isUnlocked ? Icons.lock_outline_rounded : Icons.play_arrow_rounded,
-                                  size: 13,
-                                  color: !isUnlocked ? const Color(0xFFD97706) : const Color(0xFFEF4444),
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  !isUnlocked
-                                      ? (isAmharic ? 'የተቆለፈ • ክፈት' : 'Locked • Unlock')
-                                      : (isAmharic ? 'ቪዲዮውን ይመልከቱ' : 'Watch Video'),
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w900,
-                                    color: !isUnlocked ? const Color(0xFFD97706) : const Color(0xFFEF4444),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.arrow_forward_rounded,
-                                  size: 12,
-                                  color: !isUnlocked ? const Color(0xFFD97706) : const Color(0xFFEF4444),
-                                ),
-                              ],
+                          Text(
+                            !isUnlocked
+                                ? (isAmharic ? 'የተቆለፈ • ለመክፈት ይጫኑ' : 'Locked • Tap to unlock')
+                                : (isAmharic ? 'በመተግበሪያው ያጫውቱ' : 'Watch In-App'),
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: !isUnlocked ? const Color(0xFFD97706) : const Color(0xFF10B981),
                             ),
                           ),
                           const Spacer(),
@@ -1936,62 +1907,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Academic Library Header
-            Padding(
-              padding: const EdgeInsets.only(top: 4.0, bottom: 12.0),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0284C7).withValues(alpha: 0.28),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.menu_book_rounded, color: Colors.white, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isAmharic ? 'የትምህርት ላይብረሪ' : 'Academic Library',
-                          style: TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w900,
-                            color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                            letterSpacing: -0.4,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          isAmharic
-                              ? 'አጫጭር የማጠቃለያ ማስታወሻዎች እና የክፍል ፈተናዎች'
-                              : 'Curriculum short notes & practice quizzes',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
-                            color: subColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
             // Grade Selector
             _buildUnifiedSegmentedGradeSelectorForLibrary(isLight),
             const SizedBox(height: 16.0),
@@ -2800,17 +2715,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
 
   Widget _buildOfflineScreen(bool isLight) {
-    return DownloadsHubScreen(
-      isEmbedded: true,
-      onBrowseCurriculum: () {
-        setState(() {
-          _currentIndex = 0;
-        });
-      },
-    );
-  }
-
-  Widget _buildOldOfflineScreen(bool isLight) {
     return FutureBuilder<Set<String>>(
       future: OfflineManager.getDownloadedUnitIds(),
       builder: (context, snapshot) {
@@ -3397,59 +3301,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    _userName.isNotEmpty ? _userName : (isAmharic ? 'ተማሪ' : 'Student'),
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w900,
-                                      color: textColor,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (unlockedPkgs.isNotEmpty) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
-                                      ),
-                                      borderRadius: BorderRadius.circular(10),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFFF59E0B).withValues(alpha: 0.25),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 1.5),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.verified_rounded,
-                                          size: 13,
-                                          color: Colors.white,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          isAmharic ? 'የተረጋገጠ' : 'Verified',
-                                          style: const TextStyle(
-                                            fontSize: 9.5,
-                                            fontWeight: FontWeight.w900,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
+                            Text(
+                              _userName.isNotEmpty ? _userName : (isAmharic ? 'ተማሪ' : 'Student'),
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                                color: textColor,
+                              ),
                             ),
                             const SizedBox(height: 3),
                             Text(
@@ -3606,7 +3464,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
             // Advanced Academic Analytics & Chart Analysis Engine (Separated Study Velocity, Subject Master, and Quiz Trade)
             AcademicProgressCharts(
-              key: ValueKey('${unlockedPkgs.length}_${_userName}_$_selectedGradeForLibraryTab'),
               isDarkMode: widget.isDarkMode,
               languageCode: widget.languageCode,
               currentGrade: _selectedGradeForLibraryTab,
@@ -3642,8 +3499,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     required bool isLight,
   }) {
     final bool isSelected = _currentIndex == index;
-    final Color activeColor = isLight ? const Color(0xFF0284C7) : const Color(0xFF38BDF8);
-    final Color inactiveColor = isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+    final Color activeColor = isLight ? const Color(0xFF0E7896) : const Color(0xFF00BFFF);
+    final Color inactiveColor = isLight ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF); // Gray color
     
     return Expanded(
       child: GestureDetector(
@@ -3660,101 +3517,58 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               logScreen('VideosScreen');
               break;
             case 2:
-              logScreen('LibraryScreen');
+              logScreen('OfflineScreen');
               break;
             case 3:
-              logScreen('OfflineScreen');
+              logScreen('LibraryScreen');
               break;
             case 4:
               logScreen('AccountScreen');
               break;
           }
         },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Elegant glowing capsule indicator behind active icon
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 240),
-              curve: Curves.easeOutCubic,
-              padding: EdgeInsets.symmetric(
-                horizontal: isSelected ? 16.0 : 8.0,
-                vertical: 4.5,
-              ),
-              decoration: BoxDecoration(
-                gradient: isSelected
-                    ? LinearGradient(
-                        colors: isLight
-                            ? [
-                                const Color(0xFF0284C7).withValues(alpha: 0.16),
-                                const Color(0xFF38BDF8).withValues(alpha: 0.10),
-                              ]
-                            : [
-                                const Color(0xFF38BDF8).withValues(alpha: 0.24),
-                                const Color(0xFF0284C7).withValues(alpha: 0.14),
-                              ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : null,
-                color: isSelected ? null : Colors.transparent,
-                borderRadius: BorderRadius.circular(22.0),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: (isLight ? const Color(0xFF0284C7) : const Color(0xFF38BDF8)).withValues(alpha: 0.20),
-                          blurRadius: 8.0,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: AnimatedScale(
-                scale: isSelected ? 1.10 : 1.0,
+        child: Container(
+          color: Colors.transparent,
+          height: 64.0,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOutBack,
-                child: Icon(
-                  isSelected ? iconActive : iconInactive,
-                  color: isSelected ? activeColor : inactiveColor,
-                  size: 22.0,
+                height: 3.0,
+                width: 44.0,
+                decoration: BoxDecoration(
+                  color: isSelected ? activeColor : Colors.transparent,
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(3),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 2.5),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: isSelected ? 11.0 : 10.0,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: isSelected ? activeColor : inactiveColor,
-                letterSpacing: -0.15,
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isSelected ? iconActive : iconInactive,
+                      color: isSelected ? activeColor : inactiveColor,
+                      size: 26,
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected ? activeColor : inactiveColor,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 2.0),
-            // Luminous tiny dot indicator for active tab
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-              width: isSelected ? 4.5 : 0.0,
-              height: isSelected ? 4.5 : 0.0,
-              decoration: BoxDecoration(
-                color: activeColor,
-                shape: BoxShape.circle,
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: activeColor.withValues(alpha: 0.6),
-                          blurRadius: 4.0,
-                          spreadRadius: 0.5,
-                        ),
-                      ]
-                    : null,
-              ),
-            ),
-          ],
+              const SizedBox(height: 4), // small bottom padding
+            ],
+          ),
         ),
       ),
     );

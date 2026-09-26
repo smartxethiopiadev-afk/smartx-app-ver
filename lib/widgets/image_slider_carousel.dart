@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 
-/// Modern, pure vector icon banner carousel for the Home Screen of Smart Learn Ethiopian.
-/// Designed with rich gradients, ambient glow, and crisp academic iconography.
+/// Modern, high-contrast banner carousel for the Home Screen of Smart Learn Ethiopian
 class ImageSliderCarousel extends StatefulWidget {
   final bool isDarkMode;
   final String languageCode;
@@ -23,56 +22,52 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
 
   final List<Map<String, dynamic>> _slidesData = [
     {
+      'assetPath': 'assets/images/hero_banner_edu.jpg',
       'titleEn': 'Smart Learn Ethiopian Hub',
       'titleAm': 'ስማርት ለርን ኢትዮጵያን የመማሪያ ማዕከል',
       'descEn': 'Master Grade 9-12 curriculum with concise unit notes, formulas & quizzes.',
       'descAm': 'የ9-12ኛ ክፍል አዲሱ ካሪኩለም ማጠቃለያ ማስታወሻዎች፣ ፎርሙላዎችና ጥያቄዎች።',
       'primaryColor': const Color(0xFF0284C7),
       'secondaryColor': const Color(0xFF0369A1),
-      'darkBaseColor': const Color(0xFF0C243C),
       'tagEn': 'SMART LEARN ETHIOPIAN',
       'tagAm': 'ስማርት ለርን ኢትዮጵያን',
       'icon': Icons.auto_stories_rounded,
-      'badgeIcon': Icons.school_rounded,
     },
     {
+      'assetPath': 'assets/images/hero_banner_edu.jpg',
       'titleEn': 'National Exam Question Bank',
       'titleAm': 'የብሔራዊ ፈተና ጥያቄዎችና ሞዴሎች',
       'descEn': 'Timed matric practice tests with detailed step-by-step explanations.',
       'descAm': 'ለማትሪክ ፈተና ከፍተኛ ውጤት የሚያዘጋጁ የፈተና ጥያቄዎችና የተብራሩ መልሶች።',
       'primaryColor': const Color(0xFFF59E0B),
       'secondaryColor': const Color(0xFFD97706),
-      'darkBaseColor': const Color(0xFF332007),
       'tagEn': 'MATRIC READY',
       'tagAm': 'ለፈተና ዝግጁ',
       'icon': Icons.quiz_rounded,
-      'badgeIcon': Icons.workspace_premium_rounded,
     },
     {
+      'assetPath': 'assets/images/hero_banner_edu.jpg',
       'titleEn': '100% Offline Study Mode',
       'titleAm': 'ያለ ኢንተርኔት 100% ከመስመር ውጭ',
       'descEn': 'Download your chapters once and study anywhere without internet connection.',
       'descAm': 'የትምህርት ክፍሎችን አንዴ በማውረድ ያለ ኢንተርኔት በየትኛውም ቦታ ያጥኑ።',
       'primaryColor': const Color(0xFF10B981),
       'secondaryColor': const Color(0xFF059669),
-      'darkBaseColor': const Color(0xFF0A291C),
       'tagEn': 'OFFLINE READY',
       'tagAm': 'ያለ ኢንተርኔት',
       'icon': Icons.offline_bolt_rounded,
-      'badgeIcon': Icons.download_done_rounded,
     },
     {
+      'assetPath': 'assets/images/hero_banner_edu.jpg',
       'titleEn': 'Performance & Quiz Analytics',
       'titleAm': 'የትምህርት እድገት እና የውጤት ትንታኔ',
       'descEn': 'Track study speed, test ratings, and chapter mastery progression in real time.',
       'descAm': 'የጥናት ፍጥነትዎን፣ የፈተና ውጤቶችን እና ያለቁ ምዕራፎችን በቀላሉ ይከታተሉ።',
       'primaryColor': const Color(0xFF8B5CF6),
       'secondaryColor': const Color(0xFF6D28D9),
-      'darkBaseColor': const Color(0xFF231145),
       'tagEn': 'SMART ANALYTICS',
       'tagAm': 'የውጤት ትንታኔ',
       'icon': Icons.insights_rounded,
-      'badgeIcon': Icons.analytics_rounded,
     },
   ];
 
@@ -106,9 +101,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
             final String tag = widget.languageCode == 'en' ? slide['tagEn']! : slide['tagAm']!;
             final Color primaryColor = slide['primaryColor']!;
             final Color secondaryColor = slide['secondaryColor']!;
-            final Color darkBaseColor = slide['darkBaseColor']!;
             final IconData icon = slide['icon']!;
-            final IconData badgeIcon = slide['badgeIcon']!;
 
             return Container(
               margin: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 1.0),
@@ -116,9 +109,9 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                 borderRadius: BorderRadius.circular(18.0),
                 boxShadow: [
                   BoxShadow(
-                    color: primaryColor.withValues(alpha: isLight ? 0.20 : 0.35),
-                    blurRadius: 16.0,
-                    offset: const Offset(0, 5),
+                    color: primaryColor.withValues(alpha: isLight ? 0.18 : 0.32),
+                    blurRadius: 14.0,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -126,58 +119,24 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                 borderRadius: BorderRadius.circular(18.0),
                 child: Stack(
                   children: [
-                    // Dynamic Rich Vector Gradient Background
+                    // Base background image
                     Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: isLight
-                                ? [
-                                    primaryColor,
-                                    secondaryColor,
-                                    const Color(0xFF0F172A),
-                                  ]
-                                : [
-                                    primaryColor.withValues(alpha: 0.85),
-                                    secondaryColor.withValues(alpha: 0.95),
-                                    darkBaseColor,
-                                    const Color(0xFF070B14),
-                                  ],
-                            stops: isLight ? const [0.0, 0.55, 1.0] : const [0.0, 0.40, 0.75, 1.0],
+                      child: Image.asset(
+                        slide['assetPath']!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [primaryColor, secondaryColor, const Color(0xFF0F172A)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
                           ),
                         ),
                       ),
                     ),
 
-                    // Ambient Decorative Glow Shapes
-                    Positioned(
-                      right: -30,
-                      top: -30,
-                      child: Container(
-                        width: 140,
-                        height: 140,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.08),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 40,
-                      bottom: -40,
-                      child: Container(
-                        width: 110,
-                        height: 110,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: primaryColor.withValues(alpha: 0.25),
-                        ),
-                      ),
-                    ),
-
-                    // Multi-layer deep overlay for crystal readability
+                    // Multi-layer deep gradient overlay for crystal readability
                     Positioned.fill(
                       child: Container(
                         decoration: BoxDecoration(
@@ -185,59 +144,26 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                             begin: Alignment.centerLeft,
                             end: Alignment.centerRight,
                             colors: [
-                              const Color(0xFF070C16).withValues(alpha: 0.88),
-                              const Color(0xFF070C16).withValues(alpha: 0.70),
-                              Colors.transparent,
+                              const Color(0xFF0A0F1D).withValues(alpha: 0.94),
+                              const Color(0xFF0A0F1D).withValues(alpha: 0.82),
+                              primaryColor.withValues(alpha: 0.45),
                             ],
-                            stops: const [0.0, 0.60, 1.0],
+                            stops: const [0.0, 0.65, 1.0],
                           ),
                         ),
                       ),
                     ),
 
-                    // Large Vector Icon Silhouette Watermark on the Right
+                    // Subtle background icon watermark
                     Positioned(
-                      right: 12,
-                      bottom: -10,
+                      right: 14,
+                      bottom: -15,
                       child: Opacity(
-                        opacity: 0.16,
+                        opacity: 0.15,
                         child: Icon(
                           icon,
-                          size: 120,
+                          size: 130,
                           color: Colors.white,
-                        ),
-                      ),
-                    ),
-
-                    // Right Vector Icon Badge
-                    Positioned(
-                      right: 18,
-                      top: 0,
-                      bottom: 0,
-                      child: Center(
-                        child: Container(
-                          width: 58,
-                          height: 58,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.12),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.25),
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: primaryColor.withValues(alpha: 0.4),
-                                blurRadius: 12,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            badgeIcon,
-                            color: Colors.white,
-                            size: 30,
-                          ),
                         ),
                       ),
                     ),
@@ -247,17 +173,17 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                       left: 18.0,
                       top: 16.0,
                       bottom: 16.0,
-                      right: 86.0,
+                      right: 28.0,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           // App Branding Tag Chip
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                             decoration: BoxDecoration(
                               color: primaryColor.withValues(alpha: 0.35),
-                              borderRadius: BorderRadius.circular(7),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: Colors.white.withValues(alpha: 0.3),
                                 width: 0.9,
@@ -267,8 +193,8 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Container(
-                                  width: 5.5,
-                                  height: 5.5,
+                                  width: 6,
+                                  height: 6,
                                   decoration: BoxDecoration(
                                     color: primaryColor,
                                     shape: BoxShape.circle,
@@ -280,12 +206,12 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 5.5),
+                                const SizedBox(width: 6),
                                 Text(
                                   tag,
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 9.0,
+                                    fontSize: 9.5,
                                     fontWeight: FontWeight.w900,
                                     letterSpacing: 0.6,
                                   ),
@@ -293,7 +219,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 6.0),
+                          const SizedBox(height: 7.0),
                           // Title
                           Text(
                             title,
@@ -301,12 +227,12 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 15.0,
+                              fontSize: 15.5,
                               fontWeight: FontWeight.w900,
                               letterSpacing: -0.3,
                             ),
                           ),
-                          const SizedBox(height: 3.5),
+                          const SizedBox(height: 4.0),
                           // Description
                           Text(
                             desc,
@@ -314,7 +240,7 @@ class _ImageSliderCarouselState extends State<ImageSliderCarousel> {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.88),
-                              fontSize: 11.0,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.w500,
                               height: 1.3,
                             ),
