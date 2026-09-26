@@ -107,18 +107,35 @@ jobs:
 
       - name: Build Split-per-ABI APKs & Universal APK
         run: |
+          echo "=== 🔨 Building Split-per-ABI APKs (Phone 64-bit, Phone 32-bit, Computer x86_64) ==="
           flutter build apk --release --split-per-abi
+          
+          echo "=== 🔨 Building Universal APK (All-in-one APK for any device) ==="
           flutter build apk --release
           
           mkdir -p release_dist
-          if [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
-            cp build/app/outputs/flutter-apk/app-release.apk release_dist/Smart-Learn-Ethiopian-Universal.apk
-          fi
+          
+          # 1. Phone Type 1: Modern 64-bit Smartphones (ARM64-v8a)
           if [ -f build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk release_dist/Smart-Learn-Ethiopian-Phone-arm64-v8a.apk
             cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk release_dist/Smart-Learn-Ethiopian-arm64-v8a.apk
           fi
+          
+          # 2. Phone Type 2: Older / Standard 32-bit Smartphones (ARMeabi-v7a)
           if [ -f build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk release_dist/Smart-Learn-Ethiopian-Phone-armeabi-v7a.apk
             cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk release_dist/Smart-Learn-Ethiopian-armeabi-v7a.apk
+          fi
+          
+          # 3. Computer / PC: Laptops, Desktops & Emulators (BlueStacks, LDPlayer, Nox, WSA, ChromeOS) (x86_64)
+          if [ -f build/app/outputs/flutter-apk/app-x86_64-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-x86_64-release.apk release_dist/Smart-Learn-Ethiopian-Computer-x86_64.apk
+            cp build/app/outputs/flutter-apk/app-x86_64-release.apk release_dist/Smart-Learn-Ethiopian-x86_64.apk
+          fi
+          
+          # 4. Universal Full APK (runs on all architectures)
+          if [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
+            cp build/app/outputs/flutter-apk/app-release.apk release_dist/Smart-Learn-Ethiopian-Universal.apk
           fi
           
           echo "=== Generated Release Files ==="
@@ -132,23 +149,37 @@ jobs:
 
       - name: Build Report - Publish Markdown Summary to GitHub Actions
         run: |
-          echo "### 🚀 Smart Learn Ethiopian Android Build & Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Smart Learn Ethiopian Android & Computer Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Artifact Name | Target Architecture | File Size |" >> $GITHUB_STEP_SUMMARY
+          echo "ለ 2 አይነት ስልኮች እና ለኮምፒውተር (Computer) የተዘጋጁ 3 የ APK ፋይሎች ዝርዝር፦" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| ፋይል (File Name) | የሚሰራበት መሳሪያ (Target Device) | መጠን (Size) |" >> $GITHUB_STEP_SUMMARY
           echo "| :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-          for f in release_dist/Smart-Learn-Ethiopian-*.apk release_dist/Smart-Learn-Ethiopian-*.aab; do
-            if [ -f "$f" ]; then
-              FNAME=$(basename "$f")
-              FSIZE=$(ls -lh "$f" | awk '{print $5}')
-              echo "| \`$FNAME\` | Android | **$FSIZE** |" >> $GITHUB_STEP_SUMMARY
-            fi
-          done
+          [ -f "release_dist/Smart-Learn-Ethiopian-Phone-arm64-v8a.apk" ] && echo "| \`Smart-Learn-Ethiopian-Phone-arm64-v8a.apk\` | 📱 **ስልክ አይነት 1 (Modern 64-bit Phones)** | **$(ls -lh release_dist/Smart-Learn-Ethiopian-Phone-arm64-v8a.apk | awk '{print $5}')** |" >> $GITHUB_STEP_SUMMARY
+          [ -f "release_dist/Smart-Learn-Ethiopian-Phone-armeabi-v7a.apk" ] && echo "| \`Smart-Learn-Ethiopian-Phone-armeabi-v7a.apk\` | 📱 **ስልክ አይነት 2 (Older 32-bit Phones)** | **$(ls -lh release_dist/Smart-Learn-Ethiopian-Phone-armeabi-v7a.apk | awk '{print $5}')** |" >> $GITHUB_STEP_SUMMARY
+          [ -f "release_dist/Smart-Learn-Ethiopian-Computer-x86_64.apk" ] && echo "| \`Smart-Learn-Ethiopian-Computer-x86_64.apk\` | 💻 **ለኮምፒውተር (PC / Laptop / Emulators)** | **$(ls -lh release_dist/Smart-Learn-Ethiopian-Computer-x86_64.apk | awk '{print $5}')** |" >> $GITHUB_STEP_SUMMARY
+          [ -f "release_dist/Smart-Learn-Ethiopian-Universal.apk" ] && echo "| \`Smart-Learn-Ethiopian-Universal.apk\` | 🌐 **ሁሉንም ያካተተ (Universal APK)** | **$(ls -lh release_dist/Smart-Learn-Ethiopian-Universal.apk | awk '{print $5}')** |" >> $GITHUB_STEP_SUMMARY
+          [ -f "release_dist/Smart-Learn-Ethiopian-PlayStore-release.aab" ] && echo "| \`Smart-Learn-Ethiopian-PlayStore-release.aab\` | 🛍️ **Google Play Store Bundle** | **$(ls -lh release_dist/Smart-Learn-Ethiopian-PlayStore-release.aab | awk '{print $5}')** |" >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload Play Store AAB Bundle (Artifact)
+      - name: Upload Phone 64-bit ARM64 APK (Artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: Smart-Learn-PlayStore-AAB-v1.0.${{ github.run_number }}
-          path: release_dist/Smart-Learn-Ethiopian-PlayStore-release.aab
+          name: Smart-Learn-Phone-ARM64-v8a-v1.0.${{ github.run_number }}
+          path: release_dist/Smart-Learn-Ethiopian-Phone-arm64-v8a.apk
+          if-no-files-found: warn
+
+      - name: Upload Phone 32-bit ARMv7 APK (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Smart-Learn-Phone-ARMeabi-v7a-v1.0.${{ github.run_number }}
+          path: release_dist/Smart-Learn-Ethiopian-Phone-armeabi-v7a.apk
+          if-no-files-found: warn
+
+      - name: Upload Computer x86_64 APK (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Smart-Learn-Computer-x86_64-v1.0.${{ github.run_number }}
+          path: release_dist/Smart-Learn-Ethiopian-Computer-x86_64.apk
           if-no-files-found: warn
 
       - name: Upload Universal APK (Artifact)
@@ -158,11 +189,20 @@ jobs:
           path: release_dist/Smart-Learn-Ethiopian-Universal.apk
           if-no-files-found: warn
 
-      - name: Upload ARM64 64-bit APK (Artifact)
+      - name: Upload Play Store AAB Bundle (Artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: Smart-Learn-ARM64-v8a-APK-v1.0.${{ github.run_number }}
-          path: release_dist/Smart-Learn-Ethiopian-arm64-v8a.apk
+          name: Smart-Learn-PlayStore-AAB-v1.0.${{ github.run_number }}
+          path: release_dist/Smart-Learn-Ethiopian-PlayStore-release.aab
+          if-no-files-found: warn
+
+      - name: Upload All Release APKs & Bundle (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Smart-Learn-All-APKs-v1.0.${{ github.run_number }}
+          path: |
+            release_dist/*.apk
+            release_dist/*.aab
           if-no-files-found: warn
 
       - name: Upload SHA-256 Checksums (Artifact)
@@ -183,16 +223,26 @@ jobs:
             
             ይህ ይፋዊ የ Smart Learn Ethiopian መተግበሪያ የተፈረመበትና የተረጋገጠበት የሪሊዝ ፋይሎች ዝርዝር ነው፦
             
-            1. **`Smart-Learn-Ethiopian-PlayStore-release.aab`** - Google Play Store App Bundle (.aab)
-            2. **`Smart-Learn-Ethiopian-Universal.apk`** - Universal Full APK
-            3. **`Smart-Learn-Ethiopian-arm64-v8a.apk`** - 64-bit Optimized APK
-            4. **`Smart-Learn-Ethiopian-armeabi-v7a.apk`** - 32-bit Legacy APK
-            5. **`SHA256SUMS.txt`** - Cryptographic Checksums
+            #### 📱 1. ለ 2 አይነት ስልኮች (For 2 Types of Mobile Phones):
+            1. **`Smart-Learn-Ethiopian-Phone-arm64-v8a.apk`** — **ለ 1ኛው አይነት ስልክ (Modern 64-bit Phones)**፡ ለዘመናዊ ስልኮች (Samsung, Xiaomi, Tecno, Infinix, Oppo, Realme ወዘተ)። አነስተኛ መጠን ያለውና እጅግ ፈጣን።
+            2. **`Smart-Learn-Ethiopian-Phone-armeabi-v7a.apk`** — **ለ 2ኛው አይነት ስልክ (Older 32-bit Phones)**፡ ለቀደምትና ለመካከለኛ 32-bit ስልኮች የሚስማማ።
+            
+            #### 💻 2. ለኮምፒውተር (For Computer / PC / Laptops & Emulators):
+            3. **`Smart-Learn-Ethiopian-Computer-x86_64.apk`** — **ለኮምፒውተር (PC / Laptop)**፡ በኮምፒውተር ላይ ለሚሰሩ አንድሮይድ ኢሙሌተሮች (BlueStacks, LDPlayer, Nox, MEmu)፣ ለ ChromeOS እና ለ Windows Subsystem for Android (WSA) በከፍተኛ ጥራት የሚሰራ።
+            
+            #### 🌐 3. ተጨማሪ ይፋዊ ፋይሎች (Universal & Play Store):
+            4. **`Smart-Learn-Ethiopian-Universal.apk`** — **ሁሉንም ያካተተ (Universal Full APK)**፡ በማንኛውም ስልክ ወይም ታብሌት ላይ የሚሰራ።
+            5. **`Smart-Learn-Ethiopian-PlayStore-release.aab`** — **Google Play Store App Bundle (.aab)**
+            6. **`SHA256SUMS.txt`** — የፋይሎቹ ማረጋገጫ ቁጥር (Cryptographic Checksums)
           files: |
-            release_dist/Smart-Learn-Ethiopian-PlayStore-release.aab
-            release_dist/Smart-Learn-Ethiopian-Universal.apk
+            release_dist/Smart-Learn-Ethiopian-Phone-arm64-v8a.apk
+            release_dist/Smart-Learn-Ethiopian-Phone-armeabi-v7a.apk
+            release_dist/Smart-Learn-Ethiopian-Computer-x86_64.apk
             release_dist/Smart-Learn-Ethiopian-arm64-v8a.apk
             release_dist/Smart-Learn-Ethiopian-armeabi-v7a.apk
+            release_dist/Smart-Learn-Ethiopian-x86_64.apk
+            release_dist/Smart-Learn-Ethiopian-Universal.apk
+            release_dist/Smart-Learn-Ethiopian-PlayStore-release.aab
             release_dist/SHA256SUMS.txt
           draft: false
           prerelease: false

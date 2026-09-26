@@ -8,11 +8,24 @@
         </shape>
     </item>
     
+    <!-- Circular background badge ensuring the icon displays as a clean circle -->
+    <item
+        android:gravity="center"
+        android:width="170dp"
+        android:height="170dp">
+        <shape android:shape="oval">
+            <solid android:color="#0F172A" />
+            <stroke
+                android:width="2.5dp"
+                android:color="#0284C7" />
+        </shape>
+    </item>
+
     <!-- Centered application icon with proper scale to avoid being tiny -->
     <item
         android:drawable="@mipmap/ic_launcher"
         android:gravity="center"
-        android:width="180dp"
-        android:height="180dp" />
+        android:width="150dp"
+        android:height="150dp" />
 </layer-list>
 

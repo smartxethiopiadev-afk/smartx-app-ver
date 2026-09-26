@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/video_model.dart';
-import '../screens/fullscreen_video_player_screen.dart';
-import '../screens/video_coming_soon_screen.dart';
 import '../services/video_service.dart';
 import 'account_upgrade_dialog.dart';
+import 'app_video_popup_dialog.dart';
 
 /// Interactive "How to Start" widget that displays a video-first guide
 /// fetched directly from the Supabase database.
@@ -21,59 +20,17 @@ class HowToStartBanner extends StatelessWidget {
     this.onGradeSelected,
   });
 
-  /// Plays the Supabase onboarding / tutorial video smoothly in-app using video_player and chewie
+  /// Plays the Supabase onboarding / tutorial video smoothly in-app using YouTube-style in-place pop-up
   static Future<void> playTutorialVideo(
     BuildContext context, {
     required bool isDarkMode,
     required String languageCode,
   }) async {
-    try {
-      final video = await VideoService.fetchAppTutorialVideo();
-      final streamUrl = video.streamUrl.isNotEmpty
-          ? video.streamUrl
-          : (video.videoUrl ?? '');
-
-      if (context.mounted && streamUrl.isNotEmpty) {
-        await FullscreenVideoPlayerScreen.open(
-          context,
-          videoUrl: streamUrl,
-          title: video.title.isNotEmpty ? video.title : 'Smart Learn Ethiopian - Tutorial',
-          subtitle: languageCode == 'am' ? 'የመተግበሪያ አጠቃቀም መመሪያ' : 'App Overview & User Guide',
-          isDarkMode: isDarkMode,
-          languageCode: languageCode,
-        );
-      } else {
-        if (context.mounted) {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => VideoComingSoonScreen(
-                grade: 12,
-                subject: 'App Tutorial',
-                unitNumber: 1,
-                unitTitle: 'Getting Started',
-                isDarkMode: isDarkMode,
-                languageCode: languageCode,
-              ),
-            ),
-          );
-        }
-      }
-    } catch (_) {
-      if (context.mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => VideoComingSoonScreen(
-              grade: 12,
-              subject: 'App Tutorial',
-              unitNumber: 1,
-              unitTitle: 'Getting Started',
-              isDarkMode: isDarkMode,
-              languageCode: languageCode,
-            ),
-          ),
-        );
-      }
-    }
+    return AppVideoPopupDialog.show(
+      context,
+      isDarkMode: isDarkMode,
+      languageCode: languageCode,
+    );
   }
 
   static void showUsageGuide(
@@ -176,35 +133,14 @@ class HowToStartBanner extends StatelessWidget {
                         splashColor: const Color(0xFF00BFFF).withValues(alpha: 0.1),
                         highlightColor: Colors.transparent,
                         onTap: () {
-                          final streamUrl = video.streamUrl.isNotEmpty
-                              ? video.streamUrl
-                              : (video.videoUrl ?? '');
-
-                          if (streamUrl.isNotEmpty) {
-                            FullscreenVideoPlayerScreen.open(
-                              context,
-                              videoUrl: streamUrl,
-                              title: video.title.isNotEmpty
-                                  ? video.title
-                                  : (isAm ? 'የመተግበሪያው አጠቃቀም ሙሉ ገለፃ ቪዲዮ' : 'Smart Learn Master Tutorial Video'),
-                              subtitle: isAm ? 'የመተግበሪያ አጠቃቀም መመሪያ' : 'App Overview & User Guide',
-                              isDarkMode: isDarkMode,
-                              languageCode: languageCode,
-                            );
-                          } else {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => VideoComingSoonScreen(
-                                  grade: grade ?? 12,
-                                  subject: 'App Tutorial',
-                                  unitNumber: 1,
-                                  unitTitle: 'Getting Started',
-                                  isDarkMode: isDarkMode,
-                                  languageCode: languageCode,
-                                ),
-                              ),
-                            );
-                          }
+                          Navigator.of(ctx).pop();
+                          AppVideoPopupDialog.show(
+                            context,
+                            video: video,
+                            grade: grade ?? 12,
+                            isDarkMode: isDarkMode,
+                            languageCode: languageCode,
+                          );
                         },
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../data/curriculum_units.dart';
 import '../services/subscription_service.dart';
-import '../widgets/account_upgrade_dialog.dart';
+import '../widgets/app_video_popup_dialog.dart';
 import 'video_lesson_screen.dart';
 
 class VideoUnitSelectionScreen extends StatefulWidget {
@@ -94,12 +94,18 @@ class _VideoUnitSelectionScreenState extends State<VideoUnitSelectionScreen> {
         );
 
     if (!isUnlocked) {
-      AccountUpgradeDialog.show(
+      AppVideoPopupDialog.show(
         context,
-        initialGrade: widget.grade,
+        grade: widget.grade,
+        subject: widget.subject,
+        unitNumber: unitNumber,
+        customTitle: '🎬 Grade ${widget.grade} ${widget.subject} - Unit $unitNumber',
+        customSubtitle: widget.languageCode == 'am'
+            ? 'ይህ የቪዲዮ ትምህርት የተቆለፈ ነው። አጠቃላይ ገለጻውን ይመልከቱ ወይም አካውንትዎን ያሻሽሉ።'
+            : 'This video lesson is locked. Watch overview or upgrade your account.',
         languageCode: widget.languageCode,
         isDarkMode: widget.isDarkMode,
-        onSuccess: () {
+        onUnlocked: () {
           _checkSubscription();
         },
       );

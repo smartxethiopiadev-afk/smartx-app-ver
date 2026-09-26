@@ -8,14 +8,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'pdf_viewer_screen.dart';
 import 'downloads_screen.dart';
-import '../services/short_note_service.dart';
 import '../services/offline_manager.dart';
 import '../services/quiz_service.dart';
 import '../main.dart';
 import 'quiz_screen.dart';
 import '../services/analytics_service.dart';
 import '../services/subscription_service.dart';
-import '../widgets/account_upgrade_dialog.dart';
+import '../widgets/app_video_popup_dialog.dart';
 import '../widgets/quiz_selection_dialogs.dart';
 import '../data/curriculum_units.dart';
 
@@ -125,13 +124,19 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       return;
     }
 
-    // Show Account Upgrade & Verification Dialog directly!
-    AccountUpgradeDialog.show(
+    // Show In-Place Video Pop-Up Dialog with Verify & Upgrade + Telegram buttons
+    AppVideoPopupDialog.show(
       context,
-      initialGrade: widget.grade,
+      grade: widget.grade,
+      subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
+      unitNumber: activeUnitNum,
+      customTitle: '🎬 Grade ${widget.grade} ${widget.enTitle} - Unit $activeUnitNum',
+      customSubtitle: widget.languageCode == 'am'
+          ? 'ይህ ምዕራፍ የተቆለፈ ነው። ቪዲዮውን ይመልከቱ ወይም አካውንትዎን ያሻሽሉ።'
+          : 'This unit is locked. Watch overview video or upgrade your account.',
       languageCode: widget.languageCode,
       isDarkMode: AppStateProvider.of(context).isDarkMode,
-      onSuccess: () {
+      onUnlocked: () {
         _checkRegistrationStatus();
         onSuccess();
       },
@@ -164,12 +169,18 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
 
     if (!isAccessible) {
       if (!mounted) return;
-      AccountUpgradeDialog.show(
+      AppVideoPopupDialog.show(
         context,
-        initialGrade: widget.grade,
+        grade: widget.grade,
+        subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
+        unitNumber: unitNumber,
+        customTitle: '🎬 Grade ${widget.grade} ${widget.enTitle} - Unit $unitNumber Short Note',
+        customSubtitle: widget.languageCode == 'am'
+            ? 'ይህ አጭር ማስታወሻ የተቆለፈ ነው። ቪዲዮውን ይመልከቱ ወይም አካውንትዎን ያሻሽሉ።'
+            : 'This short note is locked. Watch video or upgrade your account.',
         languageCode: widget.languageCode,
         isDarkMode: AppStateProvider.of(context).isDarkMode,
-        onSuccess: () {
+        onUnlocked: () {
           _checkRegistrationStatus();
           _openShortNotePdf(unitNumber);
         },
@@ -2029,12 +2040,18 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                         ),
                                         onPressed: () {
                                           if (isLocked) {
-                                            AccountUpgradeDialog.show(
+                                            AppVideoPopupDialog.show(
                                               context,
-                                              initialGrade: widget.grade,
+                                              grade: widget.grade,
+                                              subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
+                                              unitNumber: activeUnitNum,
+                                              customTitle: '🎬 Grade ${widget.grade} ${widget.enTitle} - Unit $activeUnitNum',
+                                              customSubtitle: widget.languageCode == 'am'
+                                                  ? 'ይህ ምዕራፍ የተቆለፈ ነው። ቪዲዮውን ይመልከቱ ወይም አካውንትዎን ያሻሽሉ።'
+                                                  : 'This unit is locked. Watch video or upgrade your account.',
                                               languageCode: widget.languageCode,
                                               isDarkMode: AppStateProvider.of(context).isDarkMode,
-                                              onSuccess: () {
+                                              onUnlocked: () {
                                                 _checkRegistrationStatus();
                                                 if (widget.isShortNotesMode) {
                                                   _openShortNotePdf(activeUnitNum);
