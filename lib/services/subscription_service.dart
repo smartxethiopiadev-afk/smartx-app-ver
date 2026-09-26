@@ -311,6 +311,7 @@ class SubscriptionService {
   static Future<bool> syncWithSupabase(String phoneNumber) async {
     final cleanPhone = sanitizeEthiopianPhone(phoneNumber);
     if (cleanPhone.isEmpty) return false;
+    final altPhone = cleanPhone.startsWith('0') ? '+251${cleanPhone.substring(1)}' : cleanPhone;
 
     try {
       final supabase = Supabase.instance.client;
@@ -320,7 +321,7 @@ class SubscriptionService {
       final response = await supabase
           .from('students')
           .select('device_id, unlocked_packages, subscription_status, subscription_expires_at, is_active')
-          .eq('phone_number', cleanPhone)
+          .or('phone_number.eq.$cleanPhone,phone_number.eq.$altPhone')
           .maybeSingle();
 
       if (response == null) return false;
@@ -351,12 +352,26 @@ class SubscriptionService {
       // 3. Single device hardware binding enforcement
       final String? boundDev = (response['device_id'] as String?)?.trim();
       if (boundDev == null || boundDev.isEmpty) {
+        // Strict Check: Check for device conflicts
+        final deviceConflict = await supabase
+            .from('students')
+            .select('phone_number')
+            .eq('device_id', currentDeviceId)
+            .neq('phone_number', cleanPhone)
+            .neq('phone_number', altPhone)
+            .maybeSingle();
+
+        if (deviceConflict != null) {
+          debugPrint('[SubscriptionService] Sync failed: Current device is already bound to a different student');
+          return false;
+        }
+
         // Auto-bind on first sync
         try {
           await supabase.from('students').update({
             'device_id': currentDeviceId,
             'updated_at': DateTime.now().toUtc().toIso8601String(),
-          }).eq('phone_number', cleanPhone);
+          }).or('phone_number.eq.$cleanPhone,phone_number.eq.$altPhone');
         } catch (e) {
           debugPrint('[SubscriptionService] Auto-bind error: $e');
         }
@@ -483,11 +498,13 @@ class SubscriptionService {
       final supabase = Supabase.instance.client;
       final nowIso = DateTime.now().toUtc().toIso8601String();
 
-      // Query `students` table directly
+      final altPhone = cleanPhone.startsWith('0') ? '+251${cleanPhone.substring(1)}' : cleanPhone;
+
+      // Query `students` table directly with both formats
       final res = await supabase
           .from('students')
           .select('full_name, phone_number, grade, device_id, unlocked_packages, subscription_status, subscription_expires_at, is_active')
-          .eq('phone_number', cleanPhone)
+          .or('phone_number.eq.$cleanPhone,phone_number.eq.$altPhone')
           .maybeSingle();
 
       if (res == null) {
@@ -534,12 +551,28 @@ class SubscriptionService {
       // First time binding or update device_id
       bool deviceBindingConfirmed = false;
       if (boundDev == null || boundDev.isEmpty) {
+        // Strict Check: Check if currentDeviceId is already bound to another phone number
+        final deviceConflict = await supabase
+            .from('students')
+            .select('phone_number')
+            .eq('device_id', currentDeviceId)
+            .neq('phone_number', cleanPhone)
+            .neq('phone_number', altPhone)
+            .maybeSingle();
+
+        if (deviceConflict != null) {
+          return const StudentUpgradeResult(
+            isSuccess: false,
+            message: 'ይህ መሣሪያ ቀደም ሲል ከሌላ መለያ ጋር ተገናኝቷል። ከአንድ መሣሪያ በላይ መያዝ አይቻልም! / This device is already linked to another phone number.',
+          );
+        }
+
         try {
           final updateRes = await supabase.from('students').update({
             'device_id': currentDeviceId,
             'full_name': cleanName,
             'updated_at': nowIso,
-          }).eq('phone_number', cleanPhone).select('device_id');
+          }).or('phone_number.eq.$cleanPhone,phone_number.eq.$altPhone').select('device_id');
           
           if (updateRes.isNotEmpty && updateRes.first['device_id'] == currentDeviceId) {
             deviceBindingConfirmed = true;
@@ -553,7 +586,7 @@ class SubscriptionService {
           await supabase.from('students').update({
             'full_name': cleanName,
             'updated_at': nowIso,
-          }).eq('phone_number', cleanPhone);
+          }).or('phone_number.eq.$cleanPhone,phone_number.eq.$altPhone');
         } catch (_) {}
       }
 

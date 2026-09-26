@@ -8,6 +8,10 @@
              the Flutter engine draws its first frame -->
         <item name="android:windowBackground">@drawable/launch_background</item>
         <item name="android:colorBackground">#080E1E</item>
+        
+        <!-- Android 12+ Splash Screen API Properties to make it match in size and color -->
+        <item name="android:windowSplashScreenBackground">#080E1E</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
     </style>
 
     <!-- Theme applied to the Android Window as soon as the Flutter experience

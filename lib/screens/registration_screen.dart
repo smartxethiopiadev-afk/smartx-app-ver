@@ -45,15 +45,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (cleanDigits.startsWith('251') && cleanDigits.length == 12) {
       final localPart = cleanDigits.substring(3);
       if (localPart.startsWith('9') || localPart.startsWith('7')) {
-        return '+$cleanDigits';
+        return '0$localPart';
       }
     } else if (cleanDigits.startsWith('0') && cleanDigits.length == 10) {
       final localPart = cleanDigits.substring(1);
       if (localPart.startsWith('9') || localPart.startsWith('7')) {
-        return '+251$localPart';
+        return '0$localPart';
       }
     } else if (cleanDigits.length == 9 && (cleanDigits.startsWith('9') || cleanDigits.startsWith('7'))) {
-      return '+251$cleanDigits';
+      return '0$cleanDigits';
     }
     return null;
   }
@@ -92,59 +92,152 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _isLoading = true;
     });
 
+    final bool isAm = widget.languageCode == 'am';
+
     try {
       final currentDeviceId = await DeviceService.getDeviceId();
       final supabase = Supabase.instance.client;
       final String nowIso = DateTime.now().toUtc().toIso8601String();
 
-      // Check if student already exists in 'students' table
-      List<String> unlockedPackages = [];
-      try {
-        final existing = await supabase
-            .from('students')
-            .select('unlocked_packages, device_id')
-            .eq('phone_number', formattedPhone)
-            .maybeSingle()
-            .timeout(const Duration(seconds: 5));
+      final String altPhone = formattedPhone.startsWith('0')
+          ? '+251${formattedPhone.substring(1)}'
+          : formattedPhone;
 
-        if (existing != null) {
-          final existingDev = (existing['device_id'] as String?)?.trim();
-          if (existingDev != null && existingDev.isNotEmpty && existingDev != currentDeviceId) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(widget.languageCode == 'am'
-                      ? 'ይህ ስልክ ቁጥር አስቀድሞ በሌላ ስልክ ላይ ተመዝግቧል። መለያ ማጋራት በጥብቅ የተከለከለ ነው።'
-                      : 'This phone number is already registered on another device. Account sharing is strictly prohibited.'),
-                  backgroundColor: const Color(0xFFEF4444),
-                  behavior: SnackBarBehavior.floating,
+      // 1. Strict Check: If phone number is already registered in 'students' table, block registration!
+      final existing = await supabase
+          .from('students')
+          .select('unlocked_packages, device_id')
+          .or('phone_number.eq.$formattedPhone,phone_number.eq.$altPhone')
+          .maybeSingle()
+          .timeout(const Duration(seconds: 8));
+
+      if (existing != null) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: !widget.isDarkMode ? Colors.white : const Color(0xFF1E293B),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              title: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Color(0xFF0284C7), size: 28),
+                  const SizedBox(width: 8),
+                  Text(
+                    isAm ? 'አስቀድሞ የተመዘገበ ቁጥር' : 'Already Registered',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                      color: !widget.isDarkMode ? const Color(0xFF0F172A) : Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                isAm
+                    ? 'ይህ ስልክ ቁጥር አስቀድሞ ተመዝግቧል! እባክዎ ወደ "የተማሪ መግቢያ" ገጽ በመሄድ ይግቡ።'
+                    : 'This phone number is already registered! Please go to the Login & Activation screen to sign in.',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: !widget.isDarkMode ? const Color(0xFF475569) : const Color(0xFF94A3B8),
+                  height: 1.4,
                 ),
-              );
-            }
-            setState(() => _isLoading = false);
-            return;
-          }
-          final raw = existing['unlocked_packages'] as List<dynamic>?;
-          if (raw != null) {
-            unlockedPackages = raw.map((e) => e.toString()).toList();
-          }
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    Navigator.of(context).pop(); // Go back to login screen
+                  },
+                  child: Text(
+                    isAm ? 'ወደ መግቢያ ሂድ' : 'Go to Login',
+                    style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF0284C7)),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(
+                    isAm ? 'ዝጋ' : 'Dismiss',
+                    style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+          );
         }
-
-        // Upsert into unified 'students' table without giving away free packages
-        await supabase.from('students').upsert({
-          'full_name': fullName,
-          'phone_number': formattedPhone,
-          'grade': _selectedGrade,
-          'device_id': currentDeviceId,
-          'is_active': true,
-          'unlocked_packages': unlockedPackages,
-          'updated_at': nowIso,
-        }, onConflict: 'phone_number').timeout(const Duration(seconds: 8));
-
-        await SubscriptionService.setUnlockedPackages(unlockedPackages);
-      } catch (err) {
-        debugPrint('[Registration] students upsert notice: $err');
+        setState(() => _isLoading = false);
+        return;
       }
+
+      // 2. Strict Check: If device ID is already registered to a different phone number in 'students' table, block!
+      final deviceConflict = await supabase
+          .from('students')
+          .select('phone_number')
+          .eq('device_id', currentDeviceId)
+          .neq('phone_number', formattedPhone)
+          .neq('phone_number', altPhone)
+          .maybeSingle()
+          .timeout(const Duration(seconds: 8));
+
+      if (deviceConflict != null) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: !widget.isDarkMode ? Colors.white : const Color(0xFF1E293B),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              title: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 28),
+                  const SizedBox(width: 8),
+                  Text(
+                    isAm ? 'የደህንነት መቆለፊያ (Device Bound)' : 'Device Security Bound',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                      color: !widget.isDarkMode ? const Color(0xFF0F172A) : Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                isAm
+                    ? 'ይህ ስልክ ከዚህ ቀደም ከሌላ መለያ ጋር ተገናኝቷል። የደህንነት ስርዓቱ 1 መሣሪያ ለአንድ መለያ ብቻ ይፈቅዳል (Single-Device Protection)።'
+                    : 'This device is already bound to another registered account. Single-device protection strictly allows only one account per hardware device.',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: !widget.isDarkMode ? const Color(0xFF475569) : const Color(0xFF94A3B8),
+                  height: 1.4,
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(
+                    isAm ? 'እሺ' : 'OK',
+                    style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEF4444)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // 3. Perform standard secure registration
+      List<String> unlockedPackages = [];
+      await supabase.from('students').upsert({
+        'full_name': fullName,
+        'phone_number': formattedPhone, // Save standard '09...' format
+        'grade': _selectedGrade,
+        'device_id': currentDeviceId,
+        'is_active': true,
+        'unlocked_packages': unlockedPackages,
+        'updated_at': nowIso,
+      }, onConflict: 'phone_number').timeout(const Duration(seconds: 10));
+
+      await SubscriptionService.setUnlockedPackages(unlockedPackages);
 
       // Save locally in SharedPreferences
       final prefs = await SharedPreferences.getInstance();
@@ -165,25 +258,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         _navigateToHome();
       }
     } catch (e) {
-      debugPrint('[Registration] Error or offline mode: $e');
-
-      final currentDeviceId = await DeviceService.getDeviceId();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('has_registered', true);
-      await prefs.setBool('is_authenticated', true);
-      await prefs.setString('user_fullName', fullName);
-      await prefs.setString('user_phoneNumber', formattedPhone);
-      await prefs.setString('user_grade', 'Grade $_selectedGrade');
-      await prefs.setInt('selected_grade', _selectedGrade);
-      await prefs.setString('user_device_id', currentDeviceId);
-
+      debugPrint('[Registration] Error in online verification: $e');
       setState(() {
         _isLoading = false;
+        _validationErrorBanner = isAm
+            ? 'ምዝገባውን ለማጠናቀቅ የኢንተርኔት ግንኙነት ያስፈልጋል። እባክዎ ግንኙነትዎን ፈትሸው እንደገና ይሞክሩ።'
+            : 'An active internet connection is required to register and secure your single-device license. Please try again.';
       });
-
-      if (mounted) {
-        _navigateToHome();
-      }
     }
   }
 

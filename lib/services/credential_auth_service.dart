@@ -43,7 +43,7 @@ class CredentialAuthService {
     int? grade,
     String? subject,
   }) async {
-    final cleanPhone = phoneNumber.replaceAll(RegExp(r'\s+'), '').trim();
+    final cleanPhone = SubscriptionService.sanitizeEthiopianPhone(phoneNumber);
     final cleanName = fullName.trim();
 
     if (cleanPhone.isEmpty) {
@@ -56,16 +56,20 @@ class CredentialAuthService {
     final currentDeviceId = await DeviceService.getDeviceId();
     final prefs = await SharedPreferences.getInstance();
 
+    final altPhone = cleanPhone.startsWith('0')
+        ? '+251${cleanPhone.substring(1)}'
+        : cleanPhone;
+
     try {
       final supabase = Supabase.instance.client;
       Map<String, dynamic>? studentRecord;
 
-      // Query ONLY public.students table
+      // Query ONLY public.students table with both formats
       try {
         final res = await supabase
             .from('students')
             .select()
-            .eq('phone_number', cleanPhone)
+            .or('phone_number.eq.$cleanPhone,phone_number.eq.$altPhone')
             .maybeSingle();
         if (res != null) {
           studentRecord = res;
@@ -80,7 +84,7 @@ class CredentialAuthService {
         final cachedAuth = prefs.getBool(_keyIsAuth) ?? false;
         final cachedDevId = prefs.getString(_keyBoundDeviceId) ?? '';
 
-        if (cachedAuth && cachedPhone.isNotEmpty && (cachedPhone == cleanPhone || cleanPhone.endsWith(cachedPhone) || cleanPhone.endsWith(cachedPhone))) {
+        if (cachedAuth && cachedPhone.isNotEmpty && (cachedPhone == cleanPhone || cachedPhone == altPhone)) {
           if (cachedDevId.isNotEmpty && cachedDevId != currentDeviceId) {
             return const CredentialAuthResult(
               status: CredentialAuthStatus.deviceMismatchLocked,
@@ -107,23 +111,39 @@ class CredentialAuthService {
       if (!isActive) {
         return const CredentialAuthResult(
           status: CredentialAuthStatus.inactiveAccount,
-          message: 'ይህ መለያ በአሁኑ ጊዜ አገልግሎቱ ተቋርጧል።',
+          message: 'ይህ መለያ በአሁኑ ጊዜ አገልግሎቱ ተቋርጧል። / This account is suspended.',
         );
       }
 
       // Device binding check against students.device_id
       final String? boundDeviceId = (studentRecord['device_id'] as String?)?.trim();
       if (boundDeviceId == null || boundDeviceId.isEmpty) {
+        // 1. Strict Check: If current device ID is already registered to another phone, block!
+        final deviceConflict = await supabase
+            .from('students')
+            .select('phone_number')
+            .eq('device_id', currentDeviceId)
+            .neq('phone_number', cleanPhone)
+            .neq('phone_number', altPhone)
+            .maybeSingle();
+
+        if (deviceConflict != null) {
+          return const CredentialAuthResult(
+            status: CredentialAuthStatus.deviceMismatchLocked,
+            message: 'ይህ መሣሪያ ቀደም ሲል ከሌላ መለያ ጋር ተገናኝቷል። ከአንድ መሣሪያ በላይ መያዝ አይቻልም! / This device is already linked to another phone number.',
+          );
+        }
+
         try {
           await supabase.from('students').update({
             'device_id': currentDeviceId,
             'updated_at': DateTime.now().toUtc().toIso8601String(),
-          }).eq('phone_number', cleanPhone);
+          }).or('phone_number.eq.$cleanPhone,phone_number.eq.$altPhone');
         } catch (_) {}
       } else if (boundDeviceId != currentDeviceId) {
         return const CredentialAuthResult(
           status: CredentialAuthStatus.deviceMismatchLocked,
-          message: 'ይህ ስልክ ቁጥር አስቀድሞ በሌላ ስልክ ላይ ተመዝግቧል። መለያ ማጋራት በጥብቅ የተከለከለ ነው።',
+          message: 'ይህ ስልክ ቁጥር አስቀድሞ በሌላ ስልክ ላይ ተመዝግቧል። መለያ ማጋራት በጥብቅ የተከለከለ ነው። / This account is bound to another device.',
         );
       }
 
@@ -184,13 +204,13 @@ class CredentialAuthService {
     required String phoneNumber,
     required int grade,
   }) async {
-    final cleanPhone = phoneNumber.replaceAll(RegExp(r'\s+'), '').trim();
+    final cleanPhone = SubscriptionService.sanitizeEthiopianPhone(phoneNumber);
     final cleanName = fullName.trim();
 
     if (cleanPhone.isEmpty || cleanName.isEmpty) {
       return const CredentialAuthResult(
         status: CredentialAuthStatus.invalidCredentials,
-        message: 'እባክዎ ሙሉ ስም እና ስልክ ቁጥር ያስገቡ።',
+        message: 'እባክዎ ሙሉ ስም እና ስልክ ቁጥር ያስገቡ። / Please enter your full name and phone number.',
       );
     }
 
@@ -198,15 +218,19 @@ class CredentialAuthService {
     final prefs = await SharedPreferences.getInstance();
     List<String> unlockedPackages = [];
 
+    final altPhone = cleanPhone.startsWith('0')
+        ? '+251${cleanPhone.substring(1)}'
+        : cleanPhone;
+
     try {
       final supabase = Supabase.instance.client;
 
-      // Check existing device binding in `students`
+      // Check existing phone or device binding in `students`
       try {
         final existing = await supabase
             .from('students')
             .select('device_id, unlocked_packages')
-            .eq('phone_number', cleanPhone)
+            .or('phone_number.eq.$cleanPhone,phone_number.eq.$altPhone')
             .maybeSingle();
 
         if (existing != null) {
@@ -214,13 +238,29 @@ class CredentialAuthService {
           if (existingDev != null && existingDev.isNotEmpty && existingDev != currentDeviceId) {
             return const CredentialAuthResult(
               status: CredentialAuthStatus.deviceMismatchLocked,
-              message: 'ይህ ስልክ ቁጥር አስቀድሞ በሌላ ስልክ ላይ ተመዝግቧል።',
+              message: 'ይህ ስልክ ቁጥር አስቀድሞ በሌላ ስልክ ላይ ተመዝግቧል። / This phone number is bound to another device.',
             );
           }
           final List<dynamic>? rawExistingPkgs = existing['unlocked_packages'] as List<dynamic>?;
           if (rawExistingPkgs != null) {
             unlockedPackages = rawExistingPkgs.map((e) => e.toString()).toList();
           }
+        }
+
+        // Check if device is bound to a different phone
+        final deviceConflict = await supabase
+            .from('students')
+            .select('phone_number')
+            .eq('device_id', currentDeviceId)
+            .neq('phone_number', cleanPhone)
+            .neq('phone_number', altPhone)
+            .maybeSingle();
+
+        if (deviceConflict != null) {
+          return const CredentialAuthResult(
+            status: CredentialAuthStatus.deviceMismatchLocked,
+            message: 'ይህ መሣሪያ ቀደም ሲል ከሌላ መለያ ጋር ተገናኝቷል። / This device is already linked to another account.',
+          );
         }
       } catch (e) {
         debugPrint('[Auth] check existing student error: $e');

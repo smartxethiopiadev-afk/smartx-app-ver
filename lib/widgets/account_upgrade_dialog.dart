@@ -663,59 +663,6 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 12),
-
-                      // Device ID Display (Auto-bound)
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0284C7).withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.25)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.phonelink_lock_rounded, size: 18, color: Color(0xFF0284C7)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    isAm ? 'የስልኩ መለያ (Device ID - Auto Bound)' : 'Physical Device ID (Auto Bound)',
-                                    style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF0284C7)),
-                                  ),
-                                  const SizedBox(height: 1),
-                                  Text(
-                                    _deviceId.isNotEmpty ? _deviceId : 'Detecting Device ID...',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: textColor),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.copy_rounded, size: 16, color: Color(0xFF0284C7)),
-                              tooltip: 'Copy Device ID',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: () {
-                                if (_deviceId.isNotEmpty) {
-                                  Clipboard.setData(ClipboardData(text: _deviceId));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(isAm ? 'Device ID ተገልብጧል' : 'Device ID copied to clipboard'),
-                                      behavior: SnackBarBehavior.floating,
-                                      duration: const Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
                       const SizedBox(height: 16),
 
                       // Register Button

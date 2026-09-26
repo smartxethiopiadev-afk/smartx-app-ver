@@ -1416,14 +1416,14 @@ class _QuizScreenState extends State<QuizScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Question text with slender, modern, elegant typography
+                // Question text with bold, clear, modern typography
                 _buildMathText(
                   q.questionText,
-                  GoogleFonts.plusJakartaSans(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w400,
-                    height: 1.55,
-                    letterSpacing: 0.12,
+                  GoogleFonts.notoSansEthiopic(
+                    fontSize: 16.0,
+                    fontWeight: FontWeight.w800,
+                    height: 1.5,
+                    letterSpacing: 0.1,
                     color: isLight ? const Color(0xFF0F172A) : Colors.white,
                   ),
                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/credential_auth_service.dart';
+import '../services/subscription_service.dart';
 import '../widgets/friendly_error_card.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'registration_screen.dart';
@@ -316,6 +317,10 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) {
                     return isAm ? 'እባክዎ ስልክ ቁጥር ያስገቡ' : 'Please enter your phone number';
+                  }
+                  final sanitized = SubscriptionService.sanitizeEthiopianPhone(val);
+                  if (sanitized.isEmpty || sanitized.length < 9) {
+                    return isAm ? 'እባክዎ ትክክለኛ ስልክ ቁጥር ያስገቡ' : 'Please enter a valid phone number';
                   }
                   return null;
                 },

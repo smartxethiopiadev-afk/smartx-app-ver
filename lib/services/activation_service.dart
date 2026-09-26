@@ -72,11 +72,15 @@ class ActivationService {
     try {
       final supabase = Supabase.instance.client;
 
-      // Primary verification: Check `students` record directly
+      // Primary verification: Check `students` record directly using both formats
+      final altPhone = cleanPhone.startsWith('0')
+          ? '+251${cleanPhone.substring(1)}'
+          : cleanPhone;
+
       final res = await supabase
           .from('students')
           .select('full_name, phone_number, grade, device_id, unlocked_packages, subscription_status, subscription_expires_at, is_active')
-          .eq('phone_number', cleanPhone)
+          .or('phone_number.eq.$cleanPhone,phone_number.eq.$altPhone')
           .maybeSingle();
 
       if (res == null) {
@@ -125,13 +129,34 @@ class ActivationService {
         );
       }
 
+      if (boundDev == null || boundDev.isEmpty) {
+        // Strict Check: Check if currentDeviceId is already bound to another phone number
+        final deviceConflict = await supabase
+            .from('students')
+            .select('phone_number')
+            .eq('device_id', currentDeviceId)
+            .neq('phone_number', cleanPhone)
+            .neq('phone_number', altPhone)
+            .maybeSingle();
+
+        if (deviceConflict != null) {
+          return ActivationResult(
+            status: ActivationStatus.alreadyUsedDifferentDevice,
+            isSuccess: false,
+            message: isAmharic
+                ? 'ይህ ስልክ (መሣሪያ) ከሌላ ተማሪ ስልክ ቁጥር ጋር ተገናኝቷል። ይህ መሣሪያ ከአንድ መለያ በላይ መያዝ አይችልም።'
+                : 'This device is already linked to another registered phone number. Only one account is allowed per device.',
+          );
+        }
+      }
+
       // Auto-bind device
       final nowIso = DateTime.now().toUtc().toIso8601String();
       await supabase.from('students').update({
         'device_id': currentDeviceId,
         'full_name': cleanName,
         'updated_at': nowIso,
-      }).eq('phone_number', cleanPhone);
+      }).or('phone_number.eq.$cleanPhone,phone_number.eq.$altPhone');
 
       final int grade = (res['grade'] as num?)?.toInt() ?? 12;
       final List<dynamic>? rawPkgs = res['unlocked_packages'] as List<dynamic>?;
