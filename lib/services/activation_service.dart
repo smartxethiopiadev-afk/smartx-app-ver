@@ -10,6 +10,7 @@ enum ActivationStatus {
   alreadyUsedDifferentDevice,
   alreadyUsedSameDevice,
   missingInfo,
+  expired,
   networkError,
 }
 
@@ -34,7 +35,7 @@ class ActivationResult {
 }
 
 class ActivationService {
-  /// Verify and activate a package-specific activation code
+  /// Verify and upgrade student account directly using the `students` table
   static Future<ActivationResult> activateCode({
     required String code,
     required String name,
@@ -44,17 +45,7 @@ class ActivationService {
     final bool isAmharic = languageCode == 'am';
     final cleanCode = code.trim().toUpperCase().replaceAll(' ', '');
     final cleanName = name.trim();
-    final cleanPhone = phone.replaceAll(RegExp(r'\s+'), '').trim();
-
-    if (cleanCode.isEmpty) {
-      return ActivationResult(
-        status: ActivationStatus.missingInfo,
-        isSuccess: false,
-        message: isAmharic
-            ? 'እባክዎ የማግበሪያ ኮዱን ያስገቡ።'
-            : 'Please enter a valid activation code.',
-      );
-    }
+    final cleanPhone = SubscriptionService.sanitizeEthiopianPhone(phone);
 
     if (cleanName.isEmpty) {
       return ActivationResult(
@@ -81,222 +72,118 @@ class ActivationService {
     try {
       final supabase = Supabase.instance.client;
 
-      // Primary Flow: Call atomic PostgreSQL RPC function redeem_activation_code
-      try {
-        final rpcResult = await supabase.rpc('redeem_activation_code', params: {
-          'p_code': cleanCode,
-          'p_phone': cleanPhone,
-          'p_name': cleanName,
-          'p_device_id': currentDeviceId,
-        });
+      // Primary verification: Check `students` record directly using both formats
+      final altPhone = cleanPhone.startsWith('0')
+          ? '+251${cleanPhone.substring(1)}'
+          : cleanPhone;
 
-        if (rpcResult is Map) {
-          final bool success = rpcResult['success'] == true;
-          final String? rpcMsg = rpcResult['message'] as String?;
-          final String? rpcError = rpcResult['error'] as String?;
-          final String? packageId = rpcResult['package_id'] as String?;
-          final int grade = (rpcResult['grade'] as num?)?.toInt() ?? 12;
-          final String? subject = rpcResult['subject'] as String?;
-
-          if (success && packageId != null) {
-            await _applyActivationLocally(
-              name: cleanName,
-              phone: cleanPhone,
-              packageId: packageId,
-              grade: grade,
-              subject: subject,
-              deviceId: currentDeviceId,
-            );
-
-            final readablePkg = _getHumanReadablePackageName(grade, subject, packageId, isAmharic);
-            return ActivationResult(
-              status: ActivationStatus.success,
-              isSuccess: true,
-              packageId: packageId,
-              grade: grade,
-              subject: subject,
-              packageName: readablePkg,
-              message: rpcMsg ?? (isAmharic
-                  ? 'እንኳን ደስ አለዎት! $readablePkg በተሳካ ሁኔታ ተከፍቷል!'
-                  : 'Congratulations! $readablePkg has been unlocked and bound to this device.'),
-            );
-          } else if (rpcError != null) {
-            if (rpcError.contains('different device') || rpcError.contains('already used')) {
-              return ActivationResult(
-                status: ActivationStatus.alreadyUsedDifferentDevice,
-                isSuccess: false,
-                message: isAmharic
-                    ? 'ይህ የማግበሪያ ኮድ በሌላ ስልክ ላይ አገልግሎት ላይ ውሏል። የደህንነት ስርዓቱ አንድን ኮድ ለአንድ ስልክ ብቻ ይፈቅዳል!'
-                    : 'This activation code has already been redeemed on another device. Codes are strictly single-device bound.',
-              );
-            } else if (rpcError.contains('Invalid activation code')) {
-              return ActivationResult(
-                status: ActivationStatus.invalidCode,
-                isSuccess: false,
-                message: isAmharic
-                    ? 'የተሳሳተ የማግበሪያ ኮድ። እባክዎ በትክክል መጻፍዎን ያረጋግጡና እንደገና ይሞክሩ።'
-                    : 'Invalid activation code. Please double-check your code and try again.',
-              );
-            }
-          }
-        }
-      } catch (rpcErr) {
-        debugPrint('[ActivationService] RPC fallback notice: $rpcErr');
-      }
-
-      // Fallback Direct Supabase Flow
-      // 1. Query the activation_codes table
-      final response = await supabase
-          .from('activation_codes')
-          .select()
-          .eq('code', cleanCode)
+      final res = await supabase
+          .from('students')
+          .select('full_name, phone_number, grade, device_id, unlocked_packages, subscription_status, subscription_expires_at, is_active')
+          .or('phone_number.eq.$cleanPhone,phone_number.eq.$altPhone')
           .maybeSingle();
 
-      if (response == null) {
+      if (res == null) {
         return ActivationResult(
           status: ActivationStatus.invalidCode,
           isSuccess: false,
           message: isAmharic
-              ? 'የተሳሳተ የማግበሪያ ኮድ። እባክዎ በትክክል መጻፍዎን ያረጋግጡና እንደገና ይሞክሩ።'
-              : 'Invalid activation code. Please double-check your code and try again.',
+              ? 'በዚህ ስልክ ቁጥር የተመዘገበ ተማሪ አልተገኘም። እባክዎ በአስተዳዳሪው በኩል መመዝገብዎን ያረጋግጡ።'
+              : 'No registered student found for this phone number. Please contact admin (@smart_x_help).',
         );
       }
 
-      final String packageId = response['package_id'] as String? ?? 'pkg_grade_12';
-      final int grade = response['grade'] as int? ?? 12;
-      final String? subject = response['subject'] as String?;
-      final bool isUsed = response['is_used'] as bool? ?? false;
-      final String? usedByPhone = response['used_by_phone'] as String?;
-      final String? usedByDevice = response['used_by_device'] as String?;
+      final bool isActive = res['is_active'] as bool? ?? true;
+      if (!isActive) {
+        return ActivationResult(
+          status: ActivationStatus.invalidCode,
+          isSuccess: false,
+          message: isAmharic
+              ? 'ይህ መለያ በአስተዳዳሪው ታግዷል።'
+              : 'This account is currently suspended.',
+        );
+      }
 
-      // 2. Strict Anti-Piracy / Single-Device Binding check
-      if (isUsed) {
-        final bool sameDevice = usedByDevice != null &&
-            usedByDevice.isNotEmpty &&
-            usedByDevice == currentDeviceId;
-        final bool samePhone = usedByPhone != null &&
-            usedByPhone.isNotEmpty &&
-            usedByPhone.replaceAll(RegExp(r'\s+'), '') == cleanPhone;
-
-        if (sameDevice || samePhone) {
-          // Re-activation on the same verified device
-          await _applyActivationLocally(
-            name: cleanName,
-            phone: cleanPhone,
-            packageId: packageId,
-            grade: grade,
-            subject: subject,
-            deviceId: currentDeviceId,
-          );
-
-          final readablePkg = _getHumanReadablePackageName(grade, subject, packageId, isAmharic);
-
+      // Check Expiration
+      if (res['subscription_expires_at'] != null) {
+        final expiresAt = DateTime.tryParse(res['subscription_expires_at'].toString());
+        if (expiresAt != null && DateTime.now().toUtc().isAfter(expiresAt.toUtc())) {
           return ActivationResult(
-            status: ActivationStatus.alreadyUsedSameDevice,
-            isSuccess: true,
-            packageId: packageId,
-            grade: grade,
-            subject: subject,
-            packageName: readablePkg,
+            status: ActivationStatus.expired,
+            isSuccess: false,
             message: isAmharic
-                ? 'ይህ ኮድ ቀደም ሲል ለዚህ ስልክ የተከፈተ ነው። ፓኬጁ በተሳካ ሁኔታ ታድሷል!'
-                : 'This activation code is already bound to this device. Access restored successfully!',
+                ? 'የደንበኝነት ምዝገባዎ ጊዜ አልቋል። እባክዎ ፈቃድዎን ያድሱ።'
+                : 'Subscription has expired. Please renew with admin.',
           );
-        } else {
-          // Used on a different device / phone - Anti-Account Sharing rule
+        }
+      }
+
+      final String? boundDev = (res['device_id'] as String?)?.trim();
+      if (boundDev != null && boundDev.isNotEmpty && boundDev != currentDeviceId) {
+        return ActivationResult(
+          status: ActivationStatus.alreadyUsedDifferentDevice,
+          isSuccess: false,
+          message: isAmharic
+              ? 'ይህ ስልክ ቁጥር ቀደም ሲል በሌላ ሞባይል ስልክ ላይ ተመዝግቧል! የደህንነት ስርዓቱ 1 አካውንት ለአንድ ስልክ ብቻ ይፈቅዳል (Single-Device Protection)።'
+              : 'This account is already registered on another device. Single-device protection enforced.',
+        );
+      }
+
+      if (boundDev == null || boundDev.isEmpty) {
+        // Strict Check: Check if currentDeviceId is already bound to another phone number
+        final deviceConflict = await supabase
+            .from('students')
+            .select('phone_number')
+            .eq('device_id', currentDeviceId)
+            .neq('phone_number', cleanPhone)
+            .neq('phone_number', altPhone)
+            .maybeSingle();
+
+        if (deviceConflict != null) {
           return ActivationResult(
             status: ActivationStatus.alreadyUsedDifferentDevice,
             isSuccess: false,
             message: isAmharic
-                ? 'ይህ የማግበሪያ ኮድ በሌላ ስልክ ላይ አገልግሎት ላይ ውሏል። የደህንነት ስርዓቱ አንድን ኮድ ለአንድ ስልክ ብቻ ይፈቅዳል!'
-                : 'This activation code has already been redeemed on another device. In accordance with Smart X anti-piracy policy, codes are strictly single-device bound.',
+                ? 'ይህ ስልክ (መሣሪያ) ከሌላ ተማሪ ስልክ ቁጥር ጋር ተገናኝቷል። ይህ መሣሪያ ከአንድ መለያ በላይ መያዝ አይችልም።'
+                : 'This device is already linked to another registered phone number. Only one account is allowed per device.',
           );
         }
       }
 
+      // Auto-bind device
       final nowIso = DateTime.now().toUtc().toIso8601String();
+      await supabase.from('students').update({
+        'device_id': currentDeviceId,
+        'full_name': cleanName,
+        'updated_at': nowIso,
+      }).or('phone_number.eq.$cleanPhone,phone_number.eq.$altPhone');
 
-      // 3. Mark code as used in Supabase
-      await supabase.from('activation_codes').update({
-        'is_used': true,
-        'used_by_phone': cleanPhone,
-        'used_by_device': currentDeviceId,
-        'used_at': nowIso,
-      }).eq('code', cleanCode);
+      final int grade = (res['grade'] as num?)?.toInt() ?? 12;
+      final List<dynamic>? rawPkgs = res['unlocked_packages'] as List<dynamic>?;
+      final List<String> pkgs = rawPkgs != null
+          ? rawPkgs.map((e) => e.toString()).toList()
+          : <String>['pkg_grade_$grade'];
 
-      // 4. Update students table with unlocked_packages and device binding
-      try {
-        final existingStudent = await supabase
-            .from('students')
-            .select('unlocked_packages')
-            .eq('phone_number', cleanPhone)
-            .maybeSingle();
-
-        List<String> pkgs = [];
-        if (existingStudent != null && existingStudent['unlocked_packages'] != null) {
-          pkgs = (existingStudent['unlocked_packages'] as List<dynamic>).map((e) => e.toString()).toList();
-        }
-        if (!pkgs.contains(packageId)) {
-          pkgs.add(packageId);
-        }
-        if (subject != null && subject.trim().isNotEmpty) {
-          final slug = SubscriptionService.normalizeSubjectSlug(subject);
-          final subjectPkg = 'pkg_g${grade}_$slug';
-          if (!pkgs.contains(subjectPkg)) pkgs.add(subjectPkg);
-        } else {
-          final gradePkg = 'pkg_grade_$grade';
-          if (!pkgs.contains(gradePkg)) pkgs.add(gradePkg);
-        }
-
-        await supabase.from('students').upsert({
-          'phone_number': cleanPhone,
-          'full_name': cleanName,
-          'grade': grade,
-          'device_id': currentDeviceId,
-          'is_active': true,
-          'subscription_status': 'active',
-          'unlocked_packages': pkgs,
-          'updated_at': nowIso,
-        }, onConflict: 'phone_number');
-      } catch (e) {
-        debugPrint('[ActivationService] Student table update notice: $e');
-      }
-
-      // 5. Record active subscription in user_subscriptions table
-      try {
-        await supabase.from('user_subscriptions').upsert({
-          'phone_number': cleanPhone,
-          'package_id': packageId,
-          'device_id': currentDeviceId,
-          'is_active': true,
-          'activated_at': nowIso,
-        });
-      } catch (e) {
-        debugPrint('[ActivationService] Upsert subscription notice: $e');
-      }
-
-      // 6. Apply local unlock and device binding
       await _applyActivationLocally(
         name: cleanName,
         phone: cleanPhone,
-        packageId: packageId,
+        packageId: pkgs.isNotEmpty ? pkgs.first : 'pkg_grade_$grade',
         grade: grade,
-        subject: subject,
+        packages: pkgs,
         deviceId: currentDeviceId,
       );
 
-      final readablePkg = _getHumanReadablePackageName(grade, subject, packageId, isAmharic);
+      final readablePkg = _getHumanReadablePackageName(grade, null, pkgs.isNotEmpty ? pkgs.first : '', isAmharic);
 
       return ActivationResult(
         status: ActivationStatus.success,
         isSuccess: true,
-        packageId: packageId,
+        packageId: pkgs.isNotEmpty ? pkgs.first : 'pkg_grade_$grade',
         grade: grade,
-        subject: subject,
         packageName: readablePkg,
         message: isAmharic
-            ? 'እንኳን ደስ አለዎት! $readablePkg በተሳካ ሁኔታ ተከፍቷል!'
-            : 'Congratulations! $readablePkg has been unlocked and bound to this device.',
+            ? 'እንኳን ደስ አለዎት! $readablePkg በዚህ ስልክ ላይ በተሳካ ሁኔታ ተከፍቷል!'
+            : 'Congratulations! $readablePkg has been unlocked on this device.',
       );
     } catch (e) {
       debugPrint('[ActivationService] Activation error: $e');
@@ -305,7 +192,7 @@ class ActivationService {
         isSuccess: false,
         message: isAmharic
             ? 'የኢንተርኔት ግንኙነት ችግር አጋጥሟል። እባክዎ ግንኙነትዎን ፈትሸው እንደገና ይሞክሩ።'
-            : 'Network error connecting to activation server. Please check your internet connection and try again.',
+            : 'Network error. Please check your internet connection and try again.',
       );
     }
   }
@@ -316,7 +203,7 @@ class ActivationService {
     required String phone,
     required String packageId,
     required int grade,
-    String? subject,
+    required List<String> packages,
     required String deviceId,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -326,22 +213,15 @@ class ActivationService {
     await prefs.setString('user_name', name);
     await prefs.setString('user_phoneNumber', phone);
     await prefs.setString('phone_number', phone);
+    await prefs.setInt('user_grade', grade);
     await prefs.setBool('is_registered', true);
+    await prefs.setBool('is_authenticated', true);
 
     // Apply strict hardware binding fingerprint
     await DeviceService.bindDeviceToSubscription(phone, packageId);
 
     // Unlock in SubscriptionService
-    await SubscriptionService.unlockPackage(packageId);
-
-    if (subject != null && subject.trim().isNotEmpty) {
-      final String slug = subject.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
-      await SubscriptionService.unlockPackage('pkg_g${grade}_$slug');
-    } else {
-      // Full grade package unlocked
-      await SubscriptionService.unlockPackage('pkg_grade_$grade');
-      await SubscriptionService.unlockGrade(grade);
-    }
+    await SubscriptionService.setUnlockedPackages(packages);
   }
 
   /// Helper to get user-friendly package title
@@ -351,7 +231,7 @@ class ActivationService {
     String packageId,
     bool isAmharic,
   ) {
-    if (packageId.contains('all_inclusive')) {
+    if (packageId.contains('all_inclusive') || packageId.contains('all_grades')) {
       return isAmharic
           ? 'ክፍል $grade የዩኒቨርሲቲ መግቢያ (Matric) የተሟላ ፓኬጅ'
           : 'Grade $grade All-Inclusive Matric Prep Kit';

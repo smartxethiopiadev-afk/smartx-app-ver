@@ -313,7 +313,7 @@ class _ActivationCodeDialogState extends State<ActivationCodeDialog> {
                   Text(
                     isAm
                         ? 'ከቴሌግራም ወይም ከአስተዳዳሪ የተሰጠዎትን የማግበሪያ ኮድ ያስገቡ።'
-                        : 'Enter the package-specific activation code received from Smart X Admin.',
+                        : 'Enter the package-specific activation code received from Smart Learn Ethiopian Admin.',
                     style: TextStyle(fontSize: 12, color: textSecondary, height: 1.35),
                   ),
                   const SizedBox(height: 18),
