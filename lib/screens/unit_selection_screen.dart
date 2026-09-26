@@ -15,7 +15,7 @@ import '../main.dart';
 import 'quiz_screen.dart';
 import '../services/analytics_service.dart';
 import '../services/subscription_service.dart';
-import '../widgets/locked_unit_dialog.dart';
+import '../widgets/account_upgrade_dialog.dart';
 import '../widgets/quiz_selection_dialogs.dart';
 import '../data/curriculum_units.dart';
 
@@ -125,16 +125,13 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       return;
     }
 
-    // Unit 2+ locked: Show the Locked Unit Pop-Up IMMEDIATELY without any network delay!
-    LockedUnitDialog.show(
+    // Show Account Upgrade & Verification Dialog directly!
+    AccountUpgradeDialog.show(
       context,
-      grade: widget.grade,
-      subject: widget.enTitle,
-      unitNumber: activeUnitNum,
-      unitTitle: 'Unit $activeUnitNum',
+      initialGrade: widget.grade,
       languageCode: widget.languageCode,
       isDarkMode: AppStateProvider.of(context).isDarkMode,
-      onUnlocked: () {
+      onSuccess: () {
         _checkRegistrationStatus();
         onSuccess();
       },
@@ -167,15 +164,12 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
 
     if (!isAccessible) {
       if (!mounted) return;
-      LockedUnitDialog.show(
+      AccountUpgradeDialog.show(
         context,
-        grade: widget.grade,
-        subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
-        unitNumber: unitNumber,
-        unitTitle: 'Unit $unitNumber Short Note',
+        initialGrade: widget.grade,
         languageCode: widget.languageCode,
         isDarkMode: AppStateProvider.of(context).isDarkMode,
-        onUnlocked: () {
+        onSuccess: () {
           _checkRegistrationStatus();
           _openShortNotePdf(unitNumber);
         },
@@ -2035,15 +2029,12 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
                                         ),
                                         onPressed: () {
                                           if (isLocked) {
-                                            LockedUnitDialog.show(
+                                            AccountUpgradeDialog.show(
                                               context,
-                                              grade: widget.grade,
-                                              subject: widget.enTitle,
-                                              unitNumber: activeUnitNum,
-                                              unitTitle: title,
+                                              initialGrade: widget.grade,
                                               languageCode: widget.languageCode,
                                               isDarkMode: AppStateProvider.of(context).isDarkMode,
-                                              onUnlocked: () {
+                                              onSuccess: () {
                                                 _checkRegistrationStatus();
                                                 if (widget.isShortNotesMode) {
                                                   _openShortNotePdf(activeUnitNum);

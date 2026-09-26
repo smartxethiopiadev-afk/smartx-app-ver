@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../data/curriculum_units.dart';
 import '../services/subscription_service.dart';
-import '../widgets/locked_unit_dialog.dart';
+import '../widgets/account_upgrade_dialog.dart';
 import 'video_lesson_screen.dart';
 
 class VideoUnitSelectionScreen extends StatefulWidget {
@@ -94,15 +94,12 @@ class _VideoUnitSelectionScreenState extends State<VideoUnitSelectionScreen> {
         );
 
     if (!isUnlocked) {
-      LockedUnitDialog.show(
+      AccountUpgradeDialog.show(
         context,
-        grade: widget.grade,
-        subject: widget.subject,
-        unitNumber: unitNumber,
-        unitTitle: unitTitle,
+        initialGrade: widget.grade,
         languageCode: widget.languageCode,
         isDarkMode: widget.isDarkMode,
-        onUnlocked: () {
+        onSuccess: () {
           _checkSubscription();
         },
       );
