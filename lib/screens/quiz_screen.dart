@@ -1416,15 +1416,17 @@ class _QuizScreenState extends State<QuizScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Question text with bold, clear, modern typography
+                // Question text with bold, clear, modern typography (Roboto, Inter, SF Pro, sans-serif)
                 _buildMathText(
                   q.questionText,
-                  GoogleFonts.notoSansEthiopic(
+                  GoogleFonts.inter(
                     fontSize: 16.0,
-                    fontWeight: FontWeight.w800,
-                    height: 1.5,
-                    letterSpacing: 0.1,
+                    fontWeight: FontWeight.w700,
+                    height: 1.45,
+                    letterSpacing: -0.1,
                     color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                  ).copyWith(
+                    fontFamilyFallback: const ['Roboto', 'Inter', 'SF Pro Display', 'SF Pro Text', '-apple-system', 'sans-serif', 'Noto Sans Ethiopic'],
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -1510,11 +1512,13 @@ class _QuizScreenState extends State<QuizScreen> {
                     (q.explanation != null && q.explanation!.trim().isNotEmpty)
                         ? q.explanation!.trim()
                         : _buildAutomaticExplanation(q, isAm),
-                    TextStyle(
-                      fontSize: 13,
+                    GoogleFonts.inter(
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w500,
-                      height: 1.45,
+                      height: 1.5,
                       color: isLight ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                    ).copyWith(
+                      fontFamilyFallback: const ['Roboto', 'Inter', 'SF Pro Text', '-apple-system', 'sans-serif', 'Noto Sans Ethiopic'],
                     ),
                     align: TextAlign.left,
                   ),
@@ -1698,10 +1702,12 @@ class _QuizScreenState extends State<QuizScreen> {
                   ),
                   child: Text(
                     optLetter,
-                    style: TextStyle(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w900,
                       color: isOptSelected ? Colors.white : (isLight ? const Color(0xFF475569) : Colors.white70),
+                    ).copyWith(
+                      fontFamilyFallback: const ['Roboto', 'SF Pro Text', 'sans-serif'],
                     ),
                   ),
                 ),
@@ -1710,9 +1716,12 @@ class _QuizScreenState extends State<QuizScreen> {
                   child: _buildMathText(
                     opt.text,
                     GoogleFonts.inter(
-                      fontSize: 14.0,
+                      fontSize: 14.5,
                       fontWeight: FontWeight.w600,
+                      height: 1.4,
                       color: txtCol,
+                    ).copyWith(
+                      fontFamilyFallback: const ['Roboto', 'Inter', 'SF Pro Text', '-apple-system', 'sans-serif', 'Noto Sans Ethiopic'],
                     ),
                     align: TextAlign.left,
                   ),
@@ -1817,10 +1826,13 @@ class _QuizScreenState extends State<QuizScreen> {
                   isTrue 
                       ? (isAm ? "እውነት (True)" : "TRUE") 
                       : (isAm ? "ሐሰት (False)" : "FALSE"),
-                  style: TextStyle(
+                  style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
                     color: txtCol,
+                  ).copyWith(
+                    fontFamilyFallback: const ['Roboto', 'SF Pro Display', 'sans-serif', 'Noto Sans Ethiopic'],
                   ),
                 ),
               ],

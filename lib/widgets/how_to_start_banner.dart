@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../models/video_model.dart';
-import '../services/video_service.dart';
-import 'account_upgrade_dialog.dart';
 import 'app_video_popup_dialog.dart';
 
-/// Interactive "How to Start" widget that displays a video-first guide
-/// fetched directly from the Supabase database.
+/// Interactive "How to Start" widget that displays a video tutorial banner.
+/// Tapping anywhere directly launches the in-place YouTube-style video popup player.
 class HowToStartBanner extends StatelessWidget {
   final bool isDarkMode;
   final String languageCode;
@@ -25,306 +21,11 @@ class HowToStartBanner extends StatelessWidget {
     BuildContext context, {
     required bool isDarkMode,
     required String languageCode,
+    int? grade,
   }) async {
     return AppVideoPopupDialog.show(
       context,
-      isDarkMode: isDarkMode,
-      languageCode: languageCode,
-    );
-  }
-
-  static void showUsageGuide(
-    BuildContext context, {
-    required bool isDarkMode,
-    required String languageCode,
-    int? grade,
-  }) {
-    final bool isLight = !isDarkMode;
-    final bool isAm = languageCode == 'am';
-
-    final Color dialogBg = isLight ? Colors.white : const Color(0xFF1E293B);
-    final Color textPrimary = isLight ? const Color(0xFF0F172A) : Colors.white;
-    final Color textSecondary = isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: dialogBg,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0284C7).withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.smart_display_rounded,
-                      color: Color(0xFF0284C7),
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isAm ? 'እንዴት ልጀምር? (የቪዲዮ መመሪያ)' : 'How to Start? (Video Tutorial)',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          isAm ? 'የመተግበሪያውን አጠቃቀም በቪዲዮ ይመልከቱ' : 'Step-by-step video guide from Supabase',
-                          style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 11.5,
-                            color: textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close_rounded, color: textSecondary, size: 22),
-                    onPressed: () => Navigator.of(ctx).pop(),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 16),
-
-              // Dynamic Tutorial Video Card from Supabase Database
-              FutureBuilder<VideoModel>(
-                future: VideoService.fetchAppTutorialVideo(),
-                builder: (context, snapshot) {
-                  final video = snapshot.data ?? VideoService.getAppOverviewVideo();
-                  final String thumbUrl = video.thumbnailUrl;
-
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: !isLight ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFF0284C7).withValues(alpha: 0.35),
-                        width: 1.2,
-                      ),
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        splashColor: const Color(0xFF00BFFF).withValues(alpha: 0.1),
-                        highlightColor: Colors.transparent,
-                        onTap: () {
-                          Navigator.of(ctx).pop();
-                          AppVideoPopupDialog.show(
-                            context,
-                            video: video,
-                            grade: grade ?? 12,
-                            isDarkMode: isDarkMode,
-                            languageCode: languageCode,
-                          );
-                        },
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                                  child: AspectRatio(
-                                    aspectRatio: 16 / 9,
-                                    child: thumbUrl.isNotEmpty
-                                        ? Image.network(
-                                            thumbUrl,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => Container(
-                                              color: const Color(0xFF0F172A),
-                                              child: const Center(
-                                                child: Icon(Icons.video_library_rounded, color: Colors.white54, size: 40),
-                                              ),
-                                            ),
-                                          )
-                                        : Container(
-                                            color: const Color(0xFF0F172A),
-                                            child: const Center(
-                                              child: Icon(Icons.play_arrow_rounded, color: Colors.white54, size: 48),
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                                Container(
-                                  height: 140,
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.35),
-                                  ),
-                                ),
-                                Container(
-                                  width: 52,
-                                  height: 52,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF0284C7),
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF0284C7).withValues(alpha: 0.5),
-                                        blurRadius: 14,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.play_arrow_rounded,
-                                    color: Colors.white,
-                                    size: 30,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      video.title.isNotEmpty
-                                          ? video.title
-                                          : (isAm
-                                              ? 'የመተግበሪያው አጠቃቀም ሙሉ ገለፃ ቪዲዮ'
-                                              : 'Smart Learn Master Tutorial Video'),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w800,
-                                        color: textPrimary,
-                                        height: 1.3,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF0284C7),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.play_circle_fill_rounded, size: 14, color: Colors.white),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          isAm ? 'እይ' : 'Watch',
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 11.5,
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 18),
-
-              // Action Buttons
-              SizedBox(
-                height: 46,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    AccountUpgradeDialog.show(
-                      context,
-                      isDarkMode: isDarkMode,
-                      languageCode: languageCode,
-                      initialGrade: grade ?? 12,
-                    );
-                  },
-                  icon: const Icon(Icons.vpn_key_rounded, size: 18, color: Colors.white),
-                  label: Text(
-                    isAm ? 'አካውንት ያሻሽሉ / ማግበሪያ ያስገቡ' : 'Upgrade & Verify Account',
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 13,
-                      color: Colors.white,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0284C7),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Telegram Admin Contact
-              SizedBox(
-                height: 44,
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    Navigator.of(ctx).pop();
-                    final Uri adminUri = Uri.parse('https://t.me/smart_x_help');
-                    if (await canLaunchUrl(adminUri)) {
-                      await launchUrl(adminUri, mode: LaunchMode.externalApplication);
-                    }
-                  },
-                  icon: const Icon(Icons.support_agent_rounded, size: 18, color: Color(0xFF0088CC)),
-                  label: Text(
-                    isAm ? 'አድሚኑን በቴሌግራም ያግኙ (@smart_x_help)' : 'Contact Admin on Telegram',
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                      color: const Color(0xFF0088CC),
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF0088CC), width: 1.2),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showHowToStartPopUp(BuildContext context) {
-    showUsageGuide(
-      context,
+      grade: grade ?? 12,
       isDarkMode: isDarkMode,
       languageCode: languageCode,
     );
@@ -360,71 +61,67 @@ class HowToStartBanner extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           splashColor: const Color(0xFF00BFFF).withValues(alpha: 0.10),
           highlightColor: Colors.transparent,
-          onTap: () => playTutorialVideo(context, isDarkMode: isDarkMode, languageCode: languageCode),
+          onTap: () => playTutorialVideo(
+            context,
+            isDarkMode: isDarkMode,
+            languageCode: languageCode,
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _showHowToStartPopUp(context),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0284C7).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.smart_display_rounded,
-                      color: Color(0xFF0284C7),
-                      size: 22,
-                    ),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.smart_display_rounded,
+                    color: Color(0xFF0284C7),
+                    size: 22,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _showHowToStartPopUp(context),
-                    child: Text(
-                      isAm ? 'እንዴት ልጀምር? (የቪዲዮ አጠቃቀም መመሪያ)' : 'How to Start? (Video Tutorial)',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: textPrimary,
-                      ),
+                  child: Text(
+                    isAm ? 'እንዴት ልጀምር? (የቪዲዮ መመሪያ)' : 'How to Start? (Video Tutorial)',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: textPrimary,
+                    ).copyWith(
+                      fontFamilyFallback: const ['Roboto', 'SF Pro Display', 'sans-serif', 'Noto Sans Ethiopic'],
                     ),
                   ),
                 ),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => playTutorialVideo(context, isDarkMode: isDarkMode, languageCode: languageCode),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0284C7).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          isAm ? 'እይ (Watch)' : 'Watch',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF0284C7),
-                          ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        isAm ? 'እይ (Watch)' : 'Watch',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0284C7),
+                        ).copyWith(
+                          fontFamilyFallback: const ['Roboto', 'SF Pro Display', 'sans-serif'],
                         ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 14,
-                          color: Color(0xFF0284C7),
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 14,
+                        color: Color(0xFF0284C7),
+                      ),
+                    ],
                   ),
                 ),
               ],

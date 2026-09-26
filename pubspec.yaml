@@ -46,10 +46,12 @@ flutter_launcher_icons:
   ios: false
   image_path: "assets/images/app_logo.png"
   min_sdk_android: 21
+  adaptive_icon_background: "#080E1E"
+  adaptive_icon_foreground: "assets/images/app_logo_foreground.png"
   web:
     generate: false
-    background_color: "#000000"
-    theme_color: "#000000"
+    background_color: "#080E1E"
+    theme_color: "#080E1E"
 
 flutter_native_splash:
   color: "#000000"

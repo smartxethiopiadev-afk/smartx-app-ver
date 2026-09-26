@@ -28,7 +28,7 @@ class MathText extends StatelessWidget {
           GoogleFonts.inter(
             fontSize: 14.0,
           ).copyWith(
-            fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
+            fontFamilyFallback: const ['Roboto', 'Inter', 'SF Pro Display', 'SF Pro Text', '-apple-system', 'sans-serif', 'Noto Sans Ethiopic'],
           ),
     );
 
@@ -82,7 +82,7 @@ class MathText extends StatelessWidget {
           result.add(TextSpan(
             text: formatted,
             style: baseStyle.copyWith(
-              fontFamilyFallback: const ['Inter', 'Roboto', 'sans-serif'],
+              fontFamilyFallback: const ['Roboto', 'Inter', 'SF Pro Display', 'SF Pro Text', '-apple-system', 'sans-serif', 'Noto Sans Ethiopic'],
               fontWeight: FontWeight.w600,
               letterSpacing: 0.2,
             ),
