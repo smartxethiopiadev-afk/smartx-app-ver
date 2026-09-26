@@ -193,33 +193,11 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
       return;
     }
 
-    String? pdfUrl;
-    try {
-      // Query short_notes by grade, subject (case-insensitive), and unit_number to get pdf_url
-      pdfUrl = await ShortNoteService.getPdfUrl(
-        grade: widget.grade,
-        subject: widget.subjectId,
-        unitNumber: unitNumber,
-      );
-
-      // If not found with subjectId, fallback to enTitle
-      if ((pdfUrl == null || pdfUrl.trim().isEmpty) && widget.enTitle.isNotEmpty) {
-        pdfUrl = await ShortNoteService.getPdfUrl(
-          grade: widget.grade,
-          subject: widget.enTitle,
-          unitNumber: unitNumber,
-        );
-      }
-    } catch (e) {
-      debugPrint('[UnitSelectionScreen] Error querying short_notes pdf_url: $e');
-    }
-
-    if (!mounted) return;
-
+    // Navigate immediately to eliminate button lag, letting PdfViewerScreen resolve the PDF URL asynchronously in its loading state!
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => PdfViewerScreen(
-          pdfUrl: pdfUrl?.trim() ?? '',
+          pdfUrl: '',
           title: 'Unit $unitNumber Short Note',
           subject: widget.enTitle.isNotEmpty ? widget.enTitle : widget.subjectId,
           grade: widget.grade,

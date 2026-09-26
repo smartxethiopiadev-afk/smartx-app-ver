@@ -79,7 +79,20 @@ class VideoService {
       }
     }
 
-    return getAppOverviewVideo();
+    // If not found in the database, return a model with empty videoUrl so the UI displays "Coming Soon" screen!
+    return VideoModel(
+      id: 'app_overview_video',
+      grade: 0,
+      subject: 'Tutorial',
+      unitNumber: 1,
+      partNumber: 1,
+      title: 'እንዴት እንደሚጀመር (በቅርቡ ይለቀቃል)',
+      videoUrl: '', // Empty means coming soon!
+      storagePath: '',
+      customThumbnailUrl: '',
+      durationText: 'Coming Soon',
+      orderIndex: 0,
+    );
   }
 
   /// Helper to get subjects available for a grade

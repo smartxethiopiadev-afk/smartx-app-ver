@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/video_model.dart';
 import '../screens/fullscreen_video_player_screen.dart';
+import '../screens/video_coming_soon_screen.dart';
 import '../services/video_service.dart';
 import 'youtube_video_player_dialog.dart';
 
@@ -76,6 +77,19 @@ class _StartupTutorialDialogState extends State<StartupTutorialDialog> {
         video: video,
         isDarkMode: widget.isDarkMode,
         languageCode: widget.languageCode,
+      );
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => VideoComingSoonScreen(
+            grade: 12,
+            subject: 'App Tutorial',
+            unitNumber: 1,
+            unitTitle: 'Getting Started',
+            isDarkMode: widget.isDarkMode,
+            languageCode: widget.languageCode,
+          ),
+        ),
       );
     }
   }

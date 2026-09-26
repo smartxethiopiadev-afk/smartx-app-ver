@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/video_model.dart';
 import '../screens/fullscreen_video_player_screen.dart';
+import '../screens/video_coming_soon_screen.dart';
 import '../services/video_service.dart';
 import 'account_upgrade_dialog.dart';
 
@@ -30,7 +31,7 @@ class HowToStartBanner extends StatelessWidget {
       final video = await VideoService.fetchAppTutorialVideo();
       final streamUrl = video.streamUrl.isNotEmpty
           ? video.streamUrl
-          : VideoService.getAppOverviewVideo().streamUrl;
+          : (video.videoUrl ?? '');
 
       if (context.mounted && streamUrl.isNotEmpty) {
         await FullscreenVideoPlayerScreen.open(
@@ -41,17 +42,35 @@ class HowToStartBanner extends StatelessWidget {
           isDarkMode: isDarkMode,
           languageCode: languageCode,
         );
+      } else {
+        if (context.mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => VideoComingSoonScreen(
+                grade: 12,
+                subject: 'App Tutorial',
+                unitNumber: 1,
+                unitTitle: 'Getting Started',
+                isDarkMode: isDarkMode,
+                languageCode: languageCode,
+              ),
+            ),
+          );
+        }
       }
     } catch (_) {
-      final fallbackVideo = VideoService.getAppOverviewVideo();
       if (context.mounted) {
-        await FullscreenVideoPlayerScreen.open(
-          context,
-          videoUrl: fallbackVideo.streamUrl,
-          title: fallbackVideo.title,
-          subtitle: languageCode == 'am' ? 'የመተግበሪያ አጠቃቀም መመሪያ' : 'App Overview & User Guide',
-          isDarkMode: isDarkMode,
-          languageCode: languageCode,
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => VideoComingSoonScreen(
+              grade: 12,
+              subject: 'App Tutorial',
+              unitNumber: 1,
+              unitTitle: 'Getting Started',
+              isDarkMode: isDarkMode,
+              languageCode: languageCode,
+            ),
+          ),
         );
       }
     }
@@ -159,7 +178,7 @@ class HowToStartBanner extends StatelessWidget {
                         onTap: () {
                           final streamUrl = video.streamUrl.isNotEmpty
                               ? video.streamUrl
-                              : VideoService.getAppOverviewVideo().streamUrl;
+                              : (video.videoUrl ?? '');
 
                           if (streamUrl.isNotEmpty) {
                             FullscreenVideoPlayerScreen.open(
@@ -173,14 +192,16 @@ class HowToStartBanner extends StatelessWidget {
                               languageCode: languageCode,
                             );
                           } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  isAm
-                                      ? 'የቪዲዮ መመሪያ ከ Supabase በመጫን ላይ ነው።'
-                                      : 'Video tutorial is loading from Supabase database.',
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => VideoComingSoonScreen(
+                                  grade: grade ?? 12,
+                                  subject: 'App Tutorial',
+                                  unitNumber: 1,
+                                  unitTitle: 'Getting Started',
+                                  isDarkMode: isDarkMode,
+                                  languageCode: languageCode,
                                 ),
-                                backgroundColor: const Color(0xFF0284C7),
                               ),
                             );
                           }
