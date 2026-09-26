@@ -4,7 +4,6 @@ import '../models/video_model.dart';
 import '../services/subscription_service.dart';
 import '../services/video_service.dart';
 import '../widgets/account_upgrade_dialog.dart';
-import '../widgets/locked_unit_dialog.dart';
 import '../widgets/youtube_video_player_dialog.dart';
 import '../services/offline_manager.dart';
 
@@ -71,15 +70,12 @@ class _VideoLessonScreenState extends State<VideoLessonScreen> {
   }
 
   void _handleUpgradeRedirection() {
-    LockedUnitDialog.show(
+    AccountUpgradeDialog.show(
       context,
-      grade: widget.grade,
-      subject: widget.subject,
-      unitNumber: widget.unitNumber,
-      unitTitle: widget.unitTitle,
       isDarkMode: widget.isDarkMode,
       languageCode: widget.languageCode,
-      onUnlocked: () {
+      initialGrade: widget.grade,
+      onSuccess: () {
         if (mounted) setState(() {});
       },
     );

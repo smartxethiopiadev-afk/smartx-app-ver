@@ -135,7 +135,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               content: Text(
                 isAm
                     ? 'ይህ ስልክ ቁጥር አስቀድሞ ተመዝግቧል! እባክዎ ወደ "የተማሪ መግቢያ" ገጽ በመሄድ ይግቡ።'
-                    : 'This phone number is already registered! Please go to the Login screen to sign in.',
+                    : 'This phone number is already registered! Please go to the Login & Activation screen to sign in.',
                 style: TextStyle(
                   fontSize: 13.5,
                   color: !widget.isDarkMode ? const Color(0xFF475569) : const Color(0xFF94A3B8),

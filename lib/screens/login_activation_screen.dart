@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/credential_auth_service.dart';
 import '../services/subscription_service.dart';
 import '../widgets/friendly_error_card.dart';
+import '../widgets/activation_code_dialog.dart';
 import 'registration_screen.dart';
 
 class LoginActivationScreen extends StatefulWidget {
@@ -205,7 +206,7 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          isAm ? 'የተማሪ መግቢያ' : 'Student Login',
+          isAm ? 'የተማሪ መግቢያ / ማግበር' : 'Student Login & Activation',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w900,
@@ -367,7 +368,7 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
 
               const SizedBox(height: 24),
 
-              // Contact Admin Assistance
+              // Have an Activation Code?
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -378,7 +379,7 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                 child: Column(
                   children: [
                     Text(
-                      isAm ? 'እገዛ ይፈልጋሉ?' : 'Need Assistance?',
+                      isAm ? 'የማግበሪያ ኮድ አለዎት?' : 'Have an Activation Code?',
                       style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w800,
@@ -388,29 +389,32 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                     const SizedBox(height: 4),
                     Text(
                       isAm
-                          ? 'ክፍያ ለመፈጸም ወይም አካውንትዎን ለማስከፈት አስተዳዳሪውን ያነጋግሩ።'
-                          : 'Contact support to complete payment or unlock your account.',
+                          ? 'የማግበሪያ ኮድ ካለዎት እዚህ በማስገባት በቀጥታ ይክፈቱ።'
+                          : 'Enter your curriculum code to unlock instant access.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 11.5, color: textSecondary),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
-                      onPressed: () async {
-                        await SubscriptionService.contactAdminOnTelegram(
-                          studentName: _nameController.text.trim(),
-                          phoneNumber: _phoneController.text.trim(),
-                          grade: widget.preferredGrade,
-                          customPurpose: 'የተማሪ መለያዬን ለማስከፈት ወይም ለመግባት እገዛ እፈልጋለሁ።',
+                      onPressed: () {
+                        ActivationCodeDialog.show(
+                          context,
+                          isDarkMode: widget.isDarkMode,
+                          languageCode: widget.languageCode,
+                          preferredGrade: widget.preferredGrade,
+                          onActivated: () {
+                            Navigator.of(context).pop(true);
+                          },
                         );
                       },
-                      icon: const Icon(Icons.support_agent_rounded, size: 18),
+                      icon: const Icon(Icons.vpn_key_rounded, size: 18),
                       label: Text(
-                        isAm ? 'አስተዳዳሪውን ያነጋግሩ (Contact Admin)' : 'Contact Admin',
+                        isAm ? 'ማግበሪያ ኮድ አስገባ' : 'Enter Activation Code',
                         style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
                       ),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF0088CC),
-                        side: const BorderSide(color: Color(0xFF0088CC), width: 1.2),
+                        foregroundColor: const Color(0xFF0084FF),
+                        side: const BorderSide(color: Color(0xFF0084FF)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),
