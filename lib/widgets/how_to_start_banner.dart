@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/video_model.dart';
+import '../services/subscription_service.dart';
 import '../services/video_service.dart';
 import 'account_upgrade_dialog.dart';
 import 'embedded_video_player.dart';
@@ -502,26 +502,26 @@ class _HowToStartPopupDialogState extends State<_HowToStartPopupDialog> {
 
               // Telegram Support Link Button
               SizedBox(
-                height: 42,
+                height: 44,
                 child: OutlinedButton.icon(
                   onPressed: () async {
                     Navigator.of(context).pop();
-                    final Uri adminUri = Uri.parse('https://t.me/smart_x_help');
-                    if (await canLaunchUrl(adminUri)) {
-                      await launchUrl(adminUri, mode: LaunchMode.externalApplication);
-                    }
+                    await SubscriptionService.contactAdminOnTelegram(
+                      grade: _selectedGrade,
+                      customPurpose: 'የ Grade $_selectedGrade የ Smart Learn Ethiopian ሙሉ ትምህርት ፓኬጅ ማስከፈት እፈልጋለሁ።',
+                    );
                   },
-                  icon: const Icon(Icons.support_agent_rounded, size: 18, color: Color(0xFF0088CC)),
+                  icon: const Icon(Icons.support_agent_rounded, size: 19, color: Color(0xFF0088CC)),
                   label: Text(
-                    isAm ? 'አድሚኑን በቴሌግራም ያግኙ (@smart_x_help)' : 'Contact Admin on Telegram',
+                    isAm ? 'አስተዳዳሪውን ያነጋግሩ (Contact Admin)' : 'Contact Admin',
                     style: GoogleFonts.notoSansEthiopic(
                       fontWeight: FontWeight.w800,
-                      fontSize: 12,
+                      fontSize: 13,
                       color: const Color(0xFF0088CC),
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF0088CC), width: 1.2),
+                    side: const BorderSide(color: Color(0xFF0088CC), width: 1.3),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),

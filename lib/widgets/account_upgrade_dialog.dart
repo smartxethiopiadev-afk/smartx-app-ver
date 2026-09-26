@@ -5,7 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/device_service.dart';
 import '../services/subscription_service.dart';
 import 'friendly_error_card.dart';
-import 'activation_code_dialog.dart';
 
 /// Clean, high-contrast modal dialog for Student License Verification & New Registration.
 /// Strictly removed all top video widgets as requested.
@@ -614,31 +613,30 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog>
 
           const SizedBox(height: 10),
 
-          // Activation Code Option
+          // Contact Admin Option
           SizedBox(
-            height: 40,
+            height: 42,
             child: OutlinedButton.icon(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).pop();
-                ActivationCodeDialog.show(
-                  context,
-                  isDarkMode: widget.isDarkMode,
-                  languageCode: widget.languageCode,
-                  preferredGrade: widget.initialGrade,
-                  onActivated: widget.onSuccess,
+                await SubscriptionService.contactAdminOnTelegram(
+                  studentName: _verifyNameController.text.trim(),
+                  phoneNumber: _verifyPhoneController.text.trim(),
+                  grade: widget.initialGrade,
+                  customPurpose: 'የቴሌግራም ክፍያ ፈጽሜ የትምህርት ፈቃዴን ማስከፈት እፈልጋለሁ።',
                 );
               },
-              icon: const Icon(Icons.vpn_key_rounded, size: 16, color: Color(0xFF0284C7)),
+              icon: const Icon(Icons.support_agent_rounded, size: 18, color: Color(0xFF0088CC)),
               label: Text(
-                isAm ? 'የማግበሪያ ኮድ አለዎት? (Activation Code)' : 'Have an Activation Code?',
+                isAm ? 'አስተዳዳሪውን ያነጋግሩ (Contact Admin)' : 'Contact Admin',
                 style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0284C7),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF0088CC),
                 ),
               ),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
+                side: const BorderSide(color: Color(0xFF0088CC), width: 1.2),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),

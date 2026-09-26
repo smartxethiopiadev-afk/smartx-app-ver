@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/video_model.dart';
+import '../services/subscription_service.dart';
 import '../services/video_service.dart';
 import 'account_upgrade_dialog.dart';
-import 'activation_code_dialog.dart';
 import 'embedded_video_player.dart';
 
 /// Modal dialog shown when a student attempts to access a locked unit (Unit 2+).
 /// Embeds an in-place video preview/tutorial, Upgrade Verification button,
-/// Activation Code option, and Telegram Admin contact without navigating away.
+/// and Telegram Admin contact without navigating away.
 class LockedUnitDialog extends StatefulWidget {
   final int grade;
   final String subject;
@@ -352,62 +351,32 @@ class _LockedUnitDialogState extends State<LockedUnitDialog> {
                 ),
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
 
-              // 6. Button 2: Enter Activation Code
+              // 6. Button 2: Telegram Admin Contact (Clean label without @username, with custom message)
               SizedBox(
-                height: 42,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    ActivationCodeDialog.show(
-                      context,
-                      isDarkMode: widget.isDarkMode,
-                      languageCode: widget.languageCode,
-                      preferredGrade: widget.grade,
-                      onActivated: widget.onUnlocked,
-                    );
-                  },
-                  icon: const Icon(Icons.vpn_key_rounded, size: 16, color: Color(0xFF0284C7)),
-                  label: Text(
-                    isAm ? 'የማግበሪያ ኮድ አስገባ (Activation Code)' : 'Enter Activation Code',
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0284C7),
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // 7. Button 3: Telegram Admin Contact
-              SizedBox(
-                height: 42,
+                height: 44,
                 child: OutlinedButton.icon(
                   onPressed: () async {
                     Navigator.of(context).pop();
-                    final Uri adminUri = Uri.parse('https://t.me/smart_x_help');
-                    if (await canLaunchUrl(adminUri)) {
-                      await launchUrl(adminUri, mode: LaunchMode.externalApplication);
-                    }
+                    await SubscriptionService.contactAdminOnTelegram(
+                      grade: widget.grade,
+                      subject: widget.subject,
+                      unitNumber: widget.unitNumber,
+                      unitTitle: widget.unitTitle,
+                    );
                   },
-                  icon: const Icon(Icons.support_agent_rounded, size: 18, color: Color(0xFF0088CC)),
+                  icon: const Icon(Icons.support_agent_rounded, size: 19, color: Color(0xFF0088CC)),
                   label: Text(
-                    isAm ? 'በቴሌግራም አድሚኑን ያግኙ (@smart_x_help)' : 'Contact Admin on Telegram',
+                    isAm ? 'አስተዳዳሪውን ያነጋግሩ (Contact Admin)' : 'Contact Admin',
                     style: GoogleFonts.notoSansEthiopic(
                       fontWeight: FontWeight.w800,
-                      fontSize: 12,
+                      fontSize: 13,
                       color: const Color(0xFF0088CC),
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF0088CC), width: 1.2),
+                    side: const BorderSide(color: Color(0xFF0088CC), width: 1.3),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),

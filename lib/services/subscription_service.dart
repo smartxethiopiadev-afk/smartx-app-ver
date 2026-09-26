@@ -1,6 +1,7 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'device_service.dart';
 
 class SubscriptionService {
@@ -657,6 +658,76 @@ class SubscriptionService {
       p = '0${p.substring(3)}';
     }
     return p;
+  }
+
+  /// Opens Telegram with a formatted custom message including student info, Grade, Unit, Package, and Device ID
+  static Future<void> contactAdminOnTelegram({
+    BuildContext? context,
+    String? studentName,
+    String? phoneNumber,
+    int? grade,
+    String? subject,
+    int? unitNumber,
+    String? unitTitle,
+    String? packageName,
+    String? customPurpose,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final name = (studentName != null && studentName.isNotEmpty)
+          ? studentName
+          : (prefs.getString('user_fullName') ?? prefs.getString('user_name') ?? '');
+      final phone = (phoneNumber != null && phoneNumber.isNotEmpty)
+          ? phoneNumber
+          : (prefs.getString('user_phoneNumber') ?? prefs.getString('phone_number') ?? '');
+      final currentDeviceId = await DeviceService.getDeviceId();
+      final int userGrade = grade ?? prefs.getInt('user_grade') ?? prefs.getInt('selected_grade') ?? 12;
+
+      final StringBuffer buffer = StringBuffer();
+      buffer.writeln('ሰላም አስተዳዳሪ (Smart Learn Admin)፣');
+      buffer.writeln('የ Smart Learn Ethiopian አካውንቴን ለማሳደግ (Upgrade) ፈልጌ ነበር።');
+      buffer.writeln('');
+      if (customPurpose != null && customPurpose.isNotEmpty) {
+        buffer.writeln('📌 ዓላማ: $customPurpose');
+      } else if (packageName != null && packageName.isNotEmpty) {
+        buffer.writeln('📦 የተመረጠው ፓኬጅ: $packageName');
+      } else if (subject != null && unitNumber != null) {
+        final titlePart = (unitTitle != null && unitTitle.isNotEmpty) ? ' ($unitTitle)' : '';
+        buffer.writeln('📚 የትምህርት ምዕራፍ: Grade $userGrade - $subject Unit $unitNumber$titlePart (በ 50 ብር)');
+      } else {
+        buffer.writeln('📚 የትምህርት ክፍል: Grade $userGrade ሙሉ ትምህርት');
+      }
+      buffer.writeln('');
+      if (name.isNotEmpty) buffer.writeln('👤 የተማሪ ሙሉ ስም: $name');
+      if (phone.isNotEmpty) buffer.writeln('📱 ስልክ ቁጥር: $phone');
+      buffer.writeln('🎓 ክፍል (Grade): Grade $userGrade');
+      if (currentDeviceId.isNotEmpty) buffer.writeln('🔑 Device ID: $currentDeviceId');
+      buffer.writeln('');
+      buffer.writeln('እባክዎ አካውንቴን አረጋግጠው ፈቃዴን ይክፈቱልኝ። እናመሰግናለን!');
+
+      final String fullMessage = buffer.toString();
+      final String encodedMsg = Uri.encodeComponent(fullMessage);
+      final Uri telegramUri = Uri.parse('https://t.me/smart_x_help?text=$encodedMsg');
+
+      bool launched = false;
+      if (await canLaunchUrl(telegramUri)) {
+        launched = await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
+      }
+      if (!launched) {
+        await launchUrl(telegramUri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      debugPrint('[SubscriptionService] contactAdminOnTelegram error: $e');
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('መልእክቱን ወደ አስተዳዳሪው ለመላክ ቴሌግራም ይክፈቱ'),
+            backgroundColor: Color(0xFF0088CC),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
 

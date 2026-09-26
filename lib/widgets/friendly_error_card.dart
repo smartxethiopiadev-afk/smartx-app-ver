@@ -190,12 +190,12 @@ class FriendlyErrorCard extends StatelessWidget {
             : 'Please check your Wi-Fi or mobile data connection and try again.';
         break;
       case ErrorCategory.invalidCode:
-        icon = Icons.vpn_key_off_rounded;
+        icon = Icons.lock_clock_rounded;
         accentColor = const Color(0xFFF43F5E);
-        friendlyTitle = isAm ? 'የማግበሪያ ኮድ አልተገኘም' : 'Invalid Activation Code';
+        friendlyTitle = isAm ? 'ፈቃድ አልተገኘም' : 'License / Account Not Found';
         actionableTip = isAm
-            ? 'የፊደላት ወይም የቁጥሮች ስህተት አለመኖሩን አረጋግጠው በድጋሚ ያስገቡ።'
-            : 'Please check for typos or spaces and re-enter your code.';
+            ? 'የስልክ ቁጥርዎን ወይም ሙሉ ስምዎን ያረጋግጡና በድጋሚ ይሞክሩ ወይም አድሚኑን ያነጋግሩ።'
+            : 'Please check your name and phone number or contact admin.';
         break;
       case ErrorCategory.deviceMismatch:
         icon = Icons.phonelink_lock_rounded;
