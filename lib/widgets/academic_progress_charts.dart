@@ -42,19 +42,22 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
   void initState() {
     super.initState();
     _loadStats();
+    // Safety fallback timer ensuring spinner never hangs indefinitely
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted && _isLoading) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    });
   }
 
   Future<void> _loadStats() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final keys = prefs.getKeys();
-
     int totalSolved = 0;
     int maxScore = 0;
     final List<int> allScores = [];
 
     // Map to hold scores per subject
-    // Subjects config
     final Map<String, List<int>> subjectScores = {
       'Mathematics': [],
       'Physics': [],
@@ -65,97 +68,113 @@ class _AcademicProgressChartsState extends State<AcademicProgressCharts> {
       'Agriculture': [],
     };
 
-    for (final key in keys) {
-      if (key.startsWith('best_score_') || key.startsWith('quiz_score_')) {
-        final val = prefs.getInt(key) ?? 0;
-        if (val > 0) {
-          totalSolved++;
-          allScores.add(val);
-          if (val > maxScore) maxScore = val;
+    final List<Map<String, dynamic>> computedMastery = [];
+    List<double> loadedWeekly = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+    List<int> recentScores = [];
+    double velocityRate = 0.0;
+    int masterScore = 0;
+    String regGrade = '${widget.currentGrade}';
+    String fullName = '';
 
-          // Parse subject from key: best_score_{grade}_{subject}_u{unit}
-          for (final sub in subjectScores.keys) {
-            if (key.toLowerCase().contains(sub.toLowerCase())) {
-              subjectScores[sub]!.add(val);
-              break;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      regGrade = prefs.getString('user_grade') ?? '${widget.currentGrade}';
+      fullName = prefs.getString('user_fullName') ?? prefs.getString('user_name') ?? '';
+
+      // 1. Query SharedPreferences
+      final keys = prefs.getKeys();
+      for (final key in keys) {
+        if (key.startsWith('best_score_') || key.startsWith('quiz_score_')) {
+          final val = prefs.getInt(key) ?? 0;
+          if (val > 0) {
+            totalSolved++;
+            allScores.add(val);
+            if (val > maxScore) maxScore = val;
+
+            for (final sub in subjectScores.keys) {
+              if (key.toLowerCase().contains(sub.toLowerCase())) {
+                subjectScores[sub]!.add(val);
+                break;
+              }
             }
           }
         }
       }
-    }
 
-    // Build real Subject Mastery
-    final List<Map<String, dynamic>> computedMastery = [];
-    final subjectConfig = [
-      {'id': 'Mathematics', 'nameEn': 'Mathematics', 'nameAm': 'ሂሳብ', 'color': const Color(0xFF0084FF)},
-      {'id': 'Physics', 'nameEn': 'Physics', 'nameAm': 'ፊዚክስ', 'color': const Color(0xFFE53935)},
-      {'id': 'Chemistry', 'nameEn': 'Chemistry', 'nameAm': 'ኬሚስትሪ', 'color': const Color(0xFFEF6C00)},
-      {'id': 'Biology', 'nameEn': 'Biology', 'nameAm': 'ስነ-ህይወት', 'color': const Color(0xFF2E7D32)},
-      {'id': 'English', 'nameEn': 'English', 'nameAm': 'እንግሊዝኛ', 'color': const Color(0xFF8B5CF6)},
-    ];
+      // 2. Build Subject Mastery
+      final subjectConfig = [
+        {'id': 'Mathematics', 'nameEn': 'Mathematics', 'nameAm': 'ሂሳብ', 'color': const Color(0xFF0084FF)},
+        {'id': 'Physics', 'nameEn': 'Physics', 'nameAm': 'ፊዚክስ', 'color': const Color(0xFFE53935)},
+        {'id': 'Chemistry', 'nameEn': 'Chemistry', 'nameAm': 'ኬሚስትሪ', 'color': const Color(0xFFEF6C00)},
+        {'id': 'Biology', 'nameEn': 'Biology', 'nameAm': 'ስነ-ህይወት', 'color': const Color(0xFF2E7D32)},
+        {'id': 'English', 'nameEn': 'English', 'nameAm': 'እንግሊዝኛ', 'color': const Color(0xFF8B5CF6)},
+      ];
 
-    for (final cfg in subjectConfig) {
-      final List<int> scores = subjectScores[cfg['id'] as String] ?? [];
-      int avgScore = 0;
-      int completedUnits = scores.length;
-      if (scores.isNotEmpty) {
-        avgScore = (scores.reduce((a, b) => a + b) / scores.length).round();
+      for (final cfg in subjectConfig) {
+        final List<int> scores = subjectScores[cfg['id'] as String] ?? [];
+        int avgScore = 0;
+        int completedUnits = scores.length;
+        if (scores.isNotEmpty) {
+          avgScore = (scores.reduce((a, b) => a + b) / scores.length).round();
+        }
+        computedMastery.add({
+          'nameEn': cfg['nameEn'],
+          'nameAm': cfg['nameAm'],
+          'score': avgScore,
+          'completedUnits': completedUnits,
+          'color': cfg['color'],
+        });
       }
-      computedMastery.add({
-        'nameEn': cfg['nameEn'],
-        'nameAm': cfg['nameAm'],
-        'score': avgScore,
-        'completedUnits': completedUnits,
-        'color': cfg['color'],
-      });
-    }
 
-    // Weekly Study hours calculation:
-    // Check saved weekly study record or compute from daily completions
-    List<double> loadedWeekly = [];
-    for (int i = 0; i < 7; i++) {
-      final double? h = prefs.getDouble('study_hours_day_$i');
-      loadedWeekly.add(h ?? 0.0);
-    }
+      // 3. Weekly Study hours calculation
+      for (int i = 0; i < 7; i++) {
+        final double? h = prefs.getDouble('study_hours_day_$i');
+        loadedWeekly[i] = h ?? 0.0;
+      }
 
-    // If no direct study timer recorded, estimate based on actual completed quizzes and last active days
-    final double totalEstimatedHours = totalSolved * 0.35; // ~21 mins per quiz
-    if (loadedWeekly.every((element) => element == 0.0) && totalSolved > 0) {
-      final todayIndex = (DateTime.now().weekday - 1).clamp(0, 6);
-      loadedWeekly[todayIndex] = (totalEstimatedHours * 0.4).clamp(0.2, 4.5);
-      final prevIndex = (todayIndex - 1 + 7) % 7;
-      loadedWeekly[prevIndex] = (totalEstimatedHours * 0.3).clamp(0.1, 3.5);
-      final twoDaysAgo = (todayIndex - 2 + 7) % 7;
-      loadedWeekly[twoDaysAgo] = (totalEstimatedHours * 0.3).clamp(0.1, 3.0);
-    }
+      final double totalEstimatedHours = totalSolved * 0.35;
+      if (loadedWeekly.every((element) => element == 0.0) && totalSolved > 0) {
+        final todayIndex = (DateTime.now().weekday - 1).clamp(0, 6);
+        loadedWeekly[todayIndex] = (totalEstimatedHours * 0.4).clamp(0.2, 4.5);
+        final prevIndex = (todayIndex - 1 + 7) % 7;
+        loadedWeekly[prevIndex] = (totalEstimatedHours * 0.3).clamp(0.1, 3.5);
+        final twoDaysAgo = (todayIndex - 2 + 7) % 7;
+        loadedWeekly[twoDaysAgo] = (totalEstimatedHours * 0.3).clamp(0.1, 3.0);
+      }
 
-    // Recent Quiz trade / score history
-    List<int> recentScores = [];
-    if (allScores.isNotEmpty) {
-      recentScores = allScores.reversed.take(7).toList().reversed.toList();
-    }
+      // 4. Recent Quiz history
+      if (allScores.isNotEmpty) {
+        recentScores = allScores.reversed.take(7).toList().reversed.toList();
+      }
 
-    final double velocityRate = totalSolved > 0
-        ? (totalSolved * 3.5).clamp(1.0, 35.0)
-        : 0.0;
-
-    final int masterScore = allScores.isNotEmpty
-        ? (allScores.reduce((a, b) => a + b) / allScores.length).round()
-        : 0;
-
-    if (mounted) {
-      setState(() {
-        _completedQuizzes = totalSolved;
-        _highestScore = maxScore;
-        _registeredGrade = prefs.getString('user_grade') ?? '${widget.currentGrade}';
-        _fullName = prefs.getString('user_fullName') ?? prefs.getString('user_name') ?? '';
-        _velocityStudyRate = velocityRate;
-        _masterQuizScore = masterScore;
-        _subjectMastery = computedMastery;
-        _weeklyStudyHours = loadedWeekly;
-        _recentQuizScores = recentScores;
-        _isLoading = false;
-      });
+      velocityRate = totalSolved > 0 ? (totalSolved * 3.5).clamp(1.0, 35.0) : 0.0;
+      masterScore = allScores.isNotEmpty ? (allScores.reduce((a, b) => a + b) / allScores.length).round() : 0;
+    } catch (e) {
+      debugPrint("[AcademicProgressCharts] Error loading stats: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _completedQuizzes = totalSolved;
+          _highestScore = maxScore;
+          _registeredGrade = regGrade;
+          _fullName = fullName;
+          _velocityStudyRate = velocityRate;
+          _masterQuizScore = masterScore;
+          _subjectMastery = computedMastery.isNotEmpty
+              ? computedMastery
+              : [
+                  {'nameEn': 'Mathematics', 'nameAm': 'ሂሳብ', 'score': 0, 'completedUnits': 0, 'color': const Color(0xFF0084FF)},
+                  {'nameEn': 'Physics', 'nameAm': 'ፊዚክስ', 'score': 0, 'completedUnits': 0, 'color': const Color(0xFFE53935)},
+                  {'nameEn': 'Chemistry', 'nameAm': 'ኬሚስትሪ', 'score': 0, 'completedUnits': 0, 'color': const Color(0xFFEF6C00)},
+                  {'nameEn': 'Biology', 'nameAm': 'ስነ-ህይወት', 'score': 0, 'completedUnits': 0, 'color': const Color(0xFF2E7D32)},
+                  {'nameEn': 'English', 'nameAm': 'እንግሊዝኛ', 'score': 0, 'completedUnits': 0, 'color': const Color(0xFF8B5CF6)},
+                ];
+          _weeklyStudyHours = loadedWeekly;
+          _recentQuizScores = recentScores;
+          _isLoading = false;
+        });
+      }
     }
   }
 

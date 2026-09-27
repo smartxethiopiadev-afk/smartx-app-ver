@@ -33,7 +33,7 @@ class VideoService {
       subject: 'Tutorial',
       unitNumber: 1,
       partNumber: 1,
-      title: 'Smart Learn Ethiopian - የመተግበሪያ አጠቃቀም መመሪያ (Supabase)',
+      title: 'Smart Learn Ethiopian - የመተግበሪያ አጠቃቀም መመሪያ',
       videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
       storagePath: 'tutorials/how_to_start.mp4',
       customThumbnailUrl: '',

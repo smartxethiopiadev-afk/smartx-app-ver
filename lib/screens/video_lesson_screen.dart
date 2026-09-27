@@ -210,8 +210,8 @@ class _VideoLessonScreenState extends State<VideoLessonScreen> {
                           _errorMessage != null
                               ? (isAm ? 'ስህተት ተከስቷል፡ $_errorMessage' : 'Notice: $_errorMessage')
                               : (isAm
-                                  ? 'የዚህ ክፍል ቪዲዮ በሱፓቤዝ ዳታቤዝ (Supabase Database/Storage) ገና አልተጫነም። አዲስ ቪዲዮ ሲጨመር ወዲያውኑ እዚህ ይታያል።'
-                                  : 'No video lessons have been published for this unit in the Supabase database/storage yet. When uploaded by the academic team, they will stream automatically here.'),
+                                  ? 'የዚህ ክፍል ቪዲዮ ገና አልተጫነም። አዲስ ቪዲዮ ሲጨመር ወዲያውኑ እዚህ ይታያል።'
+                                  : 'No video lessons published for this unit yet. When uploaded by the academic team, they will stream automatically here.'),
                           textAlign: TextAlign.center,
                           style: GoogleFonts.notoSansEthiopic(
                             fontSize: 13,

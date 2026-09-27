@@ -61,6 +61,11 @@ class _FullscreenVideoPlayerScreenState extends State<FullscreenVideoPlayerScree
   @override
   void initState() {
     super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _initializePlayer();
   }
 
@@ -175,10 +180,13 @@ class _FullscreenVideoPlayerScreenState extends State<FullscreenVideoPlayerScree
   void dispose() {
     _chewieController?.dispose();
     _videoPlayerController?.dispose();
-    // Restore orientation
+    // Restore orientation and system UI overlays
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
     ]);
     super.dispose();
   }
@@ -209,8 +217,8 @@ class _FullscreenVideoPlayerScreenState extends State<FullscreenVideoPlayerScree
                         const SizedBox(height: 16),
                         Text(
                           isAm
-                              ? 'ቪዲዮው ከ Supabase በመጫን ላይ ነው...'
-                              : 'Streaming video from Supabase Storage...',
+                              ? 'ቪዲዮው በመጫን ላይ ነው...'
+                              : 'Streaming video lesson...',
                           style: GoogleFonts.plusJakartaSans(
                             color: Colors.white70,
                             fontSize: 13,
@@ -334,7 +342,7 @@ class _FullscreenVideoPlayerScreenState extends State<FullscreenVideoPlayerScree
                           const Icon(Icons.cloud_done_rounded, color: Color(0xFF00BFFF), size: 14),
                           const SizedBox(width: 4),
                           Text(
-                            'Supabase HD',
+                            'Smart HD',
                             style: GoogleFonts.plusJakartaSans(
                               color: const Color(0xFF00BFFF),
                               fontSize: 10,

@@ -358,7 +358,7 @@ class _EmbeddedVideoPlayerState extends State<EmbeddedVideoPlayer> {
                         const Icon(Icons.cloud_done_rounded, size: 12, color: Color(0xFF10B981)),
                         const SizedBox(width: 4),
                         Text(
-                          'Supabase Stream',
+                          'Cloud Stream',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
@@ -580,7 +580,7 @@ class _EmbeddedVideoPlayerState extends State<EmbeddedVideoPlayer> {
             ),
             const SizedBox(height: 14),
             Text(
-              isAm ? 'ቪዲዮው ከ Supabase በመጫን ላይ ነው...' : 'Streaming from Supabase Storage...',
+              isAm ? 'ቪዲዮው በመጫን ላይ ነው...' : 'Streaming video lesson...',
               style: GoogleFonts.notoSansEthiopic(
                 fontSize: 12,
                 color: Colors.white70,
