@@ -732,7 +732,7 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
 
               const SizedBox(height: 12),
 
-              // Telegram Help
+              // Admin Help
               SizedBox(
                 height: 40,
                 child: OutlinedButton.icon(
@@ -743,9 +743,9 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
                       await launchUrl(telegramUri, mode: LaunchMode.externalApplication);
                     }
                   },
-                  icon: const Icon(Icons.send_rounded, size: 15, color: Color(0xFF0088CC)),
+                  icon: const Icon(Icons.support_agent_rounded, size: 16, color: Color(0xFF0088CC)),
                   label: Text(
-                    isAm ? 'በቴሌግራም አግኙን (@smart_x_help)' : 'Contact Telegram (@smart_x_help)',
+                    isAm ? 'አድሚኑን ያግኙ (Contact Admin)' : 'Contact Admin',
                     style: GoogleFonts.notoSansEthiopic(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w700,

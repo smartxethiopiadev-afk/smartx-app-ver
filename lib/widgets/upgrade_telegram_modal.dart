@@ -64,6 +64,7 @@ class UpgradeTelegramModal extends StatefulWidget {
 class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
   String _studentName = '';
   String _studentPhone = '';
+  String _deviceId = '';
   bool _isLoading = true;
   bool _isVerifying = false;
   int _selectedPackageIndex = 1; // Default to Grade / Stream pack (Index 1)
@@ -97,6 +98,7 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
     final phone = prefs.getString('user_phoneNumber') ??
         prefs.getString('phone_number') ??
         '';
+    final devId = await DeviceService.getDeviceId();
 
     _nameController.text = name;
     _phoneVerifyController.text = phone;
@@ -105,6 +107,7 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
       setState(() {
         _studentName = name.isNotEmpty ? name : 'Smart Learn Student';
         _studentPhone = phone;
+        _deviceId = devId;
         _isLoading = false;
       });
     }
@@ -131,7 +134,7 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
     final String selectedPkgTitle = _selectedPackage.title;
 
     final String message =
-        "ሰላም ስማርት ለርን አድሚን (@smart_x_help)፣ $selectedPkgTitle ክፍያ ፈጽሜ ማስከፈት እፈልጋለሁ። የተማሪ ስም: $cleanName፣ ስልክ ቁጥር: $cleanPhone።";
+        "ሰላም ስማርት ለርን አድሚን፣ $selectedPkgTitle ክፍያ ፈጽሜ ማስከፈት እፈልጋለሁ። የተማሪ ስም: $cleanName፣ ስልክ ቁጥር: $cleanPhone፣ የመሳሪያ መለያ (Device ID): $_deviceId።";
 
     final encodedMsg = Uri.encodeComponent(message);
     final Uri directTelegramUri = Uri.parse("https://t.me/smart_x_help?text=$encodedMsg");
@@ -149,8 +152,8 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
         SnackBar(
           content: Text(
             widget.languageCode == 'am'
-                ? 'የቴሌግራም መልእክት ተቀድቷል! ቴሌግራም ላይ ይለጥፉት (@smart_x_help)'
-                : 'Message copied to clipboard! Paste it to @smart_x_help on Telegram.',
+                ? 'የመልእክት መረጃው ተቀድቷል! እባክዎ ለአድሚን ይላኩ (Contact Admin)'
+                : 'Message copied to clipboard! Please send to admin (Contact Admin).',
           ),
           backgroundColor: const Color(0xFF0084FF),
           behavior: SnackBarBehavior.floating,
@@ -578,7 +581,7 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    isAm ? 'በቴሌግራም አግኙን (Contact Telegram)' : 'Contact Telegram Support',
+                                    isAm ? 'አድሚኑን ያግኙ (Contact Admin)' : 'Contact Admin',
                                     style: TextStyle(
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w900,
@@ -587,7 +590,7 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '@smart_x_help',
+                                    isAm ? 'ፈጣን ድጋፍና ማግበሪያ' : 'Fast Activation & Support',
                                     style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
@@ -602,8 +605,8 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
                         const SizedBox(height: 10),
                         Text(
                           isAm
-                              ? 'ፓኬጁን ለማስከፈት ወይም ፈጣን ድጋፍ ለማግኘት በቴሌግራም አድሚኑን @smart_x_help በቀጥታ ያነጋግሩ።'
-                              : 'To unlock your learning package or get instant help, contact our Telegram admin @smart_x_help directly.',
+                              ? 'ፓኬጁን ለማስከፈት ወይም ፈጣን ድጋፍ ለማግኘት አድሚኑን በቀጥታ ያነጋግሩ።'
+                              : 'To unlock your learning package or get instant help, contact admin directly.',
                           style: TextStyle(
                             fontSize: 11.5,
                             color: textSecondary,
@@ -618,7 +621,7 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
                             onPressed: _launchTelegram,
                             icon: const Icon(Icons.send_rounded, size: 16),
                             label: Text(
-                              isAm ? 'ቴሌግራም ይክፈቱ (@smart_x_help)' : 'Open Telegram (@smart_x_help)',
+                              isAm ? 'አድሚኑን ያግኙ (Contact Admin)' : 'Contact Admin',
                               style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
                             ),
                             style: ElevatedButton.styleFrom(
@@ -730,6 +733,45 @@ class _UpgradeTelegramModalState extends State<UpgradeTelegramModal> {
                                 : 'After payment, enter your phone number to immediately bind and unlock this phone.',
                             style: TextStyle(fontSize: 11, color: textSecondary),
                           ),
+                          if (_deviceId.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isLight ? Colors.white : const Color(0xFF0F172A),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: borderColor),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.fingerprint_rounded, size: 16, color: Color(0xFF0284C7)),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Device ID: $_deviceId',
+                                      style: const TextStyle(fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () {
+                                      Clipboard.setData(ClipboardData(text: _deviceId));
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(isAm ? 'የመሳሪያ መለያ ቁጥር ተቀድቷል!' : 'Device ID copied!'),
+                                          behavior: SnackBarBehavior.floating,
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    },
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(4.0),
+                                      child: Icon(Icons.copy_rounded, size: 16, color: Color(0xFF0284C7)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

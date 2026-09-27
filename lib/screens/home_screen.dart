@@ -1341,15 +1341,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             onPressed: () async {
                               final unitStr = _selectedUnitForVideosTab > 0 ? 'Unit $_selectedUnitForVideosTab' : '';
                               final msg = Uri.encodeComponent(
-                                  'ሰላም ስማርት ለርን አድሚን (@smart_x_help)፣ Grade $_selectedGradeForVideosTab $_selectedSubjectForVideosTab $unitStr ቪዲዮ እንዲጫንልኝ እፈልጋለሁ።');
+                                  'ሰላም ስማርት ለርን አድሚን፣ Grade $_selectedGradeForVideosTab $_selectedSubjectForVideosTab $unitStr ቪዲዮ እንዲጫንልኝ እፈልጋለሁ።');
                               final uri = Uri.parse('https://t.me/smart_x_help?text=$msg');
                               if (await canLaunchUrl(uri)) {
                                 await launchUrl(uri, mode: LaunchMode.externalApplication);
                               }
                             },
-                            icon: const Icon(Icons.telegram_rounded, size: 18),
+                            icon: const Icon(Icons.support_agent_rounded, size: 18),
                             label: Text(
-                              isAmharic ? 'በቴሌግራም አድሚኑን ጠይቅ' : 'Request Lesson on Telegram',
+                              isAmharic ? 'አድሚኑን ያግኙ (Contact Admin)' : 'Contact Admin',
                               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
                             ),
                             style: ElevatedButton.styleFrom(
@@ -1696,7 +1696,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           GestureDetector(
                             onTap: () async {
                               final msg = Uri.encodeComponent(
-                                  'ሰላም ስማርት ለርን አድሚን (@smart_x_help)፣ ስለ Grade ${video.grade} ${video.subject} Unit ${video.unitNumber} (${video.title}) ጥያቄ አለኝ።');
+                                  'ሰላም ስማርት ለርን አድሚን፣ ስለ Grade ${video.grade} ${video.subject} Unit ${video.unitNumber} (${video.title}) ጥያቄ አለኝ።');
                               final uri = Uri.parse('https://t.me/smart_x_help?text=$msg');
                               if (await canLaunchUrl(uri)) {
                                 await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -4433,9 +4433,9 @@ class HelpSupportScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 2.0),
-                          const Text(
-                            '@SmartX_Discussion',
-                            style: TextStyle(
+                          Text(
+                            languageCode == 'am' ? 'የውይይትና የድጋፍ መድረክ (Contact Admin)' : 'Discussion & Admin Support',
+                            style: const TextStyle(
                               fontSize: 12.0,
                               color: Color(0xFF0088CC),
                               fontWeight: FontWeight.w700,

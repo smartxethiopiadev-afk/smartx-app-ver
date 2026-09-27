@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/device_service.dart';
 
 class UpgradeRegistrationScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -46,6 +48,7 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
   late String _selectedSubject;
   String _studentName = '';
   String _studentPhone = '';
+  String _deviceId = '';
   int _selectedTierIndex = 1; // 0: Single Subject, 1: Full Grade, 2: Matric
 
   final TextEditingController _nameController = TextEditingController();
@@ -75,11 +78,13 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString('user_fullName') ?? prefs.getString('user_name') ?? '';
     final phone = prefs.getString('user_phoneNumber') ?? prefs.getString('phone_number') ?? '';
+    final devId = await DeviceService.getDeviceId();
 
     if (mounted) {
       setState(() {
         _studentName = name;
         _studentPhone = phone;
+        _deviceId = devId;
         _nameController.text = name;
         _phoneController.text = phone;
       });
@@ -94,6 +99,7 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
   }
 
   Future<void> _registerViaTelegram() async {
+    final bool isAm = widget.languageCode == 'am';
     final name = _nameController.text.trim().isNotEmpty
         ? _nameController.text.trim()
         : (_studentName.isNotEmpty ? _studentName : 'Student');
@@ -109,10 +115,11 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
     }
 
     final String message =
-        'ሰላም Smart Learn Admin (@smart_x_help), በመተግበሪያው ላይ በ 50 ብር ክፍያ ፓኬጅ ማስከፈት እፈልጋለሁ:\n'
+        'ሰላም Smart Learn Admin, በመተግበሪያው ላይ ፓኬጅ ማስከፈት እፈልጋለሁ:\n'
         '• የተመረጠው ፓኬጅ: $tierName\n'
         '• የተማሪ ስም: $name\n'
-        '• ስልክ ቁጥር: $phone';
+        '• ስልክ ቁጥር: $phone\n'
+        '• የመሳሪያ መለያ (Device ID): $_deviceId';
 
     final Uri telegramUri = Uri.parse('https://t.me/smart_x_help?text=${Uri.encodeComponent(message)}');
 
@@ -126,9 +133,13 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
       if (mounted) {
         Clipboard.setData(ClipboardData(text: message));
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('የምዝገባ መረጃው ተቀድቷል! ቴሌግራም ላይ @smart_x_help ይላኩ።'),
-            backgroundColor: Color(0xFF0088CC),
+          SnackBar(
+            content: Text(
+              isAm
+                  ? 'የምዝገባ መረጃው ተቀድቷል! እባክዎ ወደ አድሚን ይላኩ።'
+                  : 'Upgrade request copied to clipboard! Please send it to admin.',
+            ),
+            backgroundColor: const Color(0xFF0284C7),
           ),
         );
       }
@@ -473,7 +484,138 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
 
             const SizedBox(height: 20),
 
-            // Primary Action: Register on Telegram
+            // Device ID Display Card for Verify & Upgrade
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isLight ? Colors.white : const Color(0xFF1E293B),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isLight ? 0.03 : 0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.phonelink_lock_rounded, size: 20, color: Color(0xFF0284C7)),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isAm ? 'የመሳሪያ መለያ ቁጥር (Device ID)' : 'Device ID (Verification & Upgrade)',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isAm
+                                  ? 'ይህ ቁጥር ለዚህ ስልክ የተዘጋጀ ሲሆን ፓኬጅ ሲከፈት ብቻ ያገለግላል'
+                                  : 'Used exclusively during verification and account upgrade',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isLight ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isLight ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SelectableText(
+                            _deviceId.isNotEmpty ? _deviceId : 'Loading Device ID...',
+                            style: GoogleFonts.firaCode(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                              color: const Color(0xFF0284C7),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () {
+                            if (_deviceId.isNotEmpty) {
+                              Clipboard.setData(ClipboardData(text: _deviceId));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    isAm ? 'የመሳሪያ መለያ ቁጥር ተቀድቷል!' : 'Device ID copied to clipboard!',
+                                  ),
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: const Color(0xFF10B981),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0284C7),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.copy_rounded, size: 14, color: Colors.white),
+                                const SizedBox(width: 4),
+                                Text(
+                                  isAm ? 'ኮፒ' : 'Copy',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Primary Action: Contact Admin
             ElevatedButton(
               onPressed: _registerViaTelegram,
               style: ElevatedButton.styleFrom(
@@ -488,29 +630,12 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      const Icon(Icons.send_rounded, color: Colors.white, size: 18),
-                      Positioned(
-                        right: -3,
-                        top: -3,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF10B981),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.add, size: 8, color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
+                  const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                   const SizedBox(width: 10),
                   Text(
                     isAm
-                        ? 'በቴሌግራም ተመዝገብና አግኝ (Register via Telegram)'
-                        : 'Register via Telegram Admin',
+                        ? 'አድሚኑን ያግኙ (Contact Admin)'
+                        : 'Contact Admin',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
@@ -522,7 +647,7 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
 
             const SizedBox(height: 10),
 
-            // Secondary Action: Contact Telegram Support
+            // Secondary Action: Contact Admin Support
             OutlinedButton.icon(
               onPressed: () async {
                 final Uri telegramUri = Uri.parse('https://t.me/smart_x_help');
@@ -540,14 +665,14 @@ class _UpgradeRegistrationScreenState extends State<UpgradeRegistrationScreen> {
                 ),
               ),
               icon: const Icon(
-                Icons.send_rounded,
+                Icons.support_agent_rounded,
                 size: 18,
                 color: Color(0xFF0088CC),
               ),
               label: Text(
                 isAm
-                    ? 'በቴሌግራም አግኙን (Contact @smart_x_help)'
-                    : 'Contact Telegram Support (@smart_x_help)',
+                    ? 'አድሚኑን ያግኙ (Contact Admin)'
+                    : 'Contact Admin',
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/device_service.dart';
 import '../services/subscription_service.dart';
 import 'home_screen.dart';
 
@@ -59,13 +58,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Future<void> _handleRegister() async {
+    final bool isAm = widget.languageCode == 'am';
+
     setState(() {
       _validationErrorBanner = null;
     });
 
     if (!_formKey.currentState!.validate()) {
       setState(() {
-        _validationErrorBanner = "Please correct the highlighted input errors below before proceeding.";
+        _validationErrorBanner = isAm
+            ? 'እባክዎ ከታች የቀረቡትን የተማሪ መረጃዎች በትክክል ይሙሉ'
+            : 'Please correct the highlighted inputs below before proceeding.';
       });
       return;
     }
@@ -75,7 +78,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     if (fullName.length < 3) {
       setState(() {
-        _validationErrorBanner = "Full Name must be at least 3 characters long.";
+        _validationErrorBanner = isAm
+            ? 'የተማሪ ሙሉ ስም ቢያንስ 3 ፊደላት መሆን አለበት'
+            : 'Full Name must be at least 3 characters long.';
       });
       return;
     }
@@ -83,7 +88,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     final formattedPhone = _formatEthiopianPhone(rawPhone);
     if (formattedPhone == null) {
       setState(() {
-        _validationErrorBanner = "Invalid Phone Number! Enter a valid Ethiopian phone number (e.g. 0911234567 or 0712345678).";
+        _validationErrorBanner = isAm
+            ? 'እባክዎ ትክክለኛ የኢትዮጵያ ስልክ ቁጥር ያስገቡ (ለምሳሌ 0911234567 ወይም 0712345678)'
+            : 'Invalid Phone Number! Enter a valid Ethiopian phone number (e.g. 0911234567 or 0712345678).';
       });
       return;
     }
@@ -92,10 +99,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _isLoading = true;
     });
 
-    final bool isAm = widget.languageCode == 'am';
-
     try {
-      final currentDeviceId = await DeviceService.getDeviceId();
       final supabase = Supabase.instance.client;
       final String nowIso = DateTime.now().toUtc().toIso8601String();
 
@@ -103,10 +107,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ? '+251${formattedPhone.substring(1)}'
           : formattedPhone;
 
-      // 1. Strict Check: If phone number is already registered in 'students' table, block registration!
+      // 1. Strict Check: If phone number is already registered in 'students' table, notify student kindly
       final existing = await supabase
           .from('students')
-          .select('unlocked_packages, device_id')
+          .select('unlocked_packages')
           .or('phone_number.eq.$formattedPhone,phone_number.eq.$altPhone')
           .maybeSingle()
           .timeout(const Duration(seconds: 8));
@@ -117,29 +121,38 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             context: context,
             builder: (ctx) => AlertDialog(
               backgroundColor: !widget.isDarkMode ? Colors.white : const Color(0xFF1E293B),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               title: Row(
                 children: [
-                  const Icon(Icons.info_outline, color: Color(0xFF0284C7), size: 28),
-                  const SizedBox(width: 8),
-                  Text(
-                    isAm ? 'አስቀድሞ የተመዘገበ ቁጥር' : 'Already Registered',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
-                      color: !widget.isDarkMode ? const Color(0xFF0F172A) : Colors.white,
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.info_outline_rounded, color: Color(0xFF0284C7), size: 24),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      isAm ? 'አስቀድሞ የተመዘገበ ቁጥር' : 'Already Registered',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        color: !widget.isDarkMode ? const Color(0xFF0F172A) : Colors.white,
+                      ),
                     ),
                   ),
                 ],
               ),
               content: Text(
                 isAm
-                    ? 'ይህ ስልክ ቁጥር አስቀድሞ ተመዝግቧል! እባክዎ ወደ "የተማሪ መግቢያ" ገጽ በመሄድ ይግቡ።'
-                    : 'This phone number is already registered! Please go to the Login & Activation screen to sign in.',
-                style: TextStyle(
+                    ? 'ይህ ስልክ ቁጥር ($formattedPhone) አስቀድሞ ተመዝግቧል! ወደ መግቢያ ገጽ በማለፍ በቀጥታ መግባት ይችላሉ።'
+                    : 'This phone number ($formattedPhone) is already registered! Please go to the Login screen to sign in.',
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 13.5,
                   color: !widget.isDarkMode ? const Color(0xFF475569) : const Color(0xFF94A3B8),
-                  height: 1.4,
+                  height: 1.5,
                 ),
               ),
               actions: [
@@ -150,14 +163,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   },
                   child: Text(
                     isAm ? 'ወደ መግቢያ ሂድ' : 'Go to Login',
-                    style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF0284C7)),
+                    style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF0284C7)),
                   ),
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
                   child: Text(
                     isAm ? 'ዝጋ' : 'Dismiss',
-                    style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.grey),
+                    style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.grey),
                   ),
                 ),
               ],
@@ -168,70 +181,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         return;
       }
 
-      // 2. Strict Check: If device ID is already registered to a different phone number in 'students' table, block!
-      final deviceConflict = await supabase
-          .from('students')
-          .select('phone_number')
-          .eq('device_id', currentDeviceId)
-          .neq('phone_number', formattedPhone)
-          .neq('phone_number', altPhone)
-          .maybeSingle()
-          .timeout(const Duration(seconds: 8));
-
-      if (deviceConflict != null) {
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              backgroundColor: !widget.isDarkMode ? Colors.white : const Color(0xFF1E293B),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              title: Row(
-                children: [
-                  const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 28),
-                  const SizedBox(width: 8),
-                  Text(
-                    isAm ? 'የደህንነት መቆለፊያ (Device Bound)' : 'Device Security Bound',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
-                      color: !widget.isDarkMode ? const Color(0xFF0F172A) : Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-              content: Text(
-                isAm
-                    ? 'ይህ ስልክ ከዚህ ቀደም ከሌላ መለያ ጋር ተገናኝቷል። የደህንነት ስርዓቱ 1 መሣሪያ ለአንድ መለያ ብቻ ይፈቅዳል (Single-Device Protection)።'
-                    : 'This device is already bound to another registered account. Single-device protection strictly allows only one account per hardware device.',
-                style: TextStyle(
-                  fontSize: 13.5,
-                  color: !widget.isDarkMode ? const Color(0xFF475569) : const Color(0xFF94A3B8),
-                  height: 1.4,
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text(
-                    isAm ? 'እሺ' : 'OK',
-                    style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFFEF4444)),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      // 3. Perform standard secure registration
+      // 2. Perform student registration (Only: Full Name, Grade, Phone - No device ID bound here)
       List<String> unlockedPackages = [];
       await supabase.from('students').upsert({
         'full_name': fullName,
         'phone_number': formattedPhone, // Save standard '09...' format
         'grade': _selectedGrade,
-        'device_id': currentDeviceId,
         'is_active': true,
         'unlocked_packages': unlockedPackages,
         'updated_at': nowIso,
@@ -247,8 +202,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       await prefs.setString('user_phoneNumber', formattedPhone);
       await prefs.setString('user_grade', 'Grade $_selectedGrade');
       await prefs.setInt('selected_grade', _selectedGrade);
-      await prefs.setString('user_device_id', currentDeviceId);
-      await prefs.setString('smartx_verified_device_binding', currentDeviceId);
 
       setState(() {
         _isLoading = false;
@@ -258,12 +211,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         _navigateToHome();
       }
     } catch (e) {
-      debugPrint('[Registration] Error in online verification: $e');
+      debugPrint('[Registration] Error in student registration: $e');
       setState(() {
         _isLoading = false;
         _validationErrorBanner = isAm
-            ? 'ምዝገባውን ለማጠናቀቅ የኢንተርኔት ግንኙነት ያስፈልጋል። እባክዎ ግንኙነትዎን ፈትሸው እንደገና ይሞክሩ።'
-            : 'An active internet connection is required to register and secure your single-device license. Please try again.';
+            ? 'የበይነመረብ (Internet) ግንኙነት ችግር አጋጥሟል። እባክዎ ግንኙነትዎን ፈትሸው እንደገና ይሞክሩ።'
+            : 'Unable to connect to the server. Please check your internet connection and try again.';
       });
     }
   }
@@ -374,7 +327,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Student Registration & Hardware Lock',
+                                      widget.languageCode == 'am'
+                                          ? 'የተማሪ ምዝገባ (Student Registration)'
+                                          : 'Student Registration',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 12,
                                         color: const Color(0xFF0284C7),
@@ -391,19 +346,27 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           Divider(height: 1, color: borderColor),
                           const SizedBox(height: 20),
 
-                          // Error Banner Display for User Stage Validation
+                          // Beautiful Error Banner Display
                           if (_validationErrorBanner != null) ...[
                             Container(
-                              padding: const EdgeInsets.all(14),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFEF4444).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.35)),
                               ),
                               child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 22),
-                                  const SizedBox(width: 10),
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444).withValues(alpha: 0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                                  ),
+                                  const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
                                       _validationErrorBanner!,
@@ -411,8 +374,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                         fontSize: 12.5,
                                         fontWeight: FontWeight.w700,
                                         color: const Color(0xFFEF4444),
+                                        height: 1.35,
                                       ),
                                     ),
+                                  ),
+                                  IconButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _validationErrorBanner = null;
+                                      });
+                                    },
+                                    icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFFEF4444)),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
                                   ),
                                 ],
                               ),
@@ -421,7 +395,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           ],
 
                           Text(
-                            'Welcome! Please enter your details to initialize your single-device account:',
+                            widget.languageCode == 'am'
+                                ? 'እንኳን ደህና መጡ! መለያዎን ለመክፈት መረጃዎን ያስገቡ፡'
+                                : 'Welcome! Enter your details below to create your student account:',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -573,7 +549,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                     const Icon(Icons.info_outline_rounded, color: Color(0xFF0284C7), size: 20),
                                     const SizedBox(width: 8),
                                     Text(
-                                      'Smart Learn Package Architecture',
+                                      widget.languageCode == 'am'
+                                          ? 'የስማርት ለርን ፓኬጅ መረጃ'
+                                          : 'Smart Learn Package Information',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w800,
@@ -584,9 +562,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '• Unit 1 for all subjects & grades is 100% FREE forever for trial.\n'
-                                  '• Full Grade Packages unlock Unit 2+ across all curriculum subjects.\n'
-                                  '• Single Device Hardware Lock: Your account is securely tied to this device upon registration to prevent unauthorized account sharing.',
+                                  widget.languageCode == 'am'
+                                      ? '• የሁሉም ክፍሎች እና የትምህርት አይነቶች ምዕራፍ 1 (Unit 1) ለሙከራ 100% ነፃ ነው።\n'
+                                        '• ሙሉ የክፍል ፓኬጆችን በመክፈት ከምዕራፍ 2 ጀምሮ ያሉትን ጥያቄዎችና ኖቶች መጠቀም ይችላሉ።\n'
+                                        '• ምዝገባዎን ሲያጠናቅቁ በቀጥታ ወደ ትምህርት ገጽ ማለፍ ይችላሉ።'
+                                      : '• Unit 1 for all subjects & grades is 100% FREE forever for trial.\n'
+                                        '• Full Grade Packages unlock Unit 2+ across all curriculum subjects.\n'
+                                        '• Complete your registration to start practicing and learning immediately.',
                                   style: GoogleFonts.plusJakartaSans(
                                     fontSize: 11.5,
                                     height: 1.45,

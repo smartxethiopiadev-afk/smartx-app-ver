@@ -89,7 +89,7 @@ class ActivationService {
           isSuccess: false,
           message: isAmharic
               ? 'በዚህ ስልክ ቁጥር የተመዘገበ ተማሪ አልተገኘም። እባክዎ በአስተዳዳሪው በኩል መመዝገብዎን ያረጋግጡ።'
-              : 'No registered student found for this phone number. Please contact admin (@smart_x_help).',
+              : 'No registered student found for this phone number. Please contact admin.',
         );
       }
 

@@ -521,7 +521,7 @@ class SubscriptionService {
       if (!isActive) {
         return const StudentUpgradeResult(
           isSuccess: false,
-          message: 'ይህ መለያ በአስተዳዳሪው ታግዷል። እባክዎ የድጋፍ አገልግሎትን ያነጋግሩ (@smart_x_help)።',
+          message: 'ይህ መለያ በአስተዳዳሪው ታግዷል። እባክዎ አድሚኑን ያነጋግሩ (Contact Admin)።',
         );
       }
 

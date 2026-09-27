@@ -179,7 +179,7 @@ class DeviceService {
         return DeviceBindingResult(
           status: DeviceBindingStatus.inactive,
           currentDeviceId: currentDeviceId,
-          message: 'This account is currently inactive. Please contact admin (@smart_x_help).',
+          message: 'This account is currently inactive. Please contact admin.',
         );
       }
 

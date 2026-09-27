@@ -948,15 +948,15 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
               TextButton.icon(
                 onPressed: () async {
                   final msg = Uri.encodeComponent(
-                      'ሰላም ስማርት ለርን አድሚን (@smart_x_help)፣ የ $unitLabel አጭር ማስታወሻ ፒዲኤፍ እንዲጫንልኝ እፈልጋለሁ።');
+                      'ሰላም ስማርት ለርን አድሚን፣ የ $unitLabel አጭር ማስታወሻ ፒዲኤፍ እንዲጫንልኝ እፈልጋለሁ።');
                   final uri = Uri.parse('https://t.me/smart_x_help?text=$msg');
                   if (await canLaunchUrl(uri)) {
                     await launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
                 },
-                icon: const Icon(Icons.telegram_rounded, size: 18, color: Color(0xFF0284C7)),
+                icon: const Icon(Icons.support_agent_rounded, size: 18, color: Color(0xFF0284C7)),
                 label: Text(
-                  isAm ? "በቴሌግራም አድሚን እንዲጫን ጠይቅ" : "Request upload on Telegram",
+                  isAm ? "አድሚኑን ያግኙ (Contact Admin)" : "Contact Admin",
                   style: GoogleFonts.notoSansEthiopic(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,

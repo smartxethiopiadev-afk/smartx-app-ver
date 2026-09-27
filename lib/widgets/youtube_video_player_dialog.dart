@@ -574,7 +574,7 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
                     child: ElevatedButton.icon(
                       onPressed: () async {
                         final msg = Uri.encodeComponent(
-                            'ሰላም ስማርት ለርን አድሚን (@smart_x_help)፣ ስለ Grade ${widget.video.grade} ${widget.video.subject} Unit ${widget.video.unitNumber} Part ${widget.video.partNumber} (${widget.video.title}) ጥያቄ አለኝ።');
+                            'ሰላም ስማርት ለርን አድሚን፣ ስለ Grade ${widget.video.grade} ${widget.video.subject} Unit ${widget.video.unitNumber} Part ${widget.video.partNumber} (${widget.video.title}) ጥያቄ አለኝ።');
                         final uri = Uri.parse(
                             'https://t.me/smart_x_help?text=$msg');
                         if (await canLaunchUrl(uri)) {
@@ -583,12 +583,12 @@ class _YouTubeVideoPlayerDialogState extends State<YouTubeVideoPlayerDialog> {
                         }
                       },
                       icon: const Icon(
-                        Icons.chat_bubble_outline_rounded,
+                        Icons.support_agent_rounded,
                         size: 16,
                         color: Colors.white,
                       ),
                       label: Text(
-                        isAmharic ? 'መምህራንን በቴሌግራም ጥያቄ ጠይቅ' : 'Ask Tutor on Telegram',
+                        isAmharic ? 'አድሚኑን ያግኙ (Contact Admin)' : 'Contact Admin',
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 13,

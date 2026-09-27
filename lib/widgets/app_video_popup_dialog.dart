@@ -556,9 +556,9 @@ class _AppVideoPopupDialogState extends State<AppVideoPopupDialog> {
                         ),
                         child: TextButton.icon(
                           onPressed: _launchTelegram,
-                          icon: const Icon(Icons.send_rounded, color: Color(0xFF229ED9), size: 18),
+                          icon: const Icon(Icons.support_agent_rounded, color: Color(0xFF229ED9), size: 18),
                           label: Text(
-                            isAm ? '💬 አድሚኑን በቴሌግራም አነጋግር (@smart_x_help)' : '💬 Contact Admin Telegram (@smart_x_help)',
+                            isAm ? '💬 አድሚኑን ያግኙ (Contact Admin)' : '💬 Contact Admin',
                             style: GoogleFonts.notoSansEthiopic(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w800,

@@ -35,9 +35,11 @@ class VideoComingSoonScreen extends StatelessWidget {
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open Telegram. Please visit @SmartX_Discussion'),
-            backgroundColor: Color(0xFFEF4444),
+          SnackBar(
+            content: Text(languageCode == 'am'
+                ? 'ቴሌግራም መክፈት አልተቻለም። እባክዎ አድሚኑን ያነጋግሩ (Contact Admin)'
+                : 'Could not open Telegram. Please contact admin (Contact Admin)'),
+            backgroundColor: const Color(0xFFEF4444),
           ),
         );
       }
@@ -238,12 +240,12 @@ class VideoComingSoonScreen extends StatelessWidget {
 
               const SizedBox(height: 28),
 
-              // Action 1: Join Telegram Channel
+              // Action 1: Contact Admin
               ElevatedButton.icon(
                 onPressed: () => _launchTelegram(context),
-                icon: const Icon(Icons.send_rounded, size: 20),
+                icon: const Icon(Icons.support_agent_rounded, size: 20),
                 label: Text(
-                  isEn ? 'Join Telegram Channel' : 'የቴሌግራም ቻናላችንን ተቀላቀል',
+                  isEn ? 'Contact Admin' : 'አድሚኑን ያግኙ (Contact Admin)',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w800,

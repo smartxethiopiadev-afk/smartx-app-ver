@@ -381,10 +381,10 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.send_rounded, size: 18, color: Color(0xFF0088CC)),
+                        const Icon(Icons.support_agent_rounded, size: 20, color: Color(0xFF0088CC)),
                         const SizedBox(width: 8),
                         Text(
-                          isAm ? 'በቴሌግራም አግኙን (Contact Telegram)' : 'Contact Telegram Support',
+                          isAm ? 'አድሚኑን ያግኙ (Contact Admin)' : 'Contact Admin',
                           style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w800,
@@ -396,8 +396,8 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                     const SizedBox(height: 6),
                     Text(
                       isAm
-                          ? 'የአካውንት ማግበር ወይም እርዳታ ለማግኘት በቴሌግራም @smart_x_help ያነጋግሩን።'
-                          : 'For account activation or instant assistance, reach us on Telegram @smart_x_help.',
+                          ? 'የአካውንት ማግበር ወይም እርዳታ ለማግኘት አድሚኑን ያነጋግሩ።'
+                          : 'For account activation or instant assistance, contact admin directly.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 11.5, color: textSecondary, height: 1.4),
                     ),
@@ -411,7 +411,7 @@ class _LoginActivationScreenState extends State<LoginActivationScreen> {
                       },
                       icon: const Icon(Icons.send_rounded, size: 16),
                       label: Text(
-                        isAm ? 'ቴሌግራም ክፈት (@smart_x_help)' : 'Open Telegram (@smart_x_help)',
+                        isAm ? 'አድሚኑን ያግኙ (Contact Admin)' : 'Contact Admin',
                         style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
                       ),
                       style: OutlinedButton.styleFrom(
