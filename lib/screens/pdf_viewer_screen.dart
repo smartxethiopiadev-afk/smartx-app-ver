@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -10,13 +10,15 @@ import '../main.dart';
 import '../services/offline_manager.dart';
 import '../services/short_note_service.dart';
 
-/// Ultra High-Resolution Full-Screen In-App PDF Viewer Screen
+/// Ultra High-Definition Full-Screen In-App PDF Viewer Screen
 /// Features:
-/// - Full-screen edge-to-edge page cover with high DPI crisp rendering
-/// - Tap-to-toggle animated floating controls (Next, Prev, Jump, Invert, Save)
+/// - Crisp, ultra-high resolution vector rendering powered by Syncfusion PDF Engine
+/// - Full-screen edge-to-edge page width cover with zero side margins
+/// - Smooth pinch-to-zoom & double-tap zoom
+/// - Single Page vs Continuous Vertical Scroll layout modes
+/// - Tap-to-toggle animated glassmorphic controls (Next, Prev, Jump, Zoom, Night Mode, Save)
 /// - Night mode & Invert colors for eye comfort
-/// - Horizontal & Vertical swipe options
-/// - Offline download & caching
+/// - Offline download & local caching
 class PdfViewerScreen extends StatefulWidget {
   final String pdfUrl;
   final String title;
@@ -47,10 +49,9 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
   String _errorMessage = '';
 
   int _totalPages = 0;
-  int _currentPage = 0;
+  int _currentPage = 0; // 0-indexed for internal consistency
   bool _isReady = false;
-  bool _swipeHorizontal = false;
-  bool _fitBoth = false; // false = Fit width (Ultra crisp high resolution fill), true = fit both
+  bool _isContinuousLayout = false; // false = Single page (fit width), true = Continuous scroll
   bool _isNightMode = false;
   bool _nightModeExplicitlySet = false;
   bool _isSavingOffline = false;
@@ -59,14 +60,21 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
   // Controls visibility toggle
   bool _showControls = true;
 
-  PDFViewController? _pdfViewController;
+  late PdfViewerController _pdfViewerController;
 
   @override
   void initState() {
     super.initState();
+    _pdfViewerController = PdfViewerController();
     _effectivePdfUrl = widget.pdfUrl;
     _checkOfflineStatus();
     _loadPdf();
+  }
+
+  @override
+  void dispose() {
+    _pdfViewerController.dispose();
+    super.dispose();
   }
 
   @override
@@ -311,7 +319,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
             onPressed: () {
               final val = int.tryParse(controller.text.trim());
               if (val != null && val >= 1 && val <= _totalPages) {
-                _pdfViewController?.setPage(val - 1);
+                _pdfViewerController.jumpToPage(val);
                 Navigator.of(ctx).pop();
               }
             },
@@ -388,7 +396,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
       return _buildWebView(textColor, subTextColor);
     }
 
-    if (_localPath == null) {
+    if (_localPath == null && _effectivePdfUrl.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -397,48 +405,84 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
       onTap: _toggleControls,
       child: Stack(
         children: [
-          // 1. Full Screen PDF View (High DPI, Edge-to-Edge Fill)
+          // 1. Ultra High Resolution Vector PDF Viewer (Full Horizontal Cover)
           Positioned.fill(
-            child: PDFView(
-              filePath: _localPath,
-              enableSwipe: true,
-              swipeHorizontal: _swipeHorizontal,
-              autoSpacing: true,
-              pageFling: true,
-              pageSnap: true,
-              defaultPage: _currentPage,
-              fitPolicy: _fitBoth ? FitPolicy.BOTH : FitPolicy.WIDTH,
-              nightMode: _isNightMode,
-              preventLinkNavigation: false,
-              onRender: (pages) {
-                if (mounted) {
-                  setState(() {
-                    _totalPages = pages ?? 0;
-                    _isReady = true;
-                  });
-                }
-              },
-              onError: (error) {
-                if (mounted) {
-                  setState(() {
-                    _hasError = true;
-                    _errorMessage = error.toString();
-                  });
-                }
-              },
-              onPageError: (page, error) {
-                debugPrint('[PdfViewerScreen] Page $page error: $error');
-              },
-              onViewCreated: (PDFViewController pdfViewController) {
-                _pdfViewController = pdfViewController;
-              },
-              onPageChanged: (int? page, int? total) {
-                if (page != null && mounted) {
-                  setState(() {
-                    _currentPage = page;
-                  });
-                }
-              },
+            child: ColorFiltered(
+              colorFilter: _isNightMode
+                  ? const ColorFilter.matrix(<double>[
+                      -1, 0, 0, 0, 255,
+                      0, -1, 0, 0, 255,
+                      0, 0, -1, 0, 255,
+                      0, 0, 0, 1, 0,
+                    ])
+                  : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+              child: _localPath != null
+                  ? SfPdfViewer.file(
+                      File(_localPath!),
+                      controller: _pdfViewerController,
+                      canShowScrollHead: false,
+                      canShowScrollStatus: false,
+                      canShowPaginationDialog: false,
+                      pageLayoutMode: _isContinuousLayout
+                          ? PdfPageLayoutMode.continuous
+                          : PdfPageLayoutMode.single,
+                      onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+                        if (mounted) {
+                          setState(() {
+                            _totalPages = details.document.pages.count;
+                            _isReady = true;
+                          });
+                        }
+                      },
+                      onPageChanged: (PdfPageChangedDetails details) {
+                        if (mounted) {
+                          setState(() {
+                            _currentPage = details.newPageNumber - 1;
+                          });
+                        }
+                      },
+                      onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
+                        if (mounted) {
+                          setState(() {
+                            _hasError = true;
+                            _errorMessage = details.error;
+                          });
+                        }
+                      },
+                    )
+                  : SfPdfViewer.network(
+                      _effectivePdfUrl,
+                      controller: _pdfViewerController,
+                      canShowScrollHead: false,
+                      canShowScrollStatus: false,
+                      canShowPaginationDialog: false,
+                      pageLayoutMode: _isContinuousLayout
+                          ? PdfPageLayoutMode.continuous
+                          : PdfPageLayoutMode.single,
+                      onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+                        if (mounted) {
+                          setState(() {
+                            _totalPages = details.document.pages.count;
+                            _isReady = true;
+                          });
+                        }
+                      },
+                      onPageChanged: (PdfPageChangedDetails details) {
+                        if (mounted) {
+                          setState(() {
+                            _currentPage = details.newPageNumber - 1;
+                          });
+                        }
+                      },
+                      onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
+                        if (mounted) {
+                          setState(() {
+                            _hasError = true;
+                            _errorMessage = details.error;
+                          });
+                        }
+                      },
+                    ),
             ),
           ),
 
@@ -463,7 +507,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.7),
+                    color: Colors.black.withValues(alpha: 0.75),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.white24),
                   ),
@@ -486,8 +530,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
               ),
             ),
 
-          // 4. Floating Side Navigation Arrows (Appear on tap)
-          if (_showControls && _isReady && _totalPages > 1) ...[
+          // 4. Floating Side Navigation Arrows (Appear on tap in single-page mode)
+          if (_showControls && _isReady && _totalPages > 1 && !_isContinuousLayout) ...[
             // Left Quick Arrow
             Positioned(
               left: 12,
@@ -503,7 +547,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
                     child: InkWell(
                       customBorder: const CircleBorder(),
                       onTap: _currentPage > 0
-                          ? () => _pdfViewController?.setPage(_currentPage - 1)
+                          ? () => _pdfViewerController.previousPage()
                           : null,
                       child: const Padding(
                         padding: EdgeInsets.all(10.0),
@@ -530,7 +574,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
                     child: InkWell(
                       customBorder: const CircleBorder(),
                       onTap: _currentPage < _totalPages - 1
-                          ? () => _pdfViewController?.setPage(_currentPage + 1)
+                          ? () => _pdfViewerController.nextPage()
                           : null,
                       child: const Padding(
                         padding: EdgeInsets.all(10.0),
@@ -629,17 +673,17 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
             ),
           ),
 
-          // Fit Width vs Fit Page toggle for ultimate quality
+          // Single Page vs Continuous Vertical Scroll toggle
           IconButton(
-            tooltip: _fitBoth ? 'Fill Screen Width (High DPI)' : 'Fit Entire Page',
+            tooltip: _isContinuousLayout ? 'Switch to Single Page View' : 'Switch to Continuous Scroll',
             icon: Icon(
-              _fitBoth ? Icons.fit_screen_rounded : Icons.aspect_ratio_rounded,
+              _isContinuousLayout ? Icons.view_day_rounded : Icons.view_array_rounded,
               color: const Color(0xFF38BDF8),
               size: 21,
             ),
             onPressed: () {
               setState(() {
-                _fitBoth = !_fitBoth;
+                _isContinuousLayout = !_isContinuousLayout;
               });
             },
           ),
@@ -711,7 +755,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
           // Previous Page Button
           ElevatedButton.icon(
             onPressed: _currentPage > 0
-                ? () => _pdfViewController?.setPage(_currentPage - 1)
+                ? () => _pdfViewerController.previousPage()
                 : null,
             icon: const Icon(Icons.chevron_left_rounded, size: 20),
             label: Text(
@@ -760,7 +804,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
           // Next Page Button
           ElevatedButton(
             onPressed: _currentPage < _totalPages - 1
-                ? () => _pdfViewController?.setPage(_currentPage + 1)
+                ? () => _pdfViewerController.nextPage()
                 : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0284C7),
