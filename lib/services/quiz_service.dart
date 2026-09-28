@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -160,7 +159,8 @@ class QuizService {
 
   /// Fetches questions for Exam Mode strictly from `exam_questions` table.
   /// Does NOT pull from practice_questions table or legacy questions table.
-  /// Strictly multiple choice questions with randomized question order and shuffled options.
+  /// Strictly multiple choice questions with clean deduplication.
+  /// Sequential by default so QuizScreen can control randomization based on attempt count.
   /// If database has no exam questions, returns empty list (no fake mock data or cross-table fallback).
   static Future<List<QuestionModel>> fetchExamQuestions({
     required int grade,
@@ -190,7 +190,7 @@ class QuizService {
           query = query.eq('year', year);
         }
 
-        final response = await query.limit(limit);
+        final response = await query.order('question_number', ascending: true).limit(limit);
 
         if (response.isNotEmpty) {
           results = (response as List<dynamic>)
@@ -209,12 +209,14 @@ class QuizService {
       expectedUnit: unit,
     );
 
-    // Exam Mode: Randomize question sequence and shuffle choices
-    final random = Random();
-    validated.shuffle(random);
-    final randomized = validated.map((q) => q.copyWithShuffledOptions(random)).toList();
+    // Sort sequentially by default
+    validated.sort((a, b) {
+      if (a.orderIndex != b.orderIndex) return a.orderIndex.compareTo(b.orderIndex);
+      if (a.questionNumber != b.questionNumber) return a.questionNumber.compareTo(b.questionNumber);
+      return a.id.compareTo(b.id);
+    });
 
-    return randomized.take(limit).toList();
+    return validated.take(limit).toList();
   }
 
   /// General router for QuizScreen
@@ -234,6 +236,29 @@ class QuizService {
         unit: unit,
         questionType: questionType,
       );
+    }
+  }
+
+  /// Gets the number of completed attempts for a unit quiz
+  static Future<int> getQuizAttemptCount(String unitId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt('quiz_attempt_count_$unitId') ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Increments the completed attempts counter for a unit quiz
+  static Future<int> incrementQuizAttemptCount(String unitId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final current = prefs.getInt('quiz_attempt_count_$unitId') ?? 0;
+      final next = current + 1;
+      await prefs.setInt('quiz_attempt_count_$unitId', next);
+      return next;
+    } catch (_) {
+      return 1;
     }
   }
 

@@ -403,8 +403,12 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeInOut,
               padding: EdgeInsets.only(
-                top: _showControls ? (MediaQuery.of(context).padding.top + 66) : 0,
-                bottom: _showControls ? (MediaQuery.of(context).padding.bottom + 76) : 0,
+                top: _showControls 
+                    ? (MediaQuery.of(context).padding.top + 82) 
+                    : (MediaQuery.of(context).padding.top + 10),
+                bottom: _showControls 
+                    ? (MediaQuery.of(context).padding.bottom + 82) 
+                    : MediaQuery.of(context).padding.bottom,
               ),
               child: ColorFiltered(
                 colorFilter: _isNightMode
@@ -591,7 +595,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
     final topPadding = MediaQuery.of(context).padding.top;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(12, topPadding + 6, 12, 12),
+      padding: EdgeInsets.fromLTRB(12, topPadding + 12, 12, 12),
       decoration: BoxDecoration(
         color: const Color(0xFF0F172A).withValues(alpha: 0.96),
         border: const Border(

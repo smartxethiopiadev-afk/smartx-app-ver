@@ -63,6 +63,10 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
   bool _isLoading = false;
   String? _errorMessage;
   String? _successMessage;
+  bool _isRegisteredSuccessfully = false;
+  String _registeredStudentName = '';
+  String _registeredStudentPhone = '';
+  int _registeredStudentGrade = 9;
 
   @override
   void initState() {
@@ -185,21 +189,32 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
       if (authRes.isSuccess) {
         setState(() {
           _isLoading = false;
+          _isRegisteredSuccessfully = true;
+          _registeredStudentName = name;
+          _registeredStudentPhone = phone;
+          _registeredStudentGrade = _regGrade;
           _successMessage = widget.languageCode == 'am'
-              ? 'ተማሪው በተሳካ ሁኔታ በዳታቤዝ ተመዝግቧል! አድሚኑ ፓኬጅ ሲጨምርልዎ በማረጋገጫ ክፍል ውስጥ ማረጋገጥ ይችላሉ።'
-              : 'Student registered in database! Once the admin activates your package, you can verify and unlock.';
+              ? 'ተማሪው በተሳካ ሁኔታ ተመዝግቧል! መረጃዎ በዳታቤዝ ተቀምጧል።'
+              : 'Student successfully registered! Your profile is saved.';
           _verifyNameController.text = name;
           _verifyPhoneController.text = phone;
-          _selectedTab = 0; // Switch to verify tab
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              widget.languageCode == 'am'
-                  ? 'ምዝገባው ተጠናቋል! መረጃዎ በዳታቤዝ ተቀምጧል።'
-                  : 'Registration complete! Your profile is saved.',
-              style: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    widget.languageCode == 'am'
+                        ? 'ምዝገባው በተሳካ ሁኔታ ተጠናቋል!'
+                        : 'Registration completed successfully!',
+                    style: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
             ),
             backgroundColor: const Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
@@ -534,161 +549,296 @@ class _AccountUpgradeDialogState extends State<AccountUpgradeDialog> {
 
               // TAB 1: REGISTER TAB (User Request: Name, Grade, Device ID, Phone)
               if (_selectedTab == 1) ...[
-                Text(
-                  isAm ? 'አዲስ የተማሪ መለያ ይመዝገቡ' : 'Register New Student',
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: textColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isAm
-                      ? 'መረጃዎ በዳታቤዝ (students table) ተመዝግቦ ይቀመጣል። አድሚኑ ፓኬጅ ሲጨምር በቀላሉ ማረጋገጥ ይችላሉ።'
-                      : 'Your details will be registered into the students database for admin package allocation.',
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 12,
-                    color: subColor,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                Form(
-                  key: _registerFormKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Full Name
-                      Text(
-                        isAm ? 'የተማሪው ሙሉ ስም (Student Name)' : 'Student Name',
-                        style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800, color: textColor),
+                if (_isRegisteredSuccessfully) ...[
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                        width: 1.5,
                       ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: _regNameController,
-                        textCapitalization: TextCapitalization.words,
-                        style: TextStyle(fontSize: 14, color: textColor, fontWeight: FontWeight.w600),
-                        decoration: InputDecoration(
-                          hintText: isAm ? 'ለምሳሌ፡ ሰላም ታደሰ' : 'e.g., Selam Tadesse',
-                          hintStyle: TextStyle(color: subColor.withValues(alpha: 0.6), fontSize: 13),
-                          filled: true,
-                          fillColor: inputFillColor,
-                          prefixIcon: Icon(Icons.badge_outlined, color: subColor, size: 20),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: borderColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check_circle_rounded,
+                              size: 44,
+                              color: Color(0xFF10B981),
+                            ),
                           ),
                         ),
-                        validator: (v) => (v == null || v.trim().length < 2)
-                            ? (isAm ? 'እባክዎ ሙሉ ስም ያስገቡ' : 'Enter name')
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Grade Selection Chips (9, 10, 11, 12)
-                      Text(
-                        isAm ? 'የሚማሩበት ክፍል (Grade)' : 'Select Grade',
-                        style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800, color: textColor),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [9, 10, 11, 12].map((g) {
-                          final bool isGSelected = _regGrade == g;
-                          return Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 3),
-                              child: InkWell(
-                                onTap: () => setState(() => _regGrade = g),
-                                borderRadius: BorderRadius.circular(10),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 180),
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: isGSelected ? const Color(0xFF10B981) : inputFillColor,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: isGSelected ? const Color(0xFF10B981) : borderColor,
-                                      width: isGSelected ? 1.8 : 1.0,
+                        const SizedBox(height: 12),
+                        Text(
+                          isAm ? 'ምዝገባው በተሳካ ሁኔታ ተጠናቋል!' : 'Registration Successful!',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.notoSansEthiopic(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF10B981),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          isAm
+                              ? 'የተማሪው መረጃ በስኬት ተመዝግቧል። አሁን ትምህርቶችን መማርና መለማመድ ይችላሉ።'
+                              : 'Student profile has been successfully saved. You can now explore and practice lessons.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.notoSansEthiopic(
+                            fontSize: 12,
+                            color: subColor,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isLight ? Colors.white : const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: borderColor),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.person_outline_rounded, size: 16, color: Color(0xFF0284C7)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${isAm ? "ስም" : "Name"}: $_registeredStudentName',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12.5,
+                                      color: textColor,
                                     ),
                                   ),
-                                  child: Text(
-                                    'Grade $g',
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(Icons.phone_android_rounded, size: 16, color: Color(0xFF0284C7)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${isAm ? "ስልክ" : "Phone"}: $_registeredStudentPhone',
                                     style: TextStyle(
-                                      fontSize: 12,
                                       fontWeight: FontWeight.w800,
-                                      color: isGSelected ? Colors.white : textColor,
+                                      fontSize: 12.5,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(Icons.school_outlined, size: 16, color: Color(0xFF0284C7)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${isAm ? "ክፍል" : "Grade"}: Grade $_registeredStudentGrade',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 12.5,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          height: 46,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              widget.onSuccess?.call();
+                              Navigator.of(context).pop(true);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text(
+                              isAm ? 'ተጠናቋል • ወደ ትምህርት ሂድ' : 'Done • Continue Learning',
+                              style: GoogleFonts.notoSansEthiopic(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  Text(
+                    isAm ? 'አዲስ የተማሪ መለያ ይመዝገቡ' : 'Register New Student',
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isAm
+                        ? 'መረጃዎ በዳታቤዝ (students table) ተመዝግቦ ይቀመጣል።'
+                        : 'Your details will be registered into the students database.',
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontSize: 12,
+                      color: subColor,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  Form(
+                    key: _registerFormKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Full Name
+                        Text(
+                          isAm ? 'የተማሪው ሙሉ ስም (Student Name)' : 'Student Name',
+                          style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800, color: textColor),
+                        ),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: _regNameController,
+                          textCapitalization: TextCapitalization.words,
+                          style: TextStyle(fontSize: 14, color: textColor, fontWeight: FontWeight.w600),
+                          decoration: InputDecoration(
+                            hintText: isAm ? 'ለምሳሌ፡ ሰላም ታደሰ' : 'e.g., Selam Tadesse',
+                            hintStyle: TextStyle(color: subColor.withValues(alpha: 0.6), fontSize: 13),
+                            filled: true,
+                            fillColor: inputFillColor,
+                            prefixIcon: Icon(Icons.badge_outlined, color: subColor, size: 20),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                          ),
+                          validator: (v) => (v == null || v.trim().length < 2)
+                              ? (isAm ? 'እባክዎ ሙሉ ስም ያስገቡ' : 'Enter name')
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Grade Selection Chips (9, 10, 11, 12)
+                        Text(
+                          isAm ? 'የሚማሩበት ክፍል (Grade)' : 'Select Grade',
+                          style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800, color: textColor),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [9, 10, 11, 12].map((g) {
+                            final bool isGSelected = _regGrade == g;
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 3),
+                                child: InkWell(
+                                  onTap: () => setState(() => _regGrade = g),
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: isGSelected ? const Color(0xFF10B981) : inputFillColor,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isGSelected ? const Color(0xFF10B981) : borderColor,
+                                        width: isGSelected ? 1.8 : 1.0,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Grade $g',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: isGSelected ? Colors.white : textColor,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Phone Number
+                        Text(
+                          isAm ? 'ስልክ ቁጥር (Phone Number)' : 'Phone Number',
+                          style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800, color: textColor),
+                        ),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: _regPhoneController,
+                          keyboardType: TextInputType.phone,
+                          style: TextStyle(fontSize: 14, color: textColor, fontWeight: FontWeight.w600),
+                          decoration: InputDecoration(
+                            hintText: isAm ? '0911234567 ወይም 0711234567' : '0911234567 or 0711234567',
+                            hintStyle: TextStyle(color: subColor.withValues(alpha: 0.6), fontSize: 13),
+                            filled: true,
+                            fillColor: inputFillColor,
+                            prefixIcon: Icon(Icons.phone_android_rounded, color: subColor, size: 20),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: borderColor),
                             ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 12),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return isAm ? 'ስልክ ቁጥር ያስገቡ' : 'Enter phone';
+                            final clean = SubscriptionService.sanitizeEthiopianPhone(v);
+                            if (!RegExp(r'^0[79]\d{8}$').hasMatch(clean)) {
+                              return isAm ? 'ትክክለኛ 10 አሃዝ ስልክ (09.../07...)' : 'Invalid phone number';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
 
-                      // Phone Number
-                      Text(
-                        isAm ? 'ስልክ ቁጥር (Phone Number)' : 'Phone Number',
-                        style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800, color: textColor),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: _regPhoneController,
-                        keyboardType: TextInputType.phone,
-                        style: TextStyle(fontSize: 14, color: textColor, fontWeight: FontWeight.w600),
-                        decoration: InputDecoration(
-                          hintText: isAm ? '0911234567 ወይም 0711234567' : '0911234567 or 0711234567',
-                          hintStyle: TextStyle(color: subColor.withValues(alpha: 0.6), fontSize: 13),
-                          filled: true,
-                          fillColor: inputFillColor,
-                          prefixIcon: Icon(Icons.phone_android_rounded, color: subColor, size: 20),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: borderColor),
+                        // Register Button
+                        SizedBox(
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _handleRegisterStudent,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                  )
+                                : Text(
+                                    isAm ? 'ተማሪውን መዝግብ (Register Student)' : 'Register Student',
+                                    style: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w800, fontSize: 14),
+                                  ),
                           ),
                         ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return isAm ? 'ስልክ ቁጥር ያስገቡ' : 'Enter phone';
-                          final clean = SubscriptionService.sanitizeEthiopianPhone(v);
-                          if (!RegExp(r'^0[79]\d{8}$').hasMatch(clean)) {
-                            return isAm ? 'ትክክለኛ 10 አሃዝ ስልክ (09.../07...)' : 'Invalid phone number';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Register Button
-                      SizedBox(
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _handleRegisterStudent,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF10B981),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                                )
-                              : Text(
-                                  isAm ? 'ተማሪውን መዝግብ (Register Student)' : 'Register Student',
-                                  style: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w800, fontSize: 14),
-                                ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ],
 
               // Error / Success Feedback

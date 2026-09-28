@@ -208,6 +208,27 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       });
 
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    isAm ? 'ምዝገባዎ በተሳካ ሁኔታ ተጠናቋል! እንኳን ደህና መጡ!' : 'Registration successful! Welcome!',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+
         _navigateToHome();
       }
     } catch (e) {

@@ -42,6 +42,8 @@ class _QuizScreenState extends State<QuizScreen> {
   String? _errorMessage;
   List<QuestionModel> _questions = [];
   late String _selectedTypeFilter;
+  int _attemptCount = 0;
+  bool _isRandomized = false;
   
   int _currentIndex = 0;
   final Map<int, int> _selectedAnswers = {}; // For MCQ and True/False (option index)
@@ -215,18 +217,22 @@ class _QuizScreenState extends State<QuizScreen> {
       }
 
       final List<QuestionModel> selectedQuestions = await QuizService.filterAndSelectQuestions(
-        unitId: _getUnitId(),
+        unitId: unitId,
         allQuestions: typeFiltered,
       );
 
+      final int attemptCount = await QuizService.getQuizAttemptCount(unitId);
+      final bool shouldRandomize = (attemptCount >= 3) && (widget.mode == QuizMode.exam);
+
       List<QuestionModel> processedQuestions = List<QuestionModel>.from(selectedQuestions);
-      if (widget.mode == QuizMode.exam) {
-        // Exam Mode: Randomize question sequence and shuffle choices
+
+      if (shouldRandomize) {
+        // After 3 attempts and in Exam Mode: Randomize question sequence and shuffle choices
         final random = Random();
         processedQuestions.shuffle(random);
         processedQuestions = processedQuestions.map((q) => q.copyWithShuffledOptions(random)).toList();
       } else {
-        // Practice Mode: Sequential ordering by orderIndex or questionNumber
+        // Initial 3 attempts (or Practice Mode): Strictly sequential ordering by orderIndex, questionNumber, id
         processedQuestions.sort((a, b) {
           if (a.orderIndex != b.orderIndex) {
             return a.orderIndex.compareTo(b.orderIndex);
@@ -240,6 +246,8 @@ class _QuizScreenState extends State<QuizScreen> {
 
       if (mounted) {
         setState(() {
+          _attemptCount = attemptCount;
+          _isRandomized = shouldRandomize;
           _questions = processedQuestions;
           _questionKeys = List.generate(processedQuestions.length, (_) => GlobalKey());
           _isLoading = false;
@@ -860,6 +868,8 @@ class _QuizScreenState extends State<QuizScreen> {
       questions: _questions,
     );
 
+    await QuizService.incrementQuizAttemptCount(_getUnitId());
+
     await _clearProgress();
 
     int score = 0;
@@ -1008,7 +1018,11 @@ class _QuizScreenState extends State<QuizScreen> {
                 child: Text(
                   _showAnswersAndExplanations 
                       ? "REVIEW MODE" 
-                      : (widget.mode == QuizMode.exam ? "EXAM MODE (MCQ ONLY)" : "PRACTICE MODE"),
+                      : (widget.mode == QuizMode.exam 
+                          ? (_isRandomized 
+                              ? "EXAM MODE • RANDOMIZED" 
+                              : "EXAM MODE • ATTEMPT ${_attemptCount + 1}/3 (IN ORDER)") 
+                          : "PRACTICE MODE (IN ORDER)"),
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
