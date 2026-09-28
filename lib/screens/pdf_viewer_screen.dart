@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:pdfrx/pdfrx.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -12,10 +12,10 @@ import '../services/short_note_service.dart';
 
 /// Ultra High-Definition Full-Screen In-App PDF Viewer Screen
 /// Features:
-/// - Crisp, ultra-high resolution vector rendering powered by Syncfusion PDF Engine
+/// - Crisp, ultra-high resolution vector rendering powered by pdfrx (Pdfium)
 /// - Full-screen edge-to-edge page width cover with zero side margins
 /// - Smooth pinch-to-zoom & double-tap zoom
-/// - Single Page vs Continuous Vertical Scroll layout modes
+/// - Compatible with Android v2 embedding (fixes Gradle compile release issue)
 /// - Tap-to-toggle animated glassmorphic controls (Next, Prev, Jump, Zoom, Night Mode, Save)
 /// - Night mode & Invert colors for eye comfort
 /// - Offline download & local caching
@@ -51,7 +51,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
   int _totalPages = 0;
   int _currentPage = 0; // 0-indexed for internal consistency
   bool _isReady = false;
-  bool _isContinuousLayout = false; // false = Single page (fit width), true = Continuous scroll
   bool _isNightMode = false;
   bool _nightModeExplicitlySet = false;
   bool _isSavingOffline = false;
@@ -60,21 +59,14 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
   // Controls visibility toggle
   bool _showControls = true;
 
-  late PdfViewerController _pdfViewerController;
+  final PdfViewerController _pdfViewerController = PdfViewerController();
 
   @override
   void initState() {
     super.initState();
-    _pdfViewerController = PdfViewerController();
     _effectivePdfUrl = widget.pdfUrl;
     _checkOfflineStatus();
     _loadPdf();
-  }
-
-  @override
-  void dispose() {
-    _pdfViewerController.dispose();
-    super.dispose();
   }
 
   @override
@@ -319,7 +311,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
             onPressed: () {
               final val = int.tryParse(controller.text.trim());
               if (val != null && val >= 1 && val <= _totalPages) {
-                _pdfViewerController.jumpToPage(val);
+                _pdfViewerController.goToPage(pageNumber: val);
                 Navigator.of(ctx).pop();
               }
             },
@@ -417,71 +409,47 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
                     ])
                   : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
               child: _localPath != null
-                  ? SfPdfViewer.file(
-                      File(_localPath!),
+                  ? PdfViewer.file(
+                      _localPath!,
                       controller: _pdfViewerController,
-                      canShowScrollHead: false,
-                      canShowScrollStatus: false,
-                      canShowPaginationDialog: false,
-                      pageLayoutMode: _isContinuousLayout
-                          ? PdfPageLayoutMode.continuous
-                          : PdfPageLayoutMode.single,
-                      onDocumentLoaded: (PdfDocumentLoadedDetails details) {
-                        if (mounted) {
-                          setState(() {
-                            _totalPages = details.document.pages.count;
-                            _isReady = true;
-                          });
-                        }
-                      },
-                      onPageChanged: (PdfPageChangedDetails details) {
-                        if (mounted) {
-                          setState(() {
-                            _currentPage = details.newPageNumber - 1;
-                          });
-                        }
-                      },
-                      onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
-                        if (mounted) {
-                          setState(() {
-                            _hasError = true;
-                            _errorMessage = details.error;
-                          });
-                        }
-                      },
+                      params: PdfViewerParams(
+                        onDocumentChanged: (document) {
+                          if (document != null && mounted) {
+                            setState(() {
+                              _totalPages = document.pages.length;
+                              _isReady = true;
+                            });
+                          }
+                        },
+                        onPageChanged: (pageNumber) {
+                          if (pageNumber != null && mounted) {
+                            setState(() {
+                              _currentPage = pageNumber - 1;
+                            });
+                          }
+                        },
+                      ),
                     )
-                  : SfPdfViewer.network(
-                      _effectivePdfUrl,
+                  : PdfViewer.uri(
+                      Uri.parse(_effectivePdfUrl),
                       controller: _pdfViewerController,
-                      canShowScrollHead: false,
-                      canShowScrollStatus: false,
-                      canShowPaginationDialog: false,
-                      pageLayoutMode: _isContinuousLayout
-                          ? PdfPageLayoutMode.continuous
-                          : PdfPageLayoutMode.single,
-                      onDocumentLoaded: (PdfDocumentLoadedDetails details) {
-                        if (mounted) {
-                          setState(() {
-                            _totalPages = details.document.pages.count;
-                            _isReady = true;
-                          });
-                        }
-                      },
-                      onPageChanged: (PdfPageChangedDetails details) {
-                        if (mounted) {
-                          setState(() {
-                            _currentPage = details.newPageNumber - 1;
-                          });
-                        }
-                      },
-                      onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
-                        if (mounted) {
-                          setState(() {
-                            _hasError = true;
-                            _errorMessage = details.error;
-                          });
-                        }
-                      },
+                      params: PdfViewerParams(
+                        onDocumentChanged: (document) {
+                          if (document != null && mounted) {
+                            setState(() {
+                              _totalPages = document.pages.length;
+                              _isReady = true;
+                            });
+                          }
+                        },
+                        onPageChanged: (pageNumber) {
+                          if (pageNumber != null && mounted) {
+                            setState(() {
+                              _currentPage = pageNumber - 1;
+                            });
+                          }
+                        },
+                      ),
                     ),
             ),
           ),
@@ -530,8 +498,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
               ),
             ),
 
-          // 4. Floating Side Navigation Arrows (Appear on tap in single-page mode)
-          if (_showControls && _isReady && _totalPages > 1 && !_isContinuousLayout) ...[
+          // 4. Floating Side Navigation Arrows (Appear on tap)
+          if (_showControls && _isReady && _totalPages > 1) ...[
             // Left Quick Arrow
             Positioned(
               left: 12,
@@ -547,7 +515,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
                     child: InkWell(
                       customBorder: const CircleBorder(),
                       onTap: _currentPage > 0
-                          ? () => _pdfViewerController.previousPage()
+                          ? () => _pdfViewerController.goToPage(pageNumber: _currentPage)
                           : null,
                       child: const Padding(
                         padding: EdgeInsets.all(10.0),
@@ -574,7 +542,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
                     child: InkWell(
                       customBorder: const CircleBorder(),
                       onTap: _currentPage < _totalPages - 1
-                          ? () => _pdfViewerController.nextPage()
+                          ? () => _pdfViewerController.goToPage(pageNumber: _currentPage + 2)
                           : null,
                       child: const Padding(
                         padding: EdgeInsets.all(10.0),
@@ -673,18 +641,16 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
             ),
           ),
 
-          // Single Page vs Continuous Vertical Scroll toggle
+          // Zoom In Button
           IconButton(
-            tooltip: _isContinuousLayout ? 'Switch to Single Page View' : 'Switch to Continuous Scroll',
-            icon: Icon(
-              _isContinuousLayout ? Icons.view_day_rounded : Icons.view_array_rounded,
-              color: const Color(0xFF38BDF8),
+            tooltip: 'Zoom In',
+            icon: const Icon(
+              Icons.zoom_in_rounded,
+              color: Color(0xFF38BDF8),
               size: 21,
             ),
             onPressed: () {
-              setState(() {
-                _isContinuousLayout = !_isContinuousLayout;
-              });
+              _pdfViewerController.zoomUp();
             },
           ),
 
@@ -755,7 +721,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
           // Previous Page Button
           ElevatedButton.icon(
             onPressed: _currentPage > 0
-                ? () => _pdfViewerController.previousPage()
+                ? () => _pdfViewerController.goToPage(pageNumber: _currentPage)
                 : null,
             icon: const Icon(Icons.chevron_left_rounded, size: 20),
             label: Text(
@@ -804,7 +770,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
           // Next Page Button
           ElevatedButton(
             onPressed: _currentPage < _totalPages - 1
-                ? () => _pdfViewerController.nextPage()
+                ? () => _pdfViewerController.goToPage(pageNumber: _currentPage + 2)
                 : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0284C7),
