@@ -158,9 +158,10 @@ class QuizService {
     return validated;
   }
 
-  /// Fetches questions for Exam Mode from `exam_questions` (or dynamic practice_questions MCQ pool).
+  /// Fetches questions for Exam Mode strictly from `exam_questions` table.
+  /// Does NOT pull from practice_questions table or legacy questions table.
   /// Strictly multiple choice questions with randomized question order and shuffled options.
-  /// If database has no questions, returns empty list (no fake mock data).
+  /// If database has no exam questions, returns empty list (no fake mock data or cross-table fallback).
   static Future<List<QuestionModel>> fetchExamQuestions({
     required int grade,
     required String subject,
@@ -173,7 +174,7 @@ class QuizService {
     List<QuestionModel> results = [];
 
     if (hasConn) {
-      // 1. Try exam_questions table first
+      // 1. Strictly exam_questions table only
       try {
         var query = _supabase
             .from('exam_questions')
@@ -199,59 +200,9 @@ class QuizService {
       } catch (e) {
         debugPrint('[QuizService] exam_questions query note: $e');
       }
-
-      // 2. If exam_questions table has no records for this unit, query practice_questions for multiple choice questions
-      if (results.isEmpty) {
-        try {
-          var poolQuery = _supabase
-              .from('practice_questions')
-              .select('*')
-              .eq('grade', grade)
-              .ilike('subject', '%$normSubject%')
-              .eq('question_type', 'multiple_choice');
-
-          if (unit != null && unit > 0) {
-            poolQuery = poolQuery.eq('unit_number', unit);
-          }
-
-          final poolResp = await poolQuery.limit(limit);
-          if (poolResp.isNotEmpty) {
-            results = (poolResp as List<dynamic>)
-                .map((json) => QuestionModel.fromJson(json as Map<String, dynamic>))
-                .toList();
-          }
-        } catch (e) {
-          debugPrint('[QuizService] dynamic exam fallback from practice_questions note: $e');
-        }
-      }
-
-      // 3. Legacy questions fallback
-      if (results.isEmpty) {
-        try {
-          var legacyQuery = _supabase
-              .from('questions')
-              .select('*, question_options(*)')
-              .eq('grade', grade)
-              .ilike('subject', '%$normSubject%');
-
-          if (unit != null && unit > 0) {
-            legacyQuery = legacyQuery.eq('unit_number', unit);
-          }
-
-          final legacyResp = await legacyQuery.limit(limit);
-
-          if (legacyResp.isNotEmpty) {
-            results = (legacyResp as List<dynamic>)
-                .map((json) => QuestionModel.fromJson(json as Map<String, dynamic>))
-                .toList();
-          }
-        } catch (e) {
-          debugPrint('[QuizService] legacy exam questions query note: $e');
-        }
-      }
     }
 
-    // Strict validation & deduplication
+    // Strict validation & deduplication (guarantees no repeated questions)
     final validated = deduplicateAndValidate(
       questions: results,
       expectedGrade: grade,

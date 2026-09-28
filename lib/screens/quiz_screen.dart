@@ -157,23 +157,36 @@ class _QuizScreenState extends State<QuizScreen> {
       final String downloadKey = '${unitId}_quiz';
       final bool isQuizDownloaded = await OfflineManager.isDownloaded(downloadKey);
 
-      if (offlineModeQuestions.isNotEmpty) {
-        fetched = offlineModeQuestions;
-      } else if (isQuizDownloaded) {
-        fetched = await OfflineManager.getOfflineQuestions(downloadKey);
-      } else if (widget.isOffline && widget.offlineUnitId != null) {
-        fetched = await OfflineManager.getOfflineQuestions(widget.offlineUnitId!);
+      if (widget.mode == QuizMode.exam) {
+        // EXAM MODE: Strictly from exam questions storage or exam_questions table only!
+        if (offlineModeQuestions.isNotEmpty) {
+          fetched = offlineModeQuestions;
+        } else {
+          fetched = await QuizService.fetchExamQuestions(
+            grade: widget.grade,
+            subject: widget.subject ?? 'unknown',
+            unit: widget.unit ?? 1,
+          );
+        }
       } else {
-        fetched = await QuizService.fetchQuestions(
-          grade: widget.grade,
-          subject: widget.subject ?? 'unknown',
-          unit: widget.unit ?? 1,
-          mode: widget.mode,
-          questionType: _selectedTypeFilter,
-        );
+        // PRACTICE MODE: From practice storage or practice_questions table
+        if (offlineModeQuestions.isNotEmpty) {
+          fetched = offlineModeQuestions;
+        } else if (isQuizDownloaded) {
+          fetched = await OfflineManager.getOfflineQuestions(downloadKey);
+        } else if (widget.isOffline && widget.offlineUnitId != null) {
+          fetched = await OfflineManager.getOfflineQuestions(widget.offlineUnitId!);
+        } else {
+          fetched = await QuizService.fetchPracticeQuestions(
+            grade: widget.grade,
+            subject: widget.subject ?? 'unknown',
+            unit: widget.unit ?? 1,
+            questionType: _selectedTypeFilter,
+          );
+        }
       }
 
-      // Local type filtering if needed
+      // Local type filtering if needed for Practice Mode
       List<QuestionModel> typeFiltered = fetched;
       if (_selectedTypeFilter != 'all' && widget.mode == QuizMode.practice) {
         typeFiltered = fetched.where((q) {
@@ -186,10 +199,17 @@ class _QuizScreenState extends State<QuizScreen> {
       }
 
       if (typeFiltered.isEmpty) {
+        final isAm = AppStateProvider.of(context).languageCode == 'am';
         setState(() {
           _questions = [];
           _isLoading = false;
-          _errorMessage = "No questions found for this selected question type.";
+          _errorMessage = widget.mode == QuizMode.exam
+              ? (isAm
+                  ? 'የዚህ ምዕራፍ የፈተና ጥያቄዎች (Exam Questions) በዳታቤዙ ውስጥ ገና አልተገኙም / Exam questions are not yet available for this unit.'
+                  : 'Exam questions are not yet available for this unit in the database.')
+              : (isAm
+                  ? 'ለዚህ የተመረጠ የጥያቄ ዓይነት ምንም ጥያቄዎች አልተገኙም / No questions found for this selected question type.'
+                  : 'No questions found for this selected question type.');
         });
         return;
       }

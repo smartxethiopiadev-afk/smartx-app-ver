@@ -266,133 +266,6 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
     );
   }
 
-  void _showQuizStartDialog({
-    required QuizMode mode,
-    required int unitNumber,
-    required VoidCallback onStart,
-  }) {
-    final bool isDark = AppStateProvider.of(context).isDarkMode;
-    final bool isAmharic = widget.languageCode == 'am';
-
-    final String title = isAmharic ? 'ምዕራፍ $unitNumber ለመጀመር ተዘጋጅተዋል?' : 'Ready to Start Unit $unitNumber?';
-    
-    final String description = mode == QuizMode.exam
-        ? (isAmharic
-            ? 'ይህ በጊዜ የተገደበ ፈተና ነው። በሚሰሩበት ጊዜ ፈጣን ምላሽ ወይም ማብራሪያ አያገኙም።'
-            : 'This is a timed test. You will not get instant answers or explanations during the exam.')
-        : (isAmharic
-            ? 'በዚህ የልምምድ ዓይነት ፈጣን ምላሾችን፣ ማብራሪያዎችን እና ዝርዝር መረጃዎችን ያገኛሉ።'
-            : 'In Practice Mode, you will get instant feedback, correct answers, and detailed explanations.');
-
-    final String startText = isAmharic ? 'ጀምር' : 'Start Quiz';
-    final String cancelText = isAmharic ? 'ተመለስ' : 'Cancel';
-
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: (mode == QuizMode.exam ? const Color(0xFFEF4444) : const Color(0xFF3B82F6)).withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      mode == QuizMode.exam ? Icons.timer_rounded : Icons.school_rounded,
-                      color: mode == QuizMode.exam ? const Color(0xFFEF4444) : const Color(0xFF3B82F6),
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                description,
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1.5,
-                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        side: BorderSide(
-                          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                        ),
-                      ),
-                      child: Text(
-                        cancelText,
-                        style: TextStyle(
-                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(dialogContext).pop();
-                        onStart();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: widget.color,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        startText,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Future<bool> _hasInternet() async {
     if (kIsWeb) return true;
     try {
@@ -901,6 +774,8 @@ class _UnitSelectionScreenState extends State<UnitSelectionScreen> {
         questions: questions,
         grade: widget.grade,
         unit: activeUnitNum,
+        title: 'Unit $activeUnitNum: ${widget.languageCode == "am" ? widget.amTitle : widget.enTitle}',
+        subject: widget.subjectId,
       );
 
       onProgress?.call(1.0);

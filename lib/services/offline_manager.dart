@@ -112,8 +112,6 @@ class OfflineManager {
     return id.replaceAll('_notes', '').replaceAll('_quiz', '');
   }
 
-  static String _cleanKey(String id) => cleanKey(id);
-
   static Map<String, int> _parseMetadata(
     String unitId, {
     int? explicitGrade,
@@ -288,7 +286,55 @@ class OfflineManager {
         final str = prefs.getString('offline_pkg_$id');
         if (str != null && str.isNotEmpty) {
           try {
-            list.add(OfflineQuestionPackage.fromJson(jsonDecode(str) as Map<String, dynamic>));
+            final pkg = OfflineQuestionPackage.fromJson(jsonDecode(str) as Map<String, dynamic>);
+
+            // Re-verify exact counts from actual storage keys to guarantee separation
+            final examList = prefs.getStringList('offline_q_${id}_exam');
+            final practiceAll = prefs.getStringList('offline_q_${id}_practice_all') ?? prefs.getStringList('offline_questions_$id');
+            final practiceMcq = prefs.getStringList('offline_q_${id}_practice_multiple_choice');
+            final practiceTf = prefs.getStringList('offline_q_${id}_practice_true_false');
+            final practiceBlank = prefs.getStringList('offline_q_${id}_practice_blank_space');
+
+            final bool hasPracticeStorage = (practiceAll != null && practiceAll.isNotEmpty) ||
+                (practiceMcq != null && practiceMcq.isNotEmpty) ||
+                (practiceTf != null && practiceTf.isNotEmpty) ||
+                (practiceBlank != null && practiceBlank.isNotEmpty);
+
+            int exactMcq = 0;
+            int exactTf = 0;
+            int exactBlank = 0;
+
+            if (hasPracticeStorage) {
+              exactMcq = practiceMcq?.length ?? (practiceAll != null ? practiceAll.where((s) => s.contains('"multiple_choice"')).length : pkg.mcqCount);
+              exactTf = practiceTf?.length ?? (practiceAll != null ? practiceAll.where((s) => s.contains('"true_false"')).length : pkg.trueFalseCount);
+              exactBlank = practiceBlank?.length ?? (practiceAll != null ? practiceAll.where((s) => s.contains('"blank_space"')).length : pkg.blankCount);
+              if (exactMcq == 0 && exactTf == 0 && exactBlank == 0 && practiceAll != null) {
+                exactMcq = practiceAll.length;
+              }
+            }
+
+            final bool hasExamStorage = examList != null && examList.isNotEmpty;
+            final int exactExam = hasExamStorage ? examList.length : (hasPracticeStorage ? 0 : pkg.examCount);
+
+            final int total = (exactMcq + exactTf + exactBlank) + (hasExamStorage ? exactExam : 0);
+
+            if (hasPracticeStorage || hasExamStorage || total > 0) {
+              list.add(OfflineQuestionPackage(
+                unitId: pkg.unitId,
+                title: pkg.title,
+                subject: pkg.subject,
+                grade: pkg.grade,
+                unit: pkg.unit,
+                totalQuestions: total > 0 ? total : pkg.totalQuestions,
+                mcqCount: exactMcq,
+                trueFalseCount: exactTf,
+                blankCount: exactBlank,
+                matchingCount: 0,
+                examCount: hasExamStorage ? exactExam : 0,
+                downloadedAt: pkg.downloadedAt,
+                payloadSizeBytes: pkg.payloadSizeBytes,
+              ));
+            }
           } catch (_) {}
         }
       }
@@ -297,11 +343,17 @@ class OfflineManager {
       for (final id in _downloadedUnitIds) {
         if (!pkgIds.contains(id) && !id.endsWith('_pdf')) {
           final genericList = prefs.getStringList('offline_questions_$id');
-          if (genericList != null && genericList.isNotEmpty) {
+          final examList = prefs.getStringList('offline_q_${id}_exam');
+          if ((genericList != null && genericList.isNotEmpty) || (examList != null && examList.isNotEmpty)) {
             final parsed = _parseMetadata(id);
-            final List<QuestionModel> questions = genericList
+            final List<QuestionModel> questions = (genericList ?? [])
                 .map((str) => QuestionModel.fromJson(jsonDecode(str) as Map<String, dynamic>))
                 .toList();
+
+            final int examCount = examList?.length ?? 0;
+            final int mcq = questions.where((q) => q.isMultipleChoice).length;
+            final int tf = questions.where((q) => q.isTrueFalse).length;
+            final int blanks = questions.where((q) => q.isBlankSpace).length;
 
             final pkg = OfflineQuestionPackage(
               unitId: id,
@@ -309,14 +361,14 @@ class OfflineManager {
               subject: 'Curriculum',
               grade: parsed['grade']!,
               unit: parsed['unit']!,
-              totalQuestions: questions.length,
-              mcqCount: questions.where((q) => q.isMultipleChoice).length,
-              trueFalseCount: questions.where((q) => q.isTrueFalse).length,
-              blankCount: questions.where((q) => q.isBlankSpace).length,
+              totalQuestions: questions.length + examCount,
+              mcqCount: mcq,
+              trueFalseCount: tf,
+              blankCount: blanks,
               matchingCount: questions.where((q) => q.questionType == QuestionType.matching).length,
-              examCount: questions.where((q) => q.isMultipleChoice).length,
+              examCount: examCount,
               downloadedAt: DateTime.now().millisecondsSinceEpoch,
-              payloadSizeBytes: genericList.fold(0, (sum, s) => sum + utf8.encode(s).length),
+              payloadSizeBytes: (questions.length + examCount) * 450 + 1024,
             );
             list.add(pkg);
           }
@@ -422,8 +474,11 @@ class OfflineManager {
     required List<QuestionModel> questions,
     int? grade,
     int? unit,
+    String? title,
+    String? subject,
   }) async {
     try {
+      final clean = cleanKey(unitId);
       final key = buildQuestionKey(unitId: unitId, mode: mode, questionType: questionType);
       final prefs = await SharedPreferences.getInstance();
       final List<String> jsonList = questions.map((q) => jsonEncode(q.toJson())).toList();
@@ -431,11 +486,76 @@ class OfflineManager {
 
       await addDownload(key);
 
-      final clean = cleanKey(unitId);
-      final hasGeneric = prefs.getStringList('offline_questions_$clean') != null;
-      if (!hasGeneric || (mode == 'practice' && (questionType == null || questionType == 'all'))) {
-        await saveOfflineQuestions(clean, questions, grade: grade, unit: unit);
+      // Load existing package or initialize metadata
+      final parsed = _parseMetadata(clean, explicitGrade: grade, explicitUnit: unit);
+      final effectiveGrade = grade ?? parsed['grade'] ?? 9;
+      final effectiveUnit = unit ?? parsed['unit'] ?? 1;
+      final effectiveTitle = title ?? 'Unit $effectiveUnit Question Set';
+      final effectiveSubject = subject ?? 'Curriculum';
+
+      // Determine exact counts from stored keys
+      final examList = prefs.getStringList('offline_q_${clean}_exam');
+      final practiceAll = prefs.getStringList('offline_q_${clean}_practice_all') ?? prefs.getStringList('offline_questions_$clean');
+      final practiceMcq = prefs.getStringList('offline_q_${clean}_practice_multiple_choice');
+      final practiceTf = prefs.getStringList('offline_q_${clean}_practice_true_false');
+      final practiceBlank = prefs.getStringList('offline_q_${clean}_practice_blank_space');
+      final practiceMatching = prefs.getStringList('offline_q_${clean}_practice_matching');
+
+      int mcqCount = practiceMcq?.length ?? (practiceAll != null ? practiceAll.where((s) => s.contains('"multiple_choice"')).length : 0);
+      int tfCount = practiceTf?.length ?? (practiceAll != null ? practiceAll.where((s) => s.contains('"true_false"')).length : 0);
+      int blankCount = practiceBlank?.length ?? (practiceAll != null ? practiceAll.where((s) => s.contains('"blank_space"')).length : 0);
+      int matchingCount = practiceMatching?.length ?? (practiceAll != null ? practiceAll.where((s) => s.contains('"matching"')).length : 0);
+      int examCount = examList?.length ?? 0;
+
+      if (mode == 'exam') {
+        examCount = questions.length;
+      } else if (mode == 'practice') {
+        if (questionType == 'multiple_choice') {
+          mcqCount = questions.length;
+        } else if (questionType == 'true_false') {
+          tfCount = questions.length;
+        } else if (questionType == 'blank_space') {
+          blankCount = questions.length;
+        } else if (questionType == 'matching') {
+          matchingCount = questions.length;
+        } else {
+          // 'all'
+          mcqCount = questions.where((q) => q.isMultipleChoice).length;
+          tfCount = questions.where((q) => q.isTrueFalse).length;
+          blankCount = questions.where((q) => q.isBlankSpace).length;
+          matchingCount = questions.where((q) => q.questionType == QuestionType.matching).length;
+          await prefs.setStringList('offline_questions_$clean', jsonList);
+        }
       }
+
+      final int totalQ = (mcqCount + tfCount + blankCount + matchingCount) + examCount;
+
+      final packageModel = OfflineQuestionPackage(
+        unitId: clean,
+        title: effectiveTitle,
+        subject: effectiveSubject,
+        grade: effectiveGrade,
+        unit: effectiveUnit,
+        totalQuestions: totalQ,
+        mcqCount: mcqCount,
+        trueFalseCount: tfCount,
+        blankCount: blankCount,
+        matchingCount: matchingCount,
+        examCount: examCount,
+        downloadedAt: DateTime.now().millisecondsSinceEpoch,
+        payloadSizeBytes: (totalQ * 450) + 1024,
+      );
+
+      await prefs.setString('offline_pkg_$clean', jsonEncode(packageModel.toJson()));
+
+      final List<String> pkgIds = prefs.getStringList('offline_pkg_catalog_ids') ?? [];
+      if (!pkgIds.contains(clean)) {
+        pkgIds.add(clean);
+        await prefs.setStringList('offline_pkg_catalog_ids', pkgIds);
+      }
+
+      await addDownload(clean);
+      _notifyListeners();
     } catch (e) {
       debugPrint('[OfflineManager] Error saving questions by mode: $e');
     }
@@ -469,6 +589,16 @@ class OfflineManager {
           }).toList();
           if (filtered.isNotEmpty) return filtered;
         }
+      }
+
+      // For Exam mode, strictly retrieve from exam storage only (no practice fallback)
+      if (mode == 'exam') {
+        if (jsonList != null && jsonList.isNotEmpty) {
+          return jsonList
+              .map((str) => QuestionModel.fromJson(jsonDecode(str) as Map<String, dynamic>))
+              .toList();
+        }
+        return [];
       }
 
       if (jsonList == null || jsonList.isEmpty) {

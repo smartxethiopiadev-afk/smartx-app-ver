@@ -119,9 +119,9 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
       pkgResults = pkgResults.where((item) => item.grade == _selectedGradeFilter).toList();
     }
     if (_selectedQuestionMode == 'practice') {
-      pkgResults = pkgResults.where((item) => (item.mcqCount + item.trueFalseCount + item.blankCount) > 0 || item.totalQuestions > 0).toList();
+      pkgResults = pkgResults.where((item) => (item.mcqCount + item.trueFalseCount + item.blankCount + item.matchingCount) > 0).toList();
     } else if (_selectedQuestionMode == 'exam') {
-      pkgResults = pkgResults.where((item) => item.examCount > 0 || item.totalQuestions > 0).toList();
+      pkgResults = pkgResults.where((item) => item.examCount > 0).toList();
     }
     if (query.isNotEmpty) {
       pkgResults = pkgResults.where((item) {
@@ -1164,10 +1164,14 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
     final themeColor = _getSubjectColor(pkg.subject);
     final subjectIcon = _getSubjectIcon(pkg.subject);
 
-    final int practiceTotal = (pkg.mcqCount + pkg.trueFalseCount + pkg.blankCount) > 0
-        ? (pkg.mcqCount + pkg.trueFalseCount + pkg.blankCount)
-        : pkg.totalQuestions;
-    final int examTotal = pkg.examCount > 0 ? pkg.examCount : pkg.totalQuestions;
+    final bool hasPracticeExplicit = (pkg.mcqCount + pkg.trueFalseCount + pkg.blankCount + pkg.matchingCount) > 0;
+    final bool hasExam = pkg.examCount > 0;
+    final bool hasPractice = hasPracticeExplicit || (!hasExam && pkg.totalQuestions > 0);
+
+    final int practiceTotal = hasPracticeExplicit
+        ? (pkg.mcqCount + pkg.trueFalseCount + pkg.blankCount + pkg.matchingCount)
+        : (hasExam ? 0 : pkg.totalQuestions);
+    final int examTotal = pkg.examCount;
 
     return Container(
       decoration: BoxDecoration(
@@ -1275,176 +1279,180 @@ class _DownloadsHubScreenState extends State<DownloadsHubScreen> with SingleTick
             const SizedBox(height: 14),
 
             // 1. Practice Mode Questions Box (Distinct Green / Emerald Styling)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF059669).withValues(alpha: isDark ? 0.15 : 0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: const Color(0xFF059669).withValues(alpha: isDark ? 0.35 : 0.25),
+            if (hasPractice) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669).withValues(alpha: isDark ? 0.15 : 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFF059669).withValues(alpha: isDark ? 0.35 : 0.25),
+                  ),
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF059669).withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF059669).withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.track_changes_rounded, size: 14, color: Color(0xFF059669)),
                         ),
-                        child: const Icon(Icons.track_changes_rounded, size: 14, color: Color(0xFF059669)),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        isAm ? 'የልምምድ ጥያቄዎች (Practice Mode)' : 'Practice Mode Questions',
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF059669),
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF059669),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '$practiceTotal ${isAm ? "ጥያቄዎች" : "Qns"}',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10,
+                        const SizedBox(width: 8),
+                        Text(
+                          isAm ? 'የልምምድ ጥያቄዎች (Practice Mode)' : 'Practice Mode Questions',
+                          style: GoogleFonts.notoSansEthiopic(
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            color: const Color(0xFF059669),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      if (pkg.mcqCount > 0)
-                        _buildModeTypeBadge('ምርጫ (MCQ)', '${pkg.mcqCount}', const Color(0xFF059669)),
-                      if (pkg.trueFalseCount > 0)
-                        _buildModeTypeBadge('እውነት/ሐሰት', '${pkg.trueFalseCount}', const Color(0xFF059669)),
-                      if (pkg.blankCount > 0)
-                        _buildModeTypeBadge('ባዶ ቦታ', '${pkg.blankCount}', const Color(0xFF059669)),
-                      if (pkg.mcqCount == 0 && pkg.trueFalseCount == 0 && pkg.blankCount == 0)
-                        _buildModeTypeBadge('ጥያቄዎች', '$practiceTotal', const Color(0xFF059669)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _startOfflineQuiz(pkg, mode: QuizMode.practice),
-                      icon: const Icon(Icons.play_circle_fill_rounded, size: 16),
-                      label: Text(
-                        isAm ? 'ልምምድ ጀምር (Start Practice)' : 'Start Practice Mode',
-                        style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF059669),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 9),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF059669),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$practiceTotal ${isAm ? "ጥያቄዎች" : "Qns"}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (pkg.mcqCount > 0)
+                          _buildModeTypeBadge('ምርጫ (MCQ)', '${pkg.mcqCount}', const Color(0xFF059669)),
+                        if (pkg.trueFalseCount > 0)
+                          _buildModeTypeBadge('እውነት/ሐሰት', '${pkg.trueFalseCount}', const Color(0xFF059669)),
+                        if (pkg.blankCount > 0)
+                          _buildModeTypeBadge('ባዶ ቦታ', '${pkg.blankCount}', const Color(0xFF059669)),
+                        if (pkg.mcqCount == 0 && pkg.trueFalseCount == 0 && pkg.blankCount == 0)
+                          _buildModeTypeBadge('ጥያቄዎች', '$practiceTotal', const Color(0xFF059669)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _startOfflineQuiz(pkg, mode: QuizMode.practice),
+                        icon: const Icon(Icons.play_circle_fill_rounded, size: 16),
+                        label: Text(
+                          isAm ? 'ልምምድ ጀምር (Start Practice)' : 'Start Practice Mode',
+                          style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF059669),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
+            ],
+            if (hasPractice && hasExam) const SizedBox(height: 12),
 
             // 2. Exam Mode Questions Box (Distinct Amber / Orange Styling)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.15 : 0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.35 : 0.25),
+            if (hasExam) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.15 : 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFFD97706).withValues(alpha: isDark ? 0.35 : 0.25),
+                  ),
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD97706).withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD97706).withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.timer_rounded, size: 14, color: Color(0xFFD97706)),
                         ),
-                        child: const Icon(Icons.timer_rounded, size: 14, color: Color(0xFFD97706)),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        isAm ? 'የፈተና ጥያቄዎች (Exam Mode)' : 'Exam Mode Questions',
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFFD97706),
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD97706),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '$examTotal ${isAm ? "ጥያቄዎች" : "Qns"}',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10,
+                        const SizedBox(width: 8),
+                        Text(
+                          isAm ? 'የፈተና ጥያቄዎች (Exam Mode)' : 'Exam Mode Questions',
+                          style: GoogleFonts.notoSansEthiopic(
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            color: const Color(0xFFD97706),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    isAm
-                        ? '⏱️ የጊዜ ገደብ ያለው የብሔራዊ ፈተና ማስመሰያ ፈተና'
-                        : '⏱️ Timed simulation mimicking national standard exams',
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 11,
-                      color: isDark ? Colors.white70 : const Color(0xFF78350F),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD97706),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$examTotal ${isAm ? "ጥያቄዎች" : "Qns"}',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _startOfflineQuiz(pkg, mode: QuizMode.exam),
-                      icon: const Icon(Icons.flash_on_rounded, size: 16),
-                      label: Text(
-                        isAm ? 'ፈተና ጀምር (Start Exam)' : 'Start Exam Mode',
-                        style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD97706),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 9),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    const SizedBox(height: 6),
+                    Text(
+                      isAm
+                          ? '⏱️ የጊዜ ገደብ ያለው የብሔራዊ ፈተና ማስመሰያ ፈተና'
+                          : '⏱️ Timed simulation mimicking national standard exams',
+                      style: GoogleFonts.notoSansEthiopic(
+                        fontSize: 11,
+                        color: isDark ? Colors.white70 : const Color(0xFF78350F),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _startOfflineQuiz(pkg, mode: QuizMode.exam),
+                        icon: const Icon(Icons.flash_on_rounded, size: 16),
+                        label: Text(
+                          isAm ? 'ፈተና ጀምር (Start Exam)' : 'Start Exam Mode',
+                          style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFD97706),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
