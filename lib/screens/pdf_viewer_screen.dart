@@ -397,60 +397,68 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
       onTap: _toggleControls,
       child: Stack(
         children: [
-          // 1. Ultra High Resolution Vector PDF Viewer (Full Horizontal Cover)
+          // 1. Ultra High Resolution Vector PDF Viewer (Full Horizontal Cover with dynamic top/bottom offset)
           Positioned.fill(
-            child: ColorFiltered(
-              colorFilter: _isNightMode
-                  ? const ColorFilter.matrix(<double>[
-                      -1, 0, 0, 0, 255,
-                      0, -1, 0, 0, 255,
-                      0, 0, -1, 0, 255,
-                      0, 0, 0, 1, 0,
-                    ])
-                  : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
-              child: _localPath != null
-                  ? PdfViewer.file(
-                      _localPath!,
-                      controller: _pdfViewerController,
-                      params: PdfViewerParams(
-                        onDocumentChanged: (document) {
-                          if (document != null && mounted) {
-                            setState(() {
-                              _totalPages = document.pages.length;
-                              _isReady = true;
-                            });
-                          }
-                        },
-                        onPageChanged: (pageNumber) {
-                          if (pageNumber != null && mounted) {
-                            setState(() {
-                              _currentPage = pageNumber - 1;
-                            });
-                          }
-                        },
+            child: AnimatedPadding(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              padding: EdgeInsets.only(
+                top: _showControls ? (MediaQuery.of(context).padding.top + 66) : 0,
+                bottom: _showControls ? (MediaQuery.of(context).padding.bottom + 76) : 0,
+              ),
+              child: ColorFiltered(
+                colorFilter: _isNightMode
+                    ? const ColorFilter.matrix(<double>[
+                        -1, 0, 0, 0, 255,
+                        0, -1, 0, 0, 255,
+                        0, 0, -1, 0, 255,
+                        0, 0, 0, 1, 0,
+                      ])
+                    : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+                child: _localPath != null
+                    ? PdfViewer.file(
+                        _localPath!,
+                        controller: _pdfViewerController,
+                        params: PdfViewerParams(
+                          onDocumentChanged: (document) {
+                            if (document != null && mounted) {
+                              setState(() {
+                                _totalPages = document.pages.length;
+                                _isReady = true;
+                              });
+                            }
+                          },
+                          onPageChanged: (pageNumber) {
+                            if (pageNumber != null && mounted) {
+                              setState(() {
+                                _currentPage = pageNumber - 1;
+                              });
+                            }
+                          },
+                        ),
+                      )
+                    : PdfViewer.uri(
+                        Uri.parse(_effectivePdfUrl),
+                        controller: _pdfViewerController,
+                        params: PdfViewerParams(
+                          onDocumentChanged: (document) {
+                            if (document != null && mounted) {
+                              setState(() {
+                                _totalPages = document.pages.length;
+                                _isReady = true;
+                              });
+                            }
+                          },
+                          onPageChanged: (pageNumber) {
+                            if (pageNumber != null && mounted) {
+                              setState(() {
+                                _currentPage = pageNumber - 1;
+                              });
+                            }
+                          },
+                        ),
                       ),
-                    )
-                  : PdfViewer.uri(
-                      Uri.parse(_effectivePdfUrl),
-                      controller: _pdfViewerController,
-                      params: PdfViewerParams(
-                        onDocumentChanged: (document) {
-                          if (document != null && mounted) {
-                            setState(() {
-                              _totalPages = document.pages.length;
-                              _isReady = true;
-                            });
-                          }
-                        },
-                        onPageChanged: (pageNumber) {
-                          if (pageNumber != null && mounted) {
-                            setState(() {
-                              _currentPage = pageNumber - 1;
-                            });
-                          }
-                        },
-                      ),
-                    ),
+              ),
             ),
           ),
 
