@@ -762,8 +762,9 @@ class _QuizScreenState extends State<QuizScreen> {
   void _showBreakDialog() {
     if (_hasShownBreakDialog) {
       setState(() {
-        _currentIndex = 19;
+        _currentIndex = 20;
       });
+      _saveProgress();
       _scrollToActiveQuestion();
       return;
     }
@@ -839,8 +840,9 @@ class _QuizScreenState extends State<QuizScreen> {
                   _startTimer();
                 }
                 setState(() {
-                  _currentIndex = 19;
+                  _currentIndex = 20;
                 });
+                _saveProgress();
                 _scrollToActiveQuestion();
               },
               style: ElevatedButton.styleFrom(
@@ -1353,6 +1355,83 @@ class _QuizScreenState extends State<QuizScreen> {
     final bool isSubmitted = _submittedQuestions.contains(index);
     final bool isExamReview = _showAnswersAndExplanations && widget.mode == QuizMode.exam;
     final bool isAm = AppStateProvider.of(context).languageCode == 'am';
+    final bool isExamActive = widget.mode == QuizMode.exam && !_showAnswersAndExplanations;
+
+    // In active Exam Mode: Cover non-active questions so user focuses on 1 question at a time
+    if (isExamActive && !isActive) {
+      final bool answered = _hasUserAnswered(index);
+      return Container(
+        key: _questionKeys[index],
+        margin: const EdgeInsets.only(bottom: 16.0),
+        child: InkWell(
+          onTap: () => _jumpToQuestion(index),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            decoration: BoxDecoration(
+              color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: answered
+                    ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                    : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+                width: answered ? 1.4 : 1.0,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: answered
+                        ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                        : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    answered ? Icons.check_circle_rounded : Icons.lock_outline_rounded,
+                    size: 18,
+                    color: answered ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Question ${index + 1} of ${_questions.length}",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: isLight ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        answered
+                            ? (isAm ? "ተመልሷል • ለመቀየር ወይም ለማየት ይንኩ" : "Answered • Tap to view/change")
+                            : (isAm ? "ጥያቄው ተሸፍኗል • ለማየት ይንኩ" : "Question Covered • Tap to focus"),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: answered ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: isLight ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Container(
       key: _questionKeys[index],

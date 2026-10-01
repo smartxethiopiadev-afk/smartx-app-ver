@@ -168,35 +168,24 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> with SingleTickerProv
         return;
       }
 
-      // 5. Download and cache PDF to secure local device storage
+      // 5. Fetch PDF into temporary cache for viewing (does not save permanently to offline storage)
       final uri = Uri.parse(url);
       final response = await http.get(uri).timeout(const Duration(seconds: 40));
 
       if (response.statusCode == 200) {
         final bytes = response.bodyBytes;
-        final dir = await getApplicationDocumentsDirectory();
-        final downloadsDir = Directory('${dir.path}/downloads');
-        if (!await downloadsDir.exists()) {
-          await downloadsDir.create(recursive: true);
+        final tempDir = await getTemporaryDirectory();
+        final cacheDir = Directory('${tempDir.path}/pdf_temp_cache');
+        if (!await cacheDir.exists()) {
+          await cacheDir.create(recursive: true);
         }
 
-        final file = File('${downloadsDir.path}/$_cleanUnitId.pdf');
+        final file = File('${cacheDir.path}/view_$_cleanUnitId.pdf');
         await file.writeAsBytes(bytes, flush: true);
-
-        // Record in offline manager catalog
-        await OfflineManager.saveOfflinePdf(
-          unitId: _cleanUnitId,
-          pdfUrl: url,
-          title: widget.title,
-          subject: widget.subject,
-          grade: widget.grade,
-          unit: widget.unitNumber,
-        );
 
         if (mounted) {
           setState(() {
             _localPath = file.path;
-            _isDownloaded = true;
             _isLoading = false;
           });
         }
