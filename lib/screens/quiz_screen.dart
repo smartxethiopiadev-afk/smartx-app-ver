@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1356,82 +1357,7 @@ class _QuizScreenState extends State<QuizScreen> {
     final bool isExamReview = _showAnswersAndExplanations && widget.mode == QuizMode.exam;
     final bool isAm = AppStateProvider.of(context).languageCode == 'am';
     final bool isExamActive = widget.mode == QuizMode.exam && !_showAnswersAndExplanations;
-
-    // In active Exam Mode: Cover non-active questions so user focuses on 1 question at a time
-    if (isExamActive && !isActive) {
-      final bool answered = _hasUserAnswered(index);
-      return Container(
-        key: _questionKeys[index],
-        margin: const EdgeInsets.only(bottom: 16.0),
-        child: InkWell(
-          onTap: () => _jumpToQuestion(index),
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            decoration: BoxDecoration(
-              color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: answered
-                    ? const Color(0xFF10B981).withValues(alpha: 0.4)
-                    : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
-                width: answered ? 1.4 : 1.0,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: answered
-                        ? const Color(0xFF10B981).withValues(alpha: 0.12)
-                        : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    answered ? Icons.check_circle_rounded : Icons.visibility_off_rounded,
-                    size: 18,
-                    color: answered ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Question ${index + 1} of ${_questions.length}",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: isLight ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        answered
-                            ? (isAm ? "ተመልሷል • ለመቀየር ወይም ለማየት ይንኩ" : "Answered • Tap to view/change")
-                            : (isAm ? "የተሸፈነ ጥያቄ • ለመክፈት ይንኩ" : "Hidden Question • Tap to view"),
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: answered ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 14,
-                  color: isLight ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    final bool answered = _hasUserAnswered(index);
 
     return Container(
       key: _questionKeys[index],
@@ -1470,6 +1396,39 @@ class _QuizScreenState extends State<QuizScreen> {
                       ),
                     ),
                   ),
+                  if (isExamActive && !isActive) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: answered
+                            ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                            : (isLight ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            answered ? Icons.check_circle_rounded : Icons.visibility_off_rounded,
+                            size: 11,
+                            color: answered ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            answered
+                                ? (isAm ? "ተመልሷል" : "Answered")
+                                : (isAm ? "የተሸፈነ" : "Hidden"),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: answered ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
               if (widget.mode == QuizMode.exam && isActive)
@@ -1508,59 +1467,171 @@ class _QuizScreenState extends State<QuizScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Question Card Box
-          Container(
-            padding: const EdgeInsets.all(18.0),
-            decoration: BoxDecoration(
-              color: isLight ? Colors.white : const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(20.0),
-              border: Border.all(
-                color: isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155),
-                width: 1.5,
+          // Question Card Box (with Frosted Blur Overlay for non-active exam questions)
+          Stack(
+            children: [
+              // Full question card structure so it preserves full natural height and smooth scrolling
+              Container(
+                padding: const EdgeInsets.all(18.0),
+                decoration: BoxDecoration(
+                  color: isLight ? Colors.white : const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(20.0),
+                  border: Border.all(
+                    color: isActive
+                        ? _getSubjectThemeColor().withValues(alpha: 0.6)
+                        : (isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155)),
+                    width: isActive ? 2.0 : 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isActive
+                          ? _getSubjectThemeColor().withValues(alpha: 0.12)
+                          : Colors.black.withValues(alpha: isLight ? 0.04 : 0.16),
+                      blurRadius: isActive ? 18.0 : 14.0,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Question text with bold, clear, modern typography
+                    _buildMathText(
+                      q.questionText,
+                      GoogleFonts.inter(
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.w700,
+                        height: 1.45,
+                        letterSpacing: -0.1,
+                        color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                      ).copyWith(
+                        fontFamilyFallback: const ['Roboto', 'Inter', 'SF Pro Display', 'SF Pro Text', '-apple-system', 'sans-serif', 'Noto Sans Ethiopic'],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Render based on Question Type
+                    if (q.questionType == QuestionType.multipleChoice)
+                      _buildMultipleChoiceContent(q, index, isActive, showFeedback, isLight)
+                    else if (q.questionType == QuestionType.trueFalse)
+                      _buildTrueFalseContent(q, index, isActive, showFeedback, isLight, isAm)
+                    else if (q.questionType == QuestionType.blankSpace)
+                      _buildBlankSpaceContent(q, index, isActive, showFeedback, isLight, isAm)
+                    else if (q.questionType == QuestionType.matching)
+                      _buildMatchingContent(q, index, isActive, showFeedback, isLight, isAm),
+                  ],
+                ),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isLight ? 0.04 : 0.16),
-                  blurRadius: 14.0,
-                  offset: const Offset(0, 4),
-                )
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Question text with bold, clear, modern typography (Roboto, Inter, SF Pro, sans-serif)
-                _buildMathText(
-                  q.questionText,
-                  GoogleFonts.inter(
-                    fontSize: 16.0,
-                    fontWeight: FontWeight.w700,
-                    height: 1.45,
-                    letterSpacing: -0.1,
-                    color: isLight ? const Color(0xFF0F172A) : Colors.white,
-                  ).copyWith(
-                    fontFamilyFallback: const ['Roboto', 'Inter', 'SF Pro Display', 'SF Pro Text', '-apple-system', 'sans-serif', 'Noto Sans Ethiopic'],
+
+              // Frosted Blur Overlay for non-active exam questions (holds full place and unblurs on click/progression)
+              if (isExamActive && !isActive)
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20.0),
+                    child: BackdropFilter(
+                      filter: ui.ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+                      child: Container(
+                        color: isLight
+                            ? const Color(0xFFF8FAFC).withValues(alpha: 0.70)
+                            : const Color(0xFF0F172A).withValues(alpha: 0.75),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _jumpToQuestion(index),
+                            borderRadius: BorderRadius.circular(20.0),
+                            child: Center(
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                                padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 14.0),
+                                decoration: BoxDecoration(
+                                  color: isLight
+                                      ? Colors.white.withValues(alpha: 0.95)
+                                      : const Color(0xFF1E293B).withValues(alpha: 0.95),
+                                  borderRadius: BorderRadius.circular(16.0),
+                                  border: Border.all(
+                                    color: answered
+                                        ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                                        : (isLight ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.08),
+                                      blurRadius: 12.0,
+                                      offset: const Offset(0, 4),
+                                    )
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: answered
+                                            ? const Color(0xFF10B981).withValues(alpha: 0.14)
+                                            : _getSubjectThemeColor().withValues(alpha: 0.12),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        answered ? Icons.check_circle_rounded : Icons.visibility_off_rounded,
+                                        size: 20,
+                                        color: answered ? const Color(0xFF10B981) : _getSubjectThemeColor(),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Flexible(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            answered
+                                                ? (isAm ? "ጥያቄ ${index + 1} ተመልሷል" : "Question ${index + 1} Answered")
+                                                : (isAm ? "ጥያቄ ${index + 1} ተሸፍኗል (Hidden)" : "Question ${index + 1} Hidden"),
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w800,
+                                              color: isLight ? const Color(0xFF0F172A) : Colors.white,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            answered
+                                                ? (isAm ? "መልስ ለመቀየር ወይም ለማየት ይንኩ" : "Tap to view or change answer")
+                                                : (isAm ? "ይህንን ጥያቄ ለመክፈት ይንኩ" : "Tap to open and focus"),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: answered ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      Icons.arrow_forward_ios_rounded,
+                                      size: 13,
+                                      color: isLight ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 14),
-                Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: isLight ? const Color(0xFFEDF2F7) : const Color(0xFF334155),
-                ),
-                const SizedBox(height: 14),
-
-                // Render based on Question Type
-                if (q.questionType == QuestionType.multipleChoice)
-                  _buildMultipleChoiceContent(q, index, isActive, showFeedback, isLight)
-                else if (q.questionType == QuestionType.trueFalse)
-                  _buildTrueFalseContent(q, index, isActive, showFeedback, isLight, isAm)
-                else if (q.questionType == QuestionType.blankSpace)
-                  _buildBlankSpaceContent(q, index, isActive, showFeedback, isLight, isAm)
-                else if (q.questionType == QuestionType.matching)
-                  _buildMatchingContent(q, index, isActive, showFeedback, isLight, isAm),
-              ],
-            ),
+            ],
           ),
 
           // Practice Mode Check Answer Button
