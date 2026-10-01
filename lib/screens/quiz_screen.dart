@@ -1389,7 +1389,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    answered ? Icons.check_circle_rounded : Icons.lock_outline_rounded,
+                    answered ? Icons.check_circle_rounded : Icons.visibility_off_rounded,
                     size: 18,
                     color: answered ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
                   ),
@@ -1411,7 +1411,7 @@ class _QuizScreenState extends State<QuizScreen> {
                       Text(
                         answered
                             ? (isAm ? "ተመልሷል • ለመቀየር ወይም ለማየት ይንኩ" : "Answered • Tap to view/change")
-                            : (isAm ? "ጥያቄው ተሸፍኗል • ለማየት ይንኩ" : "Question Covered • Tap to focus"),
+                            : (isAm ? "የተሸፈነ ጥያቄ • ለመክፈት ይንኩ" : "Hidden Question • Tap to view"),
                         style: TextStyle(
                           fontSize: 11.5,
                           color: answered ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
